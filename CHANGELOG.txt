@@ -1,0 +1,22 @@
+10/11/2008 : License changed to GNU Lesser General Public License, V3.  This should make combination with other (older) open source licenses such as the original BSD license possible.
+
+11/13/2006 : Added the remainder of the code to the project; I will no longer be working on this app.
+
+08/13/2005 : I've replaced much of the older code with new (hopefully more useful) code.  This 
+new set of namespaces includes both incoming and outgoing functionality for all the PDUs.  Note also 
+that this release is GPL only-I have dropped the QPL portion of the license from here on out. I 
+also fixed the dates on this changelog-for some reason I had them a year off.
+
+08/20/2004 : Host of changes.  The PDUFactory and several incoming PDUs were changed
+for compatibility after some testing.  Added some documentation tags.  Fixed TLVTable 
+so that null tags are simply dropped (i.e. trying to set an optional param to null 
+does nothing).  Also added the debug file and xml file to the binary release.  Also
+changed the zip files so that they store relative path info rather than full path info
+(to those of you who downloaded the early release-sorry about that).
+
+08/15/2004 : Changed the PDUFactory so that it allows multiple responses to come in on
+a PDU.  Also fixed the TrimResponsePDU() so that it didn't break if the command length 
+was too large (the null SMSC I was testing with today sent some out like that.  Also 
+included a build script.
+
+08/14/2004 : Initial release.
