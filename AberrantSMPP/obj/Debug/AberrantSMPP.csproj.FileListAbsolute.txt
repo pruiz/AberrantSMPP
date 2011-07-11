@@ -1,0 +1,5 @@
+C:\devel\crt0\AberrantSMPP.git\obj\Debug\ResolveAssemblyReference.cache
+C:\devel\crt0\AberrantSMPP.git\bin\Debug\AberrantSMPP.dll
+C:\devel\crt0\AberrantSMPP.git\bin\Debug\AberrantSMPP.pdb
+C:\devel\crt0\AberrantSMPP.git\obj\Debug\AberrantSMPP.dll
+C:\devel\crt0\AberrantSMPP.git\obj\Debug\AberrantSMPP.pdb

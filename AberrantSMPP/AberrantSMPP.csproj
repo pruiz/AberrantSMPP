@@ -1,0 +1,118 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{CB0A2871-0BC6-4ADC-BA61-AE23144F8A3C}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>AberrantSMPP</RootNamespace>
+    <AssemblyName>AberrantSMPP</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ASyncSocketClient.cs" />
+    <Compile Include="EventObject\AlertEventArgs.cs" />
+    <Compile Include="EventObject\BindEventArgs.cs" />
+    <Compile Include="EventObject\BindRespEventArgs.cs" />
+    <Compile Include="EventObject\CancelEventArgs.cs" />
+    <Compile Include="EventObject\CancelSmEventArgs.cs" />
+    <Compile Include="EventObject\CancelSmRespEventArgs.cs" />
+    <Compile Include="EventObject\CommonErrorEventArgs.cs" />
+    <Compile Include="EventObject\DataSmEventArgs.cs" />
+    <Compile Include="EventObject\DataSmRespEventArgs.cs" />
+    <Compile Include="EventObject\DeliverSmEventArgs.cs" />
+    <Compile Include="EventObject\DeliverSmRespEventArgs.cs" />
+    <Compile Include="EventObject\EnquireLinkEventArgs.cs" />
+    <Compile Include="EventObject\EnquireLinkRespEventArgs.cs" />
+    <Compile Include="EventObject\GenericNackEventArgs.cs" />
+    <Compile Include="EventObject\QuerySmEventArgs.cs" />
+    <Compile Include="EventObject\QuerySmRespEventArgs.cs" />
+    <Compile Include="EventObject\ReplaceSmEventArgs.cs" />
+    <Compile Include="EventObject\ReplaceSmRespEventArgs.cs" />
+    <Compile Include="EventObject\SmppEventArgs.cs" />
+    <Compile Include="EventObject\SubmitMultiEventArgs.cs" />
+    <Compile Include="EventObject\SubmitMultiRespEventArgs.cs" />
+    <Compile Include="EventObject\SubmitSmEventArgs.cs" />
+    <Compile Include="EventObject\SubmitSmRespEventArgs.cs" />
+    <Compile Include="EventObject\UnbindEventArgs.cs" />
+    <Compile Include="EventObject\UnbindRespEventArgs.cs" />
+    <Compile Include="Packet\Pdu.cs" />
+    <Compile Include="Packet\Request\MessageLcd2.cs" />
+    <Compile Include="Packet\Request\MessageLcd3.cs" />
+    <Compile Include="Packet\Request\MessageLcd4.cs" />
+    <Compile Include="Packet\Request\MessageLcd6.cs" />
+    <Compile Include="Packet\Request\SmppAlertNotification.cs" />
+    <Compile Include="Packet\Request\SmppBind.cs" />
+    <Compile Include="Packet\Request\SmppCancelSm.cs" />
+    <Compile Include="Packet\Request\SmppDataSm.cs" />
+    <Compile Include="Packet\Request\SmppDeliverSm.cs" />
+    <Compile Include="Packet\Request\SmppEnquireLink.cs" />
+    <Compile Include="Packet\Request\SmppGenericNack.cs" />
+    <Compile Include="Packet\Request\SmppOutbind.cs" />
+    <Compile Include="Packet\Request\SmppQuerySm.cs" />
+    <Compile Include="Packet\Request\SmppReplaceSm.cs" />
+    <Compile Include="Packet\Request\SmppSubmitMulti.cs" />
+    <Compile Include="Packet\Request\SmppSubmitSm.cs" />
+    <Compile Include="Packet\Request\SmppUnbind.cs" />
+    <Compile Include="Packet\Response\SmppBindResp.cs" />
+    <Compile Include="Packet\Response\SmppCancelSmResp.cs" />
+    <Compile Include="Packet\Response\SmppDataSmResp.cs" />
+    <Compile Include="Packet\Response\SmppDeliverSmResp.cs" />
+    <Compile Include="Packet\Response\SmppEnquireLinkResp.cs" />
+    <Compile Include="Packet\Response\SmppGenericNackResp.cs" />
+    <Compile Include="Packet\Response\SmppQuerySmResp.cs" />
+    <Compile Include="Packet\Response\SmppReplaceSmResp.cs" />
+    <Compile Include="Packet\Response\SmppSubmitMultiResp.cs" />
+    <Compile Include="Packet\Response\SmppSubmitSmResp.cs" />
+    <Compile Include="Packet\Response\SmppUnbindResp.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SMPPCommunicator.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Utility\DestinationAddress.cs" />
+    <Compile Include="Utility\PduFactory.cs" />
+    <Compile Include="Utility\PduUtil.cs" />
+    <Compile Include="Utility\SmppStringUtil.cs" />
+    <Compile Include="Utility\TlvTable.cs" />
+    <Compile Include="Utility\UnsignedNumConverter.cs" />
+    <Compile Include="Utility\UnsuccessAddress.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
