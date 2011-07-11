@@ -1,2 +1,4 @@
+*.suo
+*/*.??proj.user
 */bin
 */obj
