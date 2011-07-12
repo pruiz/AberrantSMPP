@@ -141,6 +141,9 @@ namespace AberrantSMPP.Utility
 				case Pdu.CommandIdType.unbind_resp:
 					packet = new SmppUnbindResp(response);
 					break;
+				case Pdu.CommandIdType.generic_nack:
+					packet = new SmppGenericNack(response);
+					break;
 				default:
 					packet = null;
 					break;
