@@ -1,3 +1,10 @@
+
+This is my own fork of RoaminSMPP code which wasnt maintained anymore.
+By now this is nothing more than an upgraded layout with VS2k10 solution files. 
+
+
+=========================== OLD README ==============================
+
 This software is meant to provide an open source edition of the basic 
 SMPP v3.4 functionality.  It includes PDU definitions for all of the
 PDUs in the spec.
