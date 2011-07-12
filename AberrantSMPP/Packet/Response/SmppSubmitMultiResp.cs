@@ -18,9 +18,9 @@
 using System;
 using System.Collections;
 using System.Text;
-using RoaminSMPP.Utility;
+using AberrantSMPP.Utility;
 
-namespace RoaminSMPP.Packet.Response
+namespace AberrantSMPP.Packet.Response
 {
 	/// <summary>
 	/// Description of SmppSubmitMultiResp.

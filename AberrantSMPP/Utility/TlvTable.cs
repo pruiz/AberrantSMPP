@@ -21,7 +21,7 @@ using System.Net;
 using System.Text;
 using System.Diagnostics;
 
-namespace RoaminSMPP.Utility
+namespace AberrantSMPP.Utility
 {
 	/// <summary>
 	/// Tag, length, value table for SMPP PDUs.  The methods in this class assume 

@@ -16,10 +16,10 @@
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
 using System;
-using RoaminSMPP.Utility;
+using AberrantSMPP.Utility;
 using System.Collections;
 
-namespace RoaminSMPP.Packet.Request
+namespace AberrantSMPP.Packet.Request
 {
 	/// <summary>
 	/// Class to represent a generic negative acknowledgment.

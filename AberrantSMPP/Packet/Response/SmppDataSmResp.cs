@@ -18,10 +18,10 @@
 using System;
 using System.Collections;
 using System.Text;
-using RoaminSMPP.Utility;
-using RoaminSMPP.Packet;
+using AberrantSMPP.Utility;
+using AberrantSMPP.Packet;
 
-namespace RoaminSMPP.Packet.Response
+namespace AberrantSMPP.Packet.Response
 {
 	/// <summary>
 	/// Response Pdu for the data_sm command.

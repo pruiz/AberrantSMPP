@@ -17,9 +17,9 @@
  */
 
 using System;
-using RoaminSMPP.Packet.Response;
+using AberrantSMPP.Packet.Response;
 
-namespace RoaminSMPP.EventObjects 
+namespace AberrantSMPP.EventObjects 
 {
 
 	/// <summary>

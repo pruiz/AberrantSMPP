@@ -18,9 +18,9 @@
 
 
 using System;
-using RoaminSMPP.Packet.Request;
+using AberrantSMPP.Packet.Request;
 
-namespace RoaminSMPP.EventObjects
+namespace AberrantSMPP.EventObjects
 {
 	/// <summary>
 	/// Class that defines the bind_sm event.

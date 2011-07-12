@@ -17,9 +17,9 @@
  */
 using System;
 using System.Collections;
-using RoaminSMPP.Packet;
+using AberrantSMPP.Packet;
 
-namespace RoaminSMPP.Packet.Response
+namespace AberrantSMPP.Packet.Response
 {
 	/// <summary>
 	/// This class defines an ESME originated deliver_sm_resp.

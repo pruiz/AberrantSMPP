@@ -19,7 +19,7 @@
 
 using System;
 
-namespace RoaminSMPP.EventObjects 
+namespace AberrantSMPP.EventObjects 
 {
 	/// <summary>
 	/// Event args class.  Holds the internal exception generated.

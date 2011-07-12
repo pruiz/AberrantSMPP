@@ -19,7 +19,7 @@
 using System;
 using System.Text;
 
-namespace RoaminSMPP.Utility
+namespace AberrantSMPP.Utility
 {
 	/// <summary>
 	/// Catchall utility class for dealing with strings in SMPP packets.

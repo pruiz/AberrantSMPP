@@ -16,9 +16,9 @@
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
 using System;
-using RoaminSMPP.Packet;
+using AberrantSMPP.Packet;
 
-namespace RoaminSMPP.Utility
+namespace AberrantSMPP.Utility
 {
 	/// <summary>
 	/// Defines an Unsuccess address, used with the response to submit_multi.

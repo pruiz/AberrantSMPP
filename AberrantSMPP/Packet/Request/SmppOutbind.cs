@@ -18,9 +18,9 @@
 using System;
 using System.Collections;
 using System.Text;
-using RoaminSMPP.Utility;
+using AberrantSMPP.Utility;
 
-namespace RoaminSMPP.Packet.Request
+namespace AberrantSMPP.Packet.Request
 {
 	/// <summary>
 	/// Defines an outbind response(really a request TO us)from the SMSC.

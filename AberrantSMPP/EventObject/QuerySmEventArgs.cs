@@ -18,11 +18,11 @@
 
 using System;
 
-using RoaminSMPP.Packet;
-using RoaminSMPP.Packet.Request;
+using AberrantSMPP.Packet;
+using AberrantSMPP.Packet.Request;
 
 
-namespace RoaminSMPP.EventObjects 
+namespace AberrantSMPP.EventObjects 
 {
 	/// <summary>
 	/// Class that defines a query_sm event.  

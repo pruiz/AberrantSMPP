@@ -17,12 +17,12 @@
  */
 using System;
 using System.Collections;
-using RoaminSMPP;
-using RoaminSMPP.Packet;
-using RoaminSMPP.Packet.Request;
-using RoaminSMPP.Packet.Response;
+using AberrantSMPP;
+using AberrantSMPP.Packet;
+using AberrantSMPP.Packet.Request;
+using AberrantSMPP.Packet.Response;
 
-namespace RoaminSMPP.Utility
+namespace AberrantSMPP.Utility
 {
 	/// <summary>
 	/// Takes incoming packets from an input stream and generates

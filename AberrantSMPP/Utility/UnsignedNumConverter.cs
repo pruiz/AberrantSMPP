@@ -17,7 +17,7 @@
  */
 using System;
 
-namespace RoaminSMPP.Utility
+namespace AberrantSMPP.Utility
 {
 	/// <summary>
 	/// Utility class to do big-endian to little endian conversions and the like.

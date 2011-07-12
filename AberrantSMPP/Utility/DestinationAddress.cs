@@ -16,9 +16,9 @@
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
 using System;
-using RoaminSMPP.Packet;
+using AberrantSMPP.Packet;
 
-namespace RoaminSMPP.Utility
+namespace AberrantSMPP.Utility
 {
 	/// <summary>
 	/// Marker/utility class to define destination addresses for the submit_multi.

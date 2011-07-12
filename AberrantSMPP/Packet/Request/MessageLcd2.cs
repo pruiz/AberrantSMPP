@@ -18,10 +18,10 @@
 using System;
 using System.Text;
 using System.Collections;
-using RoaminSMPP.Packet;
-using RoaminSMPP.Utility;
+using AberrantSMPP.Packet;
+using AberrantSMPP.Utility;
 
-namespace RoaminSMPP.Packet.Request
+namespace AberrantSMPP.Packet.Request
 {
 	/// <summary>
 	/// This class encapsulates common attributes for submit_sm and submit_multi Pdus.

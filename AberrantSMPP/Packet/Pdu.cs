@@ -18,10 +18,10 @@
 using System;
 using System.Collections;
 using System.Diagnostics;
-using RoaminSMPP.Utility;
+using AberrantSMPP.Utility;
 using System.Text;
 
-namespace RoaminSMPP.Packet
+namespace AberrantSMPP.Packet
 {
 	/// <summary>
 	/// Represents a protocol data unit.  This class holds type enumerations and common 
@@ -45,7 +45,7 @@ namespace RoaminSMPP.Packet
 		#region private fields
 		
 		private static uint _StaticSequenceNumber = 0;
-	  private uint _CommandStatus;
+		private uint _CommandStatus;
 		private CommandIdType _CommandID;
 		private TlvTable _tlvTable = new TlvTable();
 		private uint _CustomSequenceNumber = 0;
@@ -186,21 +186,24 @@ namespace RoaminSMPP.Packet
 		/// Gets the hex encoding(big-endian)of this Pdu.
 		///</summary>
 		///<return>The hex-encoded version of the Pdu</return>
-		public virtual void ToMsbHexEncoding()
+		public abstract void ToMsbHexEncoding();
+		/*public virtual void ToMsbHexEncoding()
 		{
 			throw new NotImplementedException("GetMSBHexEncoding is not implemented in Pdu.");
-		}
+		}*/
 		
 		/// <summary>
 		/// Decodes the bind response from the SMSC.  This version throws a NotImplementedException.
 		/// </summary>
-		protected virtual void DecodeSmscResponse()
+		protected abstract void DecodeSmscResponse();
+		/*protected virtual void DecodeSmscResponse()
 		{
 			throw new NotImplementedException("DecodeSmscResponse is not implemented in Pdu.");
-		}
+		}*/
 		
 		#endregion overridable methods
-		
+
+		#region Utility methods
 		/// <summary>
 		/// Calculates the length of the given ArrayList representation of the Pdu and
 		/// inserts this length into the appropriate spot in the Pdu.  This will call
@@ -347,9 +350,11 @@ namespace RoaminSMPP.Packet
 				_SequenceNumber = _CustomSequenceNumber;
 			}
 		}
-		
+
+		#endregion
+
 		#region TLV table methods
-		
+
 		/// <summary>
 		/// Gets the optional parameter string associated with
 		/// the given tag.
@@ -1395,5 +1400,11 @@ namespace RoaminSMPP.Packet
 		}
 		
 		#endregion IDisposable methods
+
+		public override string ToString()
+		{
+			var pduType = GetType().Name;
+			return string.Format("{0} -- Seq:{1} Status:{2} CmdId:{3}", pduType, SequenceNumber, CommandStatus, CommandID);
+		}
 	}
 }

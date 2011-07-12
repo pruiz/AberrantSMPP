@@ -17,10 +17,10 @@
  */
 using System;
 using System.Text;
-using RoaminSMPP.Packet;
-using RoaminSMPP.Utility;
+using AberrantSMPP.Packet;
+using AberrantSMPP.Utility;
 
-namespace RoaminSMPP.Packet.Request
+namespace AberrantSMPP.Packet.Request
 {
 	/// <summary>
 	/// Provides some common attributes for data_sm, submit_sm, and submit_multi.

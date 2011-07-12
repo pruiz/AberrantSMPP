@@ -18,12 +18,12 @@
 
 using System;
 
-using RoaminSMPP.Packet;
-using RoaminSMPP.Packet.Request;
-using RoaminSMPP.Packet.Response;
+using AberrantSMPP.Packet;
+using AberrantSMPP.Packet.Request;
+using AberrantSMPP.Packet.Response;
 
 
-namespace RoaminSMPP.EventObjects 
+namespace AberrantSMPP.EventObjects 
 {
 	/// <summary>
 	/// Class that defines a cancel_sm_resp event.

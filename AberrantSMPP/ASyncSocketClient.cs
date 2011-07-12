@@ -19,7 +19,7 @@
 using System;
 using System.Net.Sockets;
 
-namespace RoaminSMPP
+namespace AberrantSMPP
 {
 	/// <summary>
 	/// Socket class for asynchronous connection.

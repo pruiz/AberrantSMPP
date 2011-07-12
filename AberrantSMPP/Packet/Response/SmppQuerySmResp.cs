@@ -18,10 +18,10 @@
 using System;
 using System.Collections;
 using System.Text;
-using RoaminSMPP.Packet;
-using RoaminSMPP.Utility;
+using AberrantSMPP.Packet;
+using AberrantSMPP.Utility;
 
-namespace RoaminSMPP.Packet.Response
+namespace AberrantSMPP.Packet.Response
 {
 	/// <summary>
 	/// This class defines the response to a query_sm Pdu.
@@ -132,7 +132,8 @@ namespace RoaminSMPP.Packet.Response
 		{}
 		
 		#endregion constructors
-		
+
+		#region Pdu mangling methods..
 		/// <summary>
 		/// Decodes the query_sm response from the SMSC.
 		/// </summary>
@@ -170,6 +171,13 @@ namespace RoaminSMPP.Packet.Response
 			pdu.Add(ErrorCode);
 			
 			PacketBytes = EncodePduForTransmission(pdu);
+		}
+		#endregion
+
+		public override string ToString()
+		{
+			return string.Format("{0} MessageId:{1} FinalDate:{2} MessageStatus:{3} ErrorCode:{4}", 
+				base.ToString(), MessageId, FinalDate, MessageStatus, ErrorCode);
 		}
 	}
 }

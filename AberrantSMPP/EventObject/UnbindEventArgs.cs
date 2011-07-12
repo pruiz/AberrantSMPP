@@ -18,10 +18,10 @@
 
 
 using System;
-using RoaminSMPP.Packet.Response;
-using RoaminSMPP.Packet.Request;
+using AberrantSMPP.Packet.Response;
+using AberrantSMPP.Packet.Request;
 
-namespace RoaminSMPP.EventObjects 
+namespace AberrantSMPP.EventObjects 
 {
 
 	/// <summary>

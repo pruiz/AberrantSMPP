@@ -18,9 +18,9 @@
 using System;
 using System.Text;
 using System.Collections;
-using RoaminSMPP.Utility;
+using AberrantSMPP.Utility;
 
-namespace RoaminSMPP.Packet.Request
+namespace AberrantSMPP.Packet.Request
 {
 	/// <summary>
 	/// Defines an SMPP submit request.

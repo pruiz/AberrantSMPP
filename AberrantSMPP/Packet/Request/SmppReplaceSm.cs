@@ -18,10 +18,10 @@
 using System;
 using System.Text;
 using System.Collections;
-using RoaminSMPP.Packet;
-using RoaminSMPP.Utility;
+using AberrantSMPP.Packet;
+using AberrantSMPP.Utility;
 
-namespace RoaminSMPP.Packet.Request
+namespace AberrantSMPP.Packet.Request
 {
 	/// <summary>
 	/// Pdu to replace a previously submitted short message that hasn't been delivered.

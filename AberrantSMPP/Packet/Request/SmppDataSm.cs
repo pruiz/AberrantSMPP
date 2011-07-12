@@ -17,11 +17,11 @@
  */
 using System;
 using System.Text;
-using RoaminSMPP.Utility;
+using AberrantSMPP.Utility;
 using System.Collections;
-using RoaminSMPP.Packet;
+using AberrantSMPP.Packet;
 
-namespace RoaminSMPP.Packet.Request
+namespace AberrantSMPP.Packet.Request
 {
 	/// <summary>
 	/// This command is used to transfer data between the SMSC and the ESME(and can be

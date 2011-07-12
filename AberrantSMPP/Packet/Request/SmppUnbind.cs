@@ -17,9 +17,9 @@
  */
 using System;
 using System.Collections;
-using RoaminSMPP.Utility;
+using AberrantSMPP.Utility;
 
-namespace RoaminSMPP.Packet.Request
+namespace AberrantSMPP.Packet.Request
 {
 	/// <summary>
 	/// Class to issue an unbind request to the SMSC.

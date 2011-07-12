@@ -18,10 +18,10 @@
 using System;
 using System.Text;
 using System.Collections;
-using RoaminSMPP;
-using RoaminSMPP.Utility;
+using AberrantSMPP;
+using AberrantSMPP.Utility;
 
-namespace RoaminSMPP.Packet.Response
+namespace AberrantSMPP.Packet.Response
 {
 	/// <summary>
 	/// Class to define an SMSC bind response.

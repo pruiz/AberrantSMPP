@@ -17,11 +17,11 @@
  */
 using System;
 using System.Text;
-using RoaminSMPP.Packet;
+using AberrantSMPP.Packet;
 using System.Collections;
-using RoaminSMPP.Utility;
+using AberrantSMPP.Utility;
 
-namespace RoaminSMPP.Packet.Request
+namespace AberrantSMPP.Packet.Request
 {
 	/// <summary>
 	/// This class defines a query_sm ESME originated Pdu.

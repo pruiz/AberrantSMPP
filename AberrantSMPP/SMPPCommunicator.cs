@@ -19,16 +19,16 @@ using System;
 using System.Net.Sockets;
 using System.Collections;
 using System.Threading;
-using RoaminSMPP.Packet.Request;
-using RoaminSMPP.Utility;
-using RoaminSMPP.Packet.Response;
-using RoaminSMPP.Packet;
-using RoaminSMPP.EventObjects;
+using AberrantSMPP.Packet.Request;
+using AberrantSMPP.Utility;
+using AberrantSMPP.Packet.Response;
+using AberrantSMPP.Packet;
+using AberrantSMPP.EventObjects;
 using System.Timers;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace RoaminSMPP 
+namespace AberrantSMPP 
 {
 	/// <summary>
 	/// Wrapper class to provide asynchronous I/O for the RoaminSMPP library.  Note that most 

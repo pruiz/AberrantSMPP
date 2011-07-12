@@ -18,7 +18,7 @@
 using System;
 using System.Collections;
 
-namespace RoaminSMPP.Packet.Response
+namespace AberrantSMPP.Packet.Response
 {
 	/// <summary>
 	/// Defines the unbind response from the SMSC.

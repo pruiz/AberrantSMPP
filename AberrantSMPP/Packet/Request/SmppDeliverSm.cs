@@ -17,11 +17,11 @@
  */
 using System;
 using System.Text;
-using RoaminSMPP.Utility;
-using RoaminSMPP.Packet;
+using AberrantSMPP.Utility;
+using AberrantSMPP.Packet;
 using System.Collections;
 
-namespace RoaminSMPP.Packet.Request
+namespace AberrantSMPP.Packet.Request
 {
 	/// <summary>
 	/// This class defines a deliver_sm that is SMSC generated.  This does

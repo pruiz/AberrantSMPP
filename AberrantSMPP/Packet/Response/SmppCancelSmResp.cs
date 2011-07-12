@@ -17,9 +17,9 @@
  */
 using System;
 using System.Collections;
-using RoaminSMPP.Packet;
+using AberrantSMPP.Packet;
 	
-namespace RoaminSMPP.Packet.Response
+namespace AberrantSMPP.Packet.Response
 {	
 	/// <summary>
 	/// Response Pdu for the cancel_sm command.

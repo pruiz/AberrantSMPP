@@ -18,10 +18,10 @@
 using System;
 using System.Text;
 using System.Collections;
-using RoaminSMPP;
-using RoaminSMPP.Utility;
+using AberrantSMPP;
+using AberrantSMPP.Utility;
 
-namespace RoaminSMPP.Packet.Request
+namespace AberrantSMPP.Packet.Request
 {
 	/// <summary>
 	/// Cancels one or more previous short messages. A particular message or all messages

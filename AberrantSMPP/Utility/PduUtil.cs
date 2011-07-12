@@ -19,9 +19,9 @@
 using System;
 using System.Collections;
 using System.Text;
-using RoaminSMPP.Packet;
+using AberrantSMPP.Packet;
 
-namespace RoaminSMPP.Utility
+namespace AberrantSMPP.Utility
 {
 	/// <summary>
 	/// Holds common functionality for requests.

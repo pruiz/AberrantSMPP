@@ -16,10 +16,10 @@
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
 using System;
-using RoaminSMPP.Packet;
+using AberrantSMPP.Packet;
 using System.Collections;
 
-namespace RoaminSMPP.Packet.Request
+namespace AberrantSMPP.Packet.Request
 {
 	/// <summary>
 	/// Defines the SMPP enquire_link Pdu.  This is basically just the header.
