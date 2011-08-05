@@ -1403,8 +1403,21 @@ namespace AberrantSMPP.Packet
 
 		public override string ToString()
 		{
-			var pduType = GetType().Name;
-			return string.Format("{0} -- Seq:{1} Status:{2} CmdId:{3}", pduType, SequenceNumber, CommandStatus, CommandID);
+			var sb = new StringBuilder();
+			sb.AppendFormat("{0} -- ", GetType().Name);
+
+			foreach (var property in GetType().GetProperties())
+			{
+				object value = "--";
+
+				try { 
+					value = property.GetValue(this, null);
+				} catch { }
+
+				sb.AppendFormat("{0}:{1} ", property.Name, value);
+			}
+
+			return sb.ToString();
 		}
 	}
 }
