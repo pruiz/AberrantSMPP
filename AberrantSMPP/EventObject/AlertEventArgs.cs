@@ -27,28 +27,15 @@ namespace AberrantSMPP.EventObjects
 	/// Class that defines the bind event.  Includes all the available
 	/// mandatory and optional parameters in a bind_response.
 	/// </summary>
-	public class AlertEventArgs : SmppEventArgs 
+	public class AlertEventArgs : SmppEventArgs<SmppAlertNotification>
 	{
-		private SmppAlertNotification _response;
-
-		/// <summary>
-		/// Allows access to the underlying Pdu.
-		/// </summary>
-		public SmppAlertNotification AlertPdu
-		{
-			get
-			{
-				return _response;
-			}
-		}
-
 		/// <summary>
 		/// Sets up the AlertEventArgs.
 		/// </summary>
 		/// <param name="response">The SmppAlertNotification.</param>
-		internal AlertEventArgs(SmppAlertNotification response): base(response)
+		internal AlertEventArgs(SmppAlertNotification response)
+			: base(response)
 		{
-			_response = response;
 		}
 	}
 }

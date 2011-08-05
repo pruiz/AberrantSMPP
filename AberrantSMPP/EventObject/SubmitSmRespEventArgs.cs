@@ -22,32 +22,18 @@ using AberrantSMPP.Packet.Response;
 
 namespace AberrantSMPP.EventObjects 
 {
-
 	/// <summary>
 	/// Class that defines the submit_sm_resp event.
 	/// </summary>
-	public class SubmitSmRespEventArgs : SmppEventArgs 
+	public class SubmitSmRespEventArgs : SmppEventArgs<SmppSubmitSmResp> 
 	{
-		private SmppSubmitSmResp _response;
-
-		/// <summary>
-		/// Allows access to the underlying Pdu.
-		/// </summary>
-		public SmppSubmitSmResp SubmitSmPdu
-		{
-			get
-			{
-				return _response;
-			}
-		}
-
 		/// <summary>
 		/// Sets up the SubmitSmRespEventArgs.
 		/// </summary>
 		/// <param name="response">The SmppSubmitSmResp.</param>
-		internal SubmitSmRespEventArgs(SmppSubmitSmResp response): base(response)
+		internal SubmitSmRespEventArgs(SmppSubmitSmResp response)
+			: base(response)
 		{
-			_response = response;
 		}
 	}
 }

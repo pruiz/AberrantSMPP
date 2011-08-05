@@ -22,18 +22,18 @@ using AberrantSMPP.Packet;
 
 namespace AberrantSMPP.EventObjects 
 {
-
 	/// <summary>
 	/// Base class to provide some functionality for all events.
 	/// </summary>
-	public abstract class SmppEventArgs : System.EventArgs 
+	public abstract class SmppEventArgs<T> : System.EventArgs 
+		where T : Pdu
 	{
-		private Pdu _response;
+		private T _response;
 
 		/// <summary>
 		/// Allows access to the underlying Pdu.
 		/// </summary>
-		public Pdu ResponsePdu
+		public T ResponsePdu
 		{
 			get
 			{
@@ -45,9 +45,20 @@ namespace AberrantSMPP.EventObjects
 		/// Sets up the SmppEventArgs.
 		/// </summary>
 		/// <param name="response">The SMPPResponse.</param>
-		public SmppEventArgs(Pdu response)
+		public SmppEventArgs(T response)
 		{
 			_response = response;
+		}
+	}
+
+	/// <summary>
+	/// Base class to provide some functionality for all events.
+	/// </summary>
+	public abstract class SmppEventArgs : SmppEventArgs<Pdu>
+	{
+		public SmppEventArgs(Pdu response)
+			: base(response)
+		{
 		}
 	}
 }
