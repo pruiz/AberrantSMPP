@@ -6,11 +6,11 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("AberrantSMPP")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("AberrantSMPP Library rev. $GIT_COMMIT$")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("CRT0 Solutions, LLC")]
 [assembly: AssemblyProduct("AberrantSMPP")]
-[assembly: AssemblyCopyright("Copyright © CRT0 Solutions, LLC 2011")]
+[assembly: AssemblyCopyright("Copyright © CRT0 Solutions, LLC (2011)")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -34,5 +34,6 @@ using System.Runtime.InteropServices;
 // [assembly: AssemblyVersion("1.0.*")]
 
 // TODO: AutoVersioning thru CI.
-[assembly: AssemblyVersion("1.0.0.*")]
-[assembly: AssemblyFileVersion("1.0.0.*")]
+[assembly: AssemblyVersion("0.0.0.0")]
+[assembly: AssemblyFileVersion("0.0.0.0")]
+[assembly: AssemblyInformationalVersion("0.0.0.0 - GIT_COMMIT")]
