@@ -500,11 +500,11 @@ namespace AberrantSMPP.Packet.Request
 		/// <summary>
 		/// The language of the short message.
 		/// </summary>
-		public LanguageType LanguageIndicator
+		public LanguageIdentifier LanguageIndicator
 		{
 			get
 			{
-				return(LanguageType)
+				return(LanguageIdentifier)
 					GetOptionalParamBytes((ushort)OptionalParamCodes.language_indicator)[0];
 			}
 			

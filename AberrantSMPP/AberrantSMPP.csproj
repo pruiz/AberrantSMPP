@@ -70,6 +70,7 @@
     <Compile Include="EventObject\UnbindEventArgs.cs" />
     <Compile Include="EventObject\UnbindRespEventArgs.cs" />
     <Compile Include="Packet\DataCoding.cs" />
+    <Compile Include="Packet\LanguageIdentifier.cs" />
     <Compile Include="Packet\Pdu.cs" />
     <Compile Include="Packet\Request\MessageLcd2.cs" />
     <Compile Include="Packet\Request\MessageLcd3.cs" />
