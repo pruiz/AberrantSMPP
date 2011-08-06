@@ -508,7 +508,7 @@ namespace AberrantSMPP.Packet.Request
 			DestinationAddress = SmppStringUtil.GetCStringFromBody(ref remainder, 2);
 			EsmClass = remainder[0];
 			RegisteredDelivery = (RegisteredDeliveryType)remainder[1];
-			DataCoding = (DataCodingType)remainder[2];
+			DataCoding = (DataCoding)remainder[2];
 			
 			TranslateTlvDataIntoTable(remainder, 3);
 		}

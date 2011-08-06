@@ -31,7 +31,7 @@ namespace AberrantSMPP.Packet.Request
 
 		private string _ServiceType = string.Empty;
 		private byte _EsmClass = 0;
-		private DataCodingType _DataCoding = Pdu.DataCodingType.SMSCDefault;
+		private DataCoding _DataCoding = DataCoding.SMSCDefault;
 		
 		#endregion private fields
 		
@@ -94,7 +94,7 @@ namespace AberrantSMPP.Packet.Request
 		/// <summary>
 		/// Defines the encoding scheme of the short message user data.
 		/// </summary>
-		public DataCodingType DataCoding
+		public DataCoding DataCoding
 		{
 			get
 			{

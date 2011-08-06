@@ -335,7 +335,7 @@ namespace AberrantSMPP.Packet.Request
 			ValidityPeriod = SmppStringUtil.GetCStringFromBody(ref remainder);
 			RegisteredDelivery =(RegisteredDeliveryType)remainder[0];
 			ReplaceIfPresentFlag =(remainder[1] == 0)? false : true;
-			DataCoding =(DataCodingType)remainder[2];
+			DataCoding =(DataCoding)remainder[2];
 			SmDefaultMessageId = remainder[3];
 			_SmLength = remainder[4];
 			ShortMessage = SmppStringUtil.GetStringFromBody(ref remainder, 5, 5 + _SmLength);

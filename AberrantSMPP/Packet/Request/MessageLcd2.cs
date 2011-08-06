@@ -257,7 +257,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			pdu.Add((byte)DataCoding);
 			pdu.Add(SmDefaultMessageId);
-			_SmLength = PduUtil.InsertShortMessage(pdu, ShortMessage);
+			_SmLength = PduUtil.InsertShortMessage(pdu, DataCoding, ShortMessage);
 			
 			pdu.TrimToSize();
 			

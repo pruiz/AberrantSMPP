@@ -1,4 +1,4 @@
-/* RoaminSMPP: SMPP communication library
+﻿/* RoaminSMPP: SMPP communication library
  * Copyright (C) 2004, 2005 Christopher M. Bouzek
  *
  * This file is part of RoaminSMPP.
@@ -40,6 +40,37 @@ namespace AberrantSMPP.Utility
 		private PduUtil()
 		{
 		}
+
+		public static byte[] GetEncodedText(DataCoding coding, string text)
+		{
+			switch (coding)
+			{
+				case DataCoding.SMSCDefault:
+					//return GSM7BitEncoding.GetBytes(text);
+				case DataCoding.OctetUnspecifiedA:
+				case DataCoding.OctetUnspecifiedB:
+					return GSM8BitEncoding.GetBytes(text);
+				case DataCoding.IA5_ASCII:
+					return Encoding.ASCII.GetBytes(text);
+				case DataCoding.Latin1:
+					return Encoding.GetEncoding("iso-8859-1").GetBytes(text);
+				case DataCoding.JIS:
+				case DataCoding.ExtendedKanjiJIS:
+					return Encoding.GetEncoding("EUC-JP").GetBytes(text);
+				case DataCoding.Cyrillic:
+					return Encoding.GetEncoding("iso-8859-5").GetBytes(text);
+				case DataCoding.Latin_Hebrew:
+					return Encoding.GetEncoding("iso-8859-8").GetBytes(text);
+				case DataCoding.UCS2:
+					return Encoding.Unicode.GetBytes(text);
+				case DataCoding.MusicCodes:
+					return Encoding.GetEncoding("iso-2022-jp").GetBytes(text);
+				case DataCoding.KS_C:
+					return Encoding.GetEncoding("ks_c_5601-1987").GetBytes(text);
+				default:
+					throw new ArgumentException("Invalid (or unsupported) DataCoding value.");
+			}
+		}
 		
 		/// <summary>
 		/// Inserts the short message into the PDU ArrayList.
@@ -47,7 +78,7 @@ namespace AberrantSMPP.Utility
 		/// <param name="pdu">The PDU to put the short message into.</param>
 		/// <param name="ShortMessage">The short message to insert.</param>
 		/// <returns>The length of the short message.</returns>
-		public static byte InsertShortMessage(ArrayList pdu, object ShortMessage)
+		public static byte InsertShortMessage(ArrayList pdu, DataCoding coding, object ShortMessage)
 		{
 			byte[] msg;
 			
@@ -55,13 +86,13 @@ namespace AberrantSMPP.Utility
 			{
 				msg = new Byte[]{0x00};
 			}
-			else if(ShortMessage is string)
-			{
-				msg =  Encoding.ASCII.GetBytes((string)ShortMessage);
-			}
 			else if(ShortMessage is byte[])
 			{
 				msg =(byte[])ShortMessage;
+			}
+			else if (ShortMessage is string)
+			{
+				msg = GetEncodedText(coding, ShortMessage as string);
 			}
 			else
 			{

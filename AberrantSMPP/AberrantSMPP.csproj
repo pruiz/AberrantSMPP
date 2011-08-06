@@ -104,6 +104,7 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Utility\DestinationAddress.cs" />
+    <Compile Include="Utility\GSMEncoding.cs" />
     <Compile Include="Utility\PduFactory.cs" />
     <Compile Include="Utility\PduUtil.cs" />
     <Compile Include="Utility\SmppStringUtil.cs" />

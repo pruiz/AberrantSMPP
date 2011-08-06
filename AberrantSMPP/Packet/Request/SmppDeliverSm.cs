@@ -42,7 +42,7 @@ namespace AberrantSMPP.Packet.Request
 		private SmppVersionType _ProtocolId = SmppVersionType.Version3_4;
 		private PriorityType _PriorityFlag = PriorityType.Lowest;
 		private RegisteredDeliveryType _RegisteredDelivery = RegisteredDeliveryType.None;
-		private DataCodingType _DataCoding = DataCodingType.SMSCDefault;
+		private DataCoding _DataCoding = DataCoding.SMSCDefault;
 		private byte _SmLength = 0;
 		private string _ShortMessage = null;
 		
@@ -229,7 +229,7 @@ namespace AberrantSMPP.Packet.Request
 		/// <summary>
 		/// Indicates the encoding scheme of the short message.
 		/// </summary>
-		public DataCodingType DataCoding
+		public DataCoding DataCoding
 		{
 			get
 			{
@@ -627,7 +627,7 @@ namespace AberrantSMPP.Packet.Request
 			//reading them
 			RegisteredDelivery = (RegisteredDeliveryType)remainder[5];
 			//replace_if_present is always null, so don't bother reading it
-			DataCoding = (DataCodingType)remainder[7];
+			DataCoding = (DataCoding)remainder[7];
 			//sm_default_msg_id is always null, so don't bother reading it
 			_SmLength = remainder[9];
 			ShortMessage = SmppStringUtil.GetStringFromBody(ref remainder, 10, 10 + _SmLength);
@@ -670,7 +670,7 @@ namespace AberrantSMPP.Packet.Request
 			pdu.Add((byte)DataCoding);
 			//sm_default_msg_id is always null, so set it to zero
 			pdu.Add((byte)0);
-			_SmLength = PduUtil.InsertShortMessage(pdu, ShortMessage);
+			_SmLength = PduUtil.InsertShortMessage(pdu, DataCoding, ShortMessage);
 			
 			PacketBytes = EncodePduForTransmission(pdu);
 		}

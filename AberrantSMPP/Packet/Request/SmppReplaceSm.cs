@@ -223,8 +223,8 @@ namespace AberrantSMPP.Packet.Request
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(ValidityPeriod)));
 			pdu.Add((byte)RegisteredDelivery);
 			pdu.Add(_SmDefaultMessageId);
-			
-			_SmLength = PduUtil.InsertShortMessage(pdu, ShortMessage);
+
+			_SmLength = PduUtil.InsertShortMessage(pdu, DataCoding.SMSCDefault, ShortMessage);
 			
 			PacketBytes = EncodePduForTransmission(pdu);
 		}

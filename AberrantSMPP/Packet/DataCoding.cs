@@ -7,6 +7,9 @@ namespace AberrantSMPP.Packet
 	/// <summary>
 	/// Enumerates the data coding types.
 	/// </summary>
+	/// <remarks>
+	/// See SMPP Spec v3.4, 5.2.19 - data_coding
+	/// </remarks>
 	public enum DataCoding : byte
 	{
 		/// <summary>
@@ -30,31 +33,35 @@ namespace AberrantSMPP.Packet
 		/// </summary>
 		OctetUnspecifiedA = 0x04,
 		/// <summary>
-		/// JIS
+		/// JIS (X-0208-1990)
 		/// </summary>
 		JIS = 0x05,
 		/// <summary>
-		/// Cyrillic
+		/// Cyrillic (ISO-8859-5)
 		/// </summary>
 		Cyrillic = 0x06,
 		/// <summary>
-		/// Latin_Hebrew
+		/// Latin_Hebrew (ISO-8859-8)
 		/// </summary>
 		Latin_Hebrew = 0x07,
 		/// <summary>
-		/// Pictogram
+		/// UTF16/UCS2 (ISO/IEC-10646)
+		/// </summary>
+		UCS2 = 0x08,
+		/// <summary>
+		/// Pictogram 
 		/// </summary>
 		Pictogram = 0x09,
 		/// <summary>
-		/// MusicCodes
+		/// MusicCodes (ISO-2022-JP)
 		/// </summary>
 		MusicCodes = 0x0A,
 		/// <summary>
-		/// ExtendedKanjiJIS
+		/// ExtendedKanjiJIS (X-0212-1990)
 		/// </summary>
 		ExtendedKanjiJIS = 0x0D,
 		/// <summary>
-		/// KS_C
+		/// KS_C (5601)
 		/// </summary>
 		KS_C = 0x0E
 	}
