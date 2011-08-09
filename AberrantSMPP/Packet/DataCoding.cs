@@ -45,7 +45,7 @@ namespace AberrantSMPP.Packet
 		/// </summary>
 		Latin_Hebrew = 0x07,
 		/// <summary>
-		/// UTF16/UCS2 (ISO/IEC-10646)
+		/// UTF16/UCS2 (ISO/IEC-10646 - Big Endian format)
 		/// </summary>
 		UCS2 = 0x08,
 		/// <summary>

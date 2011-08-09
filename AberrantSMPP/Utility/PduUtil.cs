@@ -34,6 +34,7 @@ namespace AberrantSMPP.Utility
 		private const int SUBADDRESS_MAX = 23;
 		
 		#endregion constants
+
 		/// <summary>
 		/// Do not instantiate
 		/// </summary>
@@ -62,7 +63,8 @@ namespace AberrantSMPP.Utility
 				case DataCoding.Latin_Hebrew:
 					return Encoding.GetEncoding("iso-8859-8").GetBytes(text);
 				case DataCoding.UCS2:
-					return Encoding.Unicode.GetBytes(text);
+					// 1201 == Unicode Big Endian (FFFE)!
+					return Encoding.GetEncoding(1201).GetBytes(text);
 				case DataCoding.MusicCodes:
 					return Encoding.GetEncoding("iso-2022-jp").GetBytes(text);
 				case DataCoding.KS_C:
