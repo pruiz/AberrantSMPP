@@ -5,6 +5,36 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AberrantSMPP", "AberrantSMP
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestClient", "TestClient\TestClient.csproj", "{9A549B1F-9027-4FC6-B67A-390B3F532A4B}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{07328239-94EF-4F55-A1F7-095CFB9E27E4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UnixUtils", "UnixUtils", "{3B915387-7317-4F39-AE2B-05B549852BF6}"
+	ProjectSection(SolutionItems) = preProject
+		Tools\UnixUtils\libiconv2.dll = Tools\UnixUtils\libiconv2.dll
+		Tools\UnixUtils\libintl3.dll = Tools\UnixUtils\libintl3.dll
+		Tools\UnixUtils\regex2.dll = Tools\UnixUtils\regex2.dll
+		Tools\UnixUtils\sed.exe = Tools\UnixUtils\sed.exe
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AberrantSMPP.Tests", "AberrantSMPP.Tests\AberrantSMPP.Tests.csproj", "{8C7AFCC5-AEF4-4E79-9A1E-330E19ACB959}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libs", "Libs", "{11BEF2CE-ED05-40B7-8241-53AD3C5CE82D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Gallio", "Gallio", "{1AA7F588-B76F-4B59-865D-EC1B6A400522}"
+	ProjectSection(SolutionItems) = preProject
+		Libs\Gallio\Gallio.dll = Libs\Gallio\Gallio.dll
+		Libs\Gallio\Gallio.pdb = Libs\Gallio\Gallio.pdb
+		Libs\Gallio\Gallio35.dll = Libs\Gallio\Gallio35.dll
+		Libs\Gallio\Gallio35.pdb = Libs\Gallio\Gallio35.pdb
+		Libs\Gallio\Gallio35.plugin = Libs\Gallio\Gallio35.plugin
+		Libs\Gallio\Gallio35.xml = Libs\Gallio\Gallio35.xml
+		Libs\Gallio\MbUnit.dll = Libs\Gallio\MbUnit.dll
+		Libs\Gallio\MbUnit.pdb = Libs\Gallio\MbUnit.pdb
+		Libs\Gallio\MbUnit35.dll = Libs\Gallio\MbUnit35.dll
+		Libs\Gallio\MbUnit35.pdb = Libs\Gallio\MbUnit35.pdb
+		Libs\Gallio\MbUnit35.plugin = Libs\Gallio\MbUnit35.plugin
+		Libs\Gallio\MbUnit35.xml = Libs\Gallio\MbUnit35.xml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,17 +56,33 @@ Global
 		{CB0A2871-0BC6-4ADC-BA61-AE23144F8A3C}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{CB0A2871-0BC6-4ADC-BA61-AE23144F8A3C}.Release|x86.ActiveCfg = Release|Any CPU
 		{9A549B1F-9027-4FC6-B67A-390B3F532A4B}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{9A549B1F-9027-4FC6-B67A-390B3F532A4B}.Debug|Any CPU.Build.0 = Debug|x86
 		{9A549B1F-9027-4FC6-B67A-390B3F532A4B}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
 		{9A549B1F-9027-4FC6-B67A-390B3F532A4B}.Debug|Mixed Platforms.Build.0 = Debug|x86
 		{9A549B1F-9027-4FC6-B67A-390B3F532A4B}.Debug|x86.ActiveCfg = Debug|x86
 		{9A549B1F-9027-4FC6-B67A-390B3F532A4B}.Debug|x86.Build.0 = Debug|x86
 		{9A549B1F-9027-4FC6-B67A-390B3F532A4B}.Release|Any CPU.ActiveCfg = Release|x86
+		{9A549B1F-9027-4FC6-B67A-390B3F532A4B}.Release|Any CPU.Build.0 = Release|x86
 		{9A549B1F-9027-4FC6-B67A-390B3F532A4B}.Release|Mixed Platforms.ActiveCfg = Release|x86
 		{9A549B1F-9027-4FC6-B67A-390B3F532A4B}.Release|Mixed Platforms.Build.0 = Release|x86
 		{9A549B1F-9027-4FC6-B67A-390B3F532A4B}.Release|x86.ActiveCfg = Release|x86
 		{9A549B1F-9027-4FC6-B67A-390B3F532A4B}.Release|x86.Build.0 = Release|x86
+		{8C7AFCC5-AEF4-4E79-9A1E-330E19ACB959}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C7AFCC5-AEF4-4E79-9A1E-330E19ACB959}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C7AFCC5-AEF4-4E79-9A1E-330E19ACB959}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{8C7AFCC5-AEF4-4E79-9A1E-330E19ACB959}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{8C7AFCC5-AEF4-4E79-9A1E-330E19ACB959}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8C7AFCC5-AEF4-4E79-9A1E-330E19ACB959}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C7AFCC5-AEF4-4E79-9A1E-330E19ACB959}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8C7AFCC5-AEF4-4E79-9A1E-330E19ACB959}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{8C7AFCC5-AEF4-4E79-9A1E-330E19ACB959}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{8C7AFCC5-AEF4-4E79-9A1E-330E19ACB959}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{3B915387-7317-4F39-AE2B-05B549852BF6} = {07328239-94EF-4F55-A1F7-095CFB9E27E4}
+		{1AA7F588-B76F-4B59-865D-EC1B6A400522} = {11BEF2CE-ED05-40B7-8241-53AD3C5CE82D}
 	EndGlobalSection
 EndGlobal

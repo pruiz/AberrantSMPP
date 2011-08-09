@@ -49,7 +49,7 @@ namespace AberrantSMPP.Utility
 					//return GSM7BitEncoding.GetBytes(text);
 				case DataCoding.OctetUnspecifiedA:
 				case DataCoding.OctetUnspecifiedB:
-					return GSM8BitEncoding.GetBytes(text);
+					return new GSMEncoding().GetBytes(text);
 				case DataCoding.IA5_ASCII:
 					return Encoding.ASCII.GetBytes(text);
 				case DataCoding.Latin1:

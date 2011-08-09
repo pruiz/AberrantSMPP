@@ -13,7 +13,7 @@ namespace AberrantSMPP.Packet
 	public enum DataCoding : byte
 	{
 		/// <summary>
-		/// SMSCDefault
+		/// SMSCDefault (GSM 03.38 - 7bit)
 		/// </summary>
 		SMSCDefault = 0x00,
 		/// <summary>
