@@ -24,8 +24,10 @@ namespace AberrantSMPP.Packet.Request
 	/// <summary>
 	/// Defines the SMPP enquire_link Pdu.  This is basically just the header.
 	/// </summary>
-	public class SmppEnquireLink : Pdu
+	public class SmppEnquireLink : SmppRequest
 	{
+		protected override CommandId DefaultCommandId { get { return CommandId.enquire_link; } }
+
 		#region constructors
 		
 		/// <summary>
@@ -42,27 +44,7 @@ namespace AberrantSMPP.Packet.Request
 		{}
 		
 		#endregion constructors
-		
-		/// <summary>
-		/// Initializes this Pdu.
-		/// </summary>
-		protected override void InitPdu()
-		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.enquire_link;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
-			PacketBytes = EncodePduForTransmission(pdu);
-		}
-		
+				
 		/// <summary>
 		/// This decodes the query_sm Pdu.
 		/// </summary>

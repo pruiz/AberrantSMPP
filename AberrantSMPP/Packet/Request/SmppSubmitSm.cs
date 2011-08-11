@@ -25,7 +25,7 @@ namespace AberrantSMPP.Packet.Request
 	/// <summary>
 	/// Defines an SMPP submit request.
 	/// </summary>
-	public class SmppSubmitSm : MessageLcd2
+	public class SmppSubmitSm : SmppSubmit
 	{
 		#region private fields
 
@@ -36,7 +36,8 @@ namespace AberrantSMPP.Packet.Request
 		#endregion private fields
 		
 		#region mandatory parameters
-		
+		protected override CommandId DefaultCommandId { get { return CommandId.submit_sm; } }
+
 		/// <summary>
 		/// Type of Number for destination.
 		/// </summary>
@@ -271,6 +272,10 @@ namespace AberrantSMPP.Packet.Request
 		/// </summary>
 		public SmppSubmitSm(): base()
 		{
+			DestinationAddressTon = Pdu.TonType.International;
+			DestinationAddressNpi = Pdu.NpiType.ISDN;
+			DestinationAddress = null;
+			CommandStatus = 0;
 		}
 		
 		/// <summary>
@@ -282,26 +287,8 @@ namespace AberrantSMPP.Packet.Request
 		
 		#endregion constructors
 		
-		/// <summary>
-		/// Initializes this Pdu.
-		/// </summary>
-		protected override void InitPdu()
+		protected override void AppendPduData(ArrayList pdu)
 		{
-			base.InitPdu();
-			DestinationAddressTon = Pdu.TonType.International;
-			DestinationAddressNpi = Pdu.NpiType.ISDN;
-			DestinationAddress = null;
-			CommandStatus = 0;
-			CommandID = CommandIdType.submit_sm;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(ServiceType)));
 			pdu.Add((byte)SourceAddressTon);
 			pdu.Add((byte)SourceAddressNpi);
@@ -310,8 +297,6 @@ namespace AberrantSMPP.Packet.Request
 			pdu.Add((byte)DestinationAddressNpi);
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(DestinationAddress)));
 			pdu.AddRange(GetBytesAfterDestination());
-			
-			PacketBytes = EncodePduForTransmission(pdu);
 		}
 		
 		/// <summary>

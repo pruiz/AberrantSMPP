@@ -27,7 +27,7 @@ namespace AberrantSMPP.Packet.Request
 	/// Pdu to replace a previously submitted short message that hasn't been delivered.
 	/// The match is based on the message_id and source addresses of the original message.
 	/// </summary>
-	public class SmppReplaceSm : MessageLcd4
+	public class SmppReplaceSm : SmppRequest2
 	{
 		#region private fields
 		
@@ -41,7 +41,8 @@ namespace AberrantSMPP.Packet.Request
 		#endregion private fields
 		
 		#region mandatory parameters
-		
+		protected override CommandId DefaultCommandId { get { return CommandId.replace_sm; } }
+
 		/// <summary>
 		/// SMSC message ID of the message to be replaced. This must be the message ID of the 
 		/// original message.
@@ -199,22 +200,8 @@ namespace AberrantSMPP.Packet.Request
 		
 		#endregion constructors
 		
-		/// <summary>
-		/// Initializes this Pdu.
-		/// </summary>
-		protected override void InitPdu()
+		protected override void AppendPduData(ArrayList pdu)
 		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.replace_sm;
-		}
-		
-		/// <summary>
-		/// Generates the hex encoded bytes for a replace_sm Pdu.
-		/// </summary>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(MessageId)));
 			pdu.Add((byte)SourceAddressTon);
 			pdu.Add((byte)SourceAddressNpi);
@@ -225,8 +212,6 @@ namespace AberrantSMPP.Packet.Request
 			pdu.Add(_SmDefaultMessageId);
 
 			_SmLength = PduUtil.InsertShortMessage(pdu, DataCoding.SMSCDefault, ShortMessage);
-			
-			PacketBytes = EncodePduForTransmission(pdu);
 		}
 		
 		/// <summary>

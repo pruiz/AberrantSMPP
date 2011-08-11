@@ -25,6 +25,8 @@ namespace AberrantSMPP.Packet.Response
 	/// </summary>
 	public class SmppUnbindResp : Pdu
 	{
+		protected override CommandId DefaultCommandId { get { return CommandId.unbind_resp; } }
+
 		#region constructors
 		
 		/// <summary>
@@ -53,25 +55,9 @@ namespace AberrantSMPP.Packet.Response
 			TranslateTlvDataIntoTable(BytesAfterHeader);
 		}
 		
-		/// <summary>
-		/// Initializes this Pdu for sending purposes.
-		/// </summary>
-		protected override void InitPdu()
+		protected override void AppendPduData(ArrayList pdu)
 		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.unbind_resp;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
-			
-			PacketBytes = EncodePduForTransmission(pdu);
+			// Do nothing..
 		}
 	}
 }

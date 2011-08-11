@@ -24,8 +24,10 @@ namespace AberrantSMPP.Packet.Response
 	/// <summary>
 	/// Defines the response Pdu from an enquire_link.
 	/// </summary>
-	public class SmppEnquireLinkResp : Pdu
+	public class SmppEnquireLinkResp : SmppResponse
 	{
+		protected override CommandId DefaultCommandId { get { return CommandId.enquire_link_resp; } }
+
 		#region constructors
 		
 		/// <summary>
@@ -49,27 +51,6 @@ namespace AberrantSMPP.Packet.Response
 		protected override void DecodeSmscResponse()
 		{
 			TranslateTlvDataIntoTable(BytesAfterHeader);
-		}
-		
-		/// <summary>
-		/// Initializes this Pdu for sending purposes.
-		/// </summary>
-		protected override void InitPdu()
-		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.enquire_link_resp;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
-			
-			PacketBytes = EncodePduForTransmission(pdu);
 		}
 	}
 }

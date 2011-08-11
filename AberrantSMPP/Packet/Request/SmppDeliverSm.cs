@@ -27,7 +27,7 @@ namespace AberrantSMPP.Packet.Request
 	/// This class defines a deliver_sm that is SMSC generated.  This does
 	/// NOT handle anything other than strings in the short message.
 	/// </summary>
-	public class SmppDeliverSm : Pdu
+	public class SmppDeliverSm : SmppRequest
 	{
 		#region private fields
 		
@@ -47,7 +47,9 @@ namespace AberrantSMPP.Packet.Request
 		private string _ShortMessage = null;
 		
 		#endregion private fields
-		
+
+		protected override CommandId DefaultCommandId { get { return CommandId.deliver_sm; } }
+
 		/// <summary>
 		/// Used to indicate the SMS Application service associated with the message.
 		/// If this is unknown, null is returned.
@@ -442,7 +444,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				PduUtil.SetMessagePayload(this, value);
+				PduUtil.SetMessagePayload(this, DataCoding, value);
 			}
 		}
 		
@@ -634,23 +636,8 @@ namespace AberrantSMPP.Packet.Request
 			TranslateTlvDataIntoTable(remainder);
 		}
 		
-		/// <summary>
-		/// Initializes this Pdu.
-		/// </summary>
-		protected override void InitPdu()
+		protected override void AppendPduData(ArrayList pdu)
 		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.deliver_sm;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(ServiceType)));
 			pdu.Add((byte)SourceAddressTon);
 			pdu.Add((byte)SourceAddressNpi);
@@ -670,9 +657,7 @@ namespace AberrantSMPP.Packet.Request
 			pdu.Add((byte)DataCoding);
 			//sm_default_msg_id is always null, so set it to zero
 			pdu.Add((byte)0);
-			_SmLength = PduUtil.InsertShortMessage(pdu, DataCoding, ShortMessage);
-			
-			PacketBytes = EncodePduForTransmission(pdu);
+			_SmLength = PduUtil.InsertShortMessage(pdu, DataCoding, ShortMessage);			
 		}
 	}
 }

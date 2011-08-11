@@ -26,10 +26,12 @@ namespace AberrantSMPP.Packet.Response
 	/// <summary>
 	/// Class to define an SMSC bind response.
 	/// </summary>
-	public class SmppBindResp : Pdu
+	public class SmppBindResp : SmppResponse
 	{
 		private string _SystemId = string.Empty;
-		
+
+		protected override CommandId DefaultCommandId { get { return CommandId.bind_transceiver_resp; } }
+
 		/// <summary>
 		/// The ID of the SMSC.
 		/// </summary>
@@ -79,7 +81,9 @@ namespace AberrantSMPP.Packet.Response
 		{}
 		
 		/// <summary>
-		/// Creates a bind_resp.
+		/// Creates a bind_resp. Note that this sets the bind type to 
+		/// transceiver so you will want to change this if you are not dealing with a 
+		/// transceiver.  This also sets system type to an empty string.
 		/// </summary>
 		public SmppBindResp(): base()
 		{}
@@ -97,28 +101,9 @@ namespace AberrantSMPP.Packet.Response
 			TranslateTlvDataIntoTable(remainder);
 		}
 		
-		/// <summary>
-		/// Initializes this Pdu for sending purposes.  Note that this sets the bind type to 
-		/// transceiver so you will want to change this if you are not dealing with a 
-		/// transceiver.  This also sets system type to an empty string.
-		/// </summary>
-		protected override void InitPdu()
+		protected override void AppendPduData(ArrayList pdu)
 		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.bind_transceiver_resp;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(SystemId)));
-			
-			PacketBytes = EncodePduForTransmission(pdu);
 		}
 	}
 }

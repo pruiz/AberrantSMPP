@@ -24,8 +24,10 @@ namespace AberrantSMPP.Packet.Response
 	/// <summary>
 	/// Defines the replace_sm_resp Pdu.
 	/// </summary>
-	public class SmppReplaceSmResp : Pdu
+	public class SmppReplaceSmResp : SmppResponse
 	{
+		protected override CommandId DefaultCommandId { get { return CommandId.replace_sm_resp; } }
+
 		#region constructors
 		
 		/// <summary>
@@ -51,25 +53,5 @@ namespace AberrantSMPP.Packet.Response
 			TranslateTlvDataIntoTable(BytesAfterHeader);
 		}
 		
-		/// <summary>
-		/// Initializes this Pdu for sending purposes.
-		/// </summary>
-		protected override void InitPdu()
-		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.replace_sm_resp;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
-			
-			PacketBytes = EncodePduForTransmission(pdu);
-		}
 	}
 }

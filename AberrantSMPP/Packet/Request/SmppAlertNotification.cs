@@ -27,7 +27,7 @@ namespace AberrantSMPP.Packet.Request
 	/// Sent from the SMSC to the mobile device when the device is available and a
 	/// delivery pending flag has been set from a previous data_sm operation.
 	/// </summary>
-	public class SmppAlertNotification : Pdu
+	public class SmppAlertNotification : SmppRequest
 	{
 		#region private fields
 		
@@ -39,7 +39,7 @@ namespace AberrantSMPP.Packet.Request
 		private string _EsmeAddress = string.Empty;
 		
 		#endregion private fields
-		
+
 		#region enumerations
 		
 		/// <summary>
@@ -64,7 +64,8 @@ namespace AberrantSMPP.Packet.Request
 		#endregion enumerations
 		
 		#region mandatory parameters
-		
+		protected override CommandId DefaultCommandId { get { return CommandId.alert_notification; } }
+
 		/// <summary>
 		/// Enumerates the type of number.
 		/// </summary>
@@ -218,31 +219,14 @@ namespace AberrantSMPP.Packet.Request
 			TranslateTlvDataIntoTable(remainder);
 		}
 		
-		/// <summary>
-		/// Initializes this Pdu.
-		/// </summary>
-		protected override void InitPdu()
+		protected override void AppendPduData(ArrayList pdu)
 		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.alert_notification;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
 			pdu.Add((byte)SourceAddressTon);
 			pdu.Add((byte)SourceAddressNpi);
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(SourceAddress)));
 			pdu.Add((byte)EsmeAddressTon);
 			pdu.Add((byte)EsmeAddressNpi);
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(EsmeAddress)));
-			
-			PacketBytes = EncodePduForTransmission(pdu);
 		}
 	}
 }

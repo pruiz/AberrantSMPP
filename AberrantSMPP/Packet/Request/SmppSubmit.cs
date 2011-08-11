@@ -26,7 +26,7 @@ namespace AberrantSMPP.Packet.Request
 	/// <summary>
 	/// This class encapsulates common attributes for submit_sm and submit_multi Pdus.
 	/// </summary>
-	public abstract class MessageLcd2 : MessageLcd3
+	public abstract class SmppSubmit : SmppRequest3
 	{
 		/// <summary>
 		/// Limit of short message.
@@ -219,14 +219,14 @@ namespace AberrantSMPP.Packet.Request
 		/// validity period to default, replace if present to false, default message ID to 0, 
 		/// and the short message to an empty string.
 		/// </summary>
-		protected MessageLcd2(): base()
+		protected SmppSubmit(): base()
 		{}
 		
 		/// <summary>
 		/// Creates a new MessageLcd2 for incoming PDUs.
 		/// </summary>
 		/// <param name="incomingBytes">The incoming bytes to decode.</param>
-		protected MessageLcd2(byte[] incomingBytes): base(incomingBytes)
+		protected SmppSubmit(byte[] incomingBytes): base(incomingBytes)
 		{}
 		
 		#endregion constructors

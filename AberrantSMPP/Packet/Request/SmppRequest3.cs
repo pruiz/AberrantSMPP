@@ -25,7 +25,7 @@ namespace AberrantSMPP.Packet.Request
 	/// <summary>
 	/// Provides some common attributes for data_sm, submit_sm, and submit_multi.
 	/// </summary>
-	public abstract class MessageLcd3 : MessageLcd4
+	public abstract class SmppRequest3 : SmppRequest2
 	{
 		#region private fields
 
@@ -286,7 +286,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				PduUtil.SetMessagePayload(this, value);
+				PduUtil.SetMessagePayload(this, DataCoding, value);
 			}
 		}
 		
@@ -586,14 +586,14 @@ namespace AberrantSMPP.Packet.Request
 		/// source address NPI to ISDN, source address to "", registered delivery type to none, 
 		/// ESM class to 0, and data coding to SMSC default.
 		/// </summary>
-		protected MessageLcd3(): base()
+		protected SmppRequest3(): base()
 		{}
 		
 		/// <summary>
 		/// Creates a new MessageLcd3 for incoming PDUs.
 		/// </summary>
 		/// <param name="incomingBytes">The incoming bytes to decode.</param>
-		protected MessageLcd3(byte[] incomingBytes): base(incomingBytes)
+		protected SmppRequest3(byte[] incomingBytes): base(incomingBytes)
 		{}
 		
 		#endregion constructors

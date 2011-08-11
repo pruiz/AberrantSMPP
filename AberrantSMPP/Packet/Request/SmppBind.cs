@@ -25,7 +25,7 @@ namespace AberrantSMPP.Packet.Request
 	/// <summary>
 	/// Class for a bind request Pdu.
 	/// </summary>
-	public class SmppBind : Pdu
+	public class SmppBind : SmppRequest
 	{
 		#region private fields
 		
@@ -50,7 +50,8 @@ namespace AberrantSMPP.Packet.Request
 		#endregion constants
 		
 		#region mandatory parameters
-		
+		protected override CommandId DefaultCommandId { get { return CommandId.bind_transmitter; } }
+
 		/// <summary>
 		/// The binding type: transmitter, receiver, or transceiver.
 		/// </summary>
@@ -66,22 +67,22 @@ namespace AberrantSMPP.Packet.Request
 				{
 					case BindingType.BindAsReceiver:
 					{
-						CommandID = CommandIdType.bind_receiver;
+						CommandID = CommandId.bind_receiver;
 						break;
 					}
 					case BindingType.BindAsTransceiver:
 					{
-						CommandID = CommandIdType.bind_transceiver;
+						CommandID = CommandId.bind_transceiver;
 						break;
 					}
 					case BindingType.BindAsTransmitter:
 					{
-						CommandID = CommandIdType.bind_transmitter;
+						CommandID = CommandId.bind_transmitter;
 						break;
 					}
 					default:
 					{
-						CommandID = CommandIdType.bind_transmitter;
+						CommandID = CommandId.bind_transmitter;
 						break;
 					}	
 				}
@@ -281,7 +282,9 @@ namespace AberrantSMPP.Packet.Request
 		/// international, address NPI to ISDN, and sets to bind as a transceiver.
 		/// </summary>
 		public SmppBind(): base()
-		{}
+		{
+			BindType = BindingType.BindAsTransceiver;
+		}
 		
 		/// <summary>
 		/// Constructs a bind request.  Sets system ID, password, system type, and address 
@@ -290,27 +293,13 @@ namespace AberrantSMPP.Packet.Request
 		/// </summary>
 		/// <param name="incomingBytes">The incoming bytes from an ESME.</param>
 		public SmppBind(byte[] incomingBytes): base(incomingBytes)
-		{}
+		{
+		}
 		
 		#endregion constructors
 		
-		/// <summary>
-		/// Initializes this Pdu.
-		/// </summary>
-		protected override void InitPdu()
+		protected override void AppendPduData(ArrayList pdu)
 		{
-			base.InitPdu();
-			CommandStatus = 0;
-			BindType = BindingType.BindAsTransceiver;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(SystemId)));
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(Password)));
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(SystemType)));
@@ -318,8 +307,6 @@ namespace AberrantSMPP.Packet.Request
 			pdu.Add((byte)AddressTon);
 			pdu.Add((byte)AddressNpi);
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(AddressRange)));
-			
-			PacketBytes = EncodePduForTransmission(pdu);
 		}
 		
 		/// <summary>

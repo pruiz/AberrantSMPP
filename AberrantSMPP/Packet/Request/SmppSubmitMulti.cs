@@ -25,7 +25,7 @@ namespace AberrantSMPP.Packet.Request
 	/// <summary>
 	/// Defines a submit_multi Pdu.
 	/// </summary>
-	public class SmppSubmitMulti : MessageLcd2
+	public class SmppSubmitMulti : SmppSubmit
 	{
 		//note that all of the optional parameters are in the base class.
 		private byte _NumberOfDests = 0;
@@ -33,7 +33,8 @@ namespace AberrantSMPP.Packet.Request
 		private const int MAX_DESTS = 254;
 		
 		#region properties
-		
+		protected override CommandId DefaultCommandId { get { return CommandId.submit_multi; } }		
+
 		/// <summary>
 		/// The number of destinations to send to.
 		/// </summary>
@@ -94,23 +95,8 @@ namespace AberrantSMPP.Packet.Request
 		
 		#endregion constructors
 		
-		/// <summary>
-		/// Initializes this Pdu.
-		/// </summary>
-		protected override void InitPdu()
+		protected override void AppendPduData(ArrayList pdu)
 		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.submit_multi;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(ServiceType)));
 			pdu.Add((byte)SourceAddressTon);
 			pdu.Add((byte)SourceAddressNpi);
@@ -141,8 +127,6 @@ namespace AberrantSMPP.Packet.Request
 			}
 			
 			pdu.AddRange(base.GetBytesAfterDestination());
-			
-			PacketBytes = EncodePduForTransmission(pdu);
 		}
 		
 		/// <summary>

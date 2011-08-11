@@ -28,39 +28,19 @@ namespace AberrantSMPP.Packet.Response
 	/// </summary>
 	public class SmppDataSmResp : SmppSubmitSmResp
 	{
-		/// <summary>
-		/// Enumerates the delivery failure types.
-		/// </summary>
-		public enum DeliveryFailureType : byte
-		{
-			/// <summary>
-			/// DestinationUnavailable
-			/// </summary>
-			DestinationUnavailable = 0x00,
-			/// <summary>
-			/// DestinationAddressInvalid
-			/// </summary>
-			DestinationAddressInvalid = 0x01,
-			/// <summary>
-			/// PermanentNetworkError
-			/// </summary>
-			PermanentNetworkError = 0x02,
-			/// <summary>
-			/// TemporaryNetworkError
-			/// </summary>
-			TemporaryNetworkError = 0x03
-		}
-		
+
+		protected override CommandId DefaultCommandId { get { return CommandId.data_sm_resp; } }
+
 		#region optional parameters
 		
 		/// <summary>
 		/// Indicates the reason for delivery failure.
 		/// </summary>
-		public DeliveryFailureType DeliveryFailureReason
+		public DeliveryFailureReason DeliveryFailureReason
 		{
 			get
 			{
-				return(DeliveryFailureType)
+				return(DeliveryFailureReason)
 					GetOptionalParamBytes((ushort)
 					Pdu.OptionalParamCodes.delivery_failure_reason)[0];
 			}
@@ -164,26 +144,5 @@ namespace AberrantSMPP.Packet.Response
 		
 		#endregion constructors
 		
-		/// <summary>
-		/// Initializes this Pdu for sending purposes.
-		/// </summary>
-		protected override void InitPdu()
-		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.data_sm_resp;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
-			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(MessageId)));
-			
-			PacketBytes = EncodePduForTransmission(pdu);
-		}
 	}
 }

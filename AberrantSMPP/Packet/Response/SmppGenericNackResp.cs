@@ -24,8 +24,10 @@ namespace AberrantSMPP.Packet.Response
 	/// <summary>
 	/// Represents a generic NACK sent by the SMSC.
 	/// </summary>
-	public class SmppGenericNackResp : Pdu
+	public class SmppGenericNackResp : SmppResponse
 	{
+		protected override CommandId DefaultCommandId { get { return CommandId.generic_nack; } }
+
 		#region constructors
 		
 		/// <summary>
@@ -52,27 +54,6 @@ namespace AberrantSMPP.Packet.Response
 		protected override void DecodeSmscResponse()
 		{
 			TranslateTlvDataIntoTable(BytesAfterHeader);
-		}
-		
-		/// <summary>
-		/// Initializes this Pdu for sending purposes.
-		/// </summary>
-		protected override void InitPdu()
-		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.generic_nack;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
-			
-			PacketBytes = EncodePduForTransmission(pdu);
 		}
 	}
 }

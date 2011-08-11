@@ -25,11 +25,13 @@ namespace AberrantSMPP.Packet.Response
 	/// <summary>
 	/// Defines the submit_sm response from the SMSC.
 	/// </summary>
-	public class SmppSubmitSmResp : Pdu
+	public class SmppSubmitSmResp : SmppResponse
 	{
 		private string _MessageId = string.Empty;
 		private byte[] _ResponseAfterMsgId;
 		
+		protected override CommandId DefaultCommandId { get { return CommandId.submit_sm_resp; } }
+
 		/// <summary>
 		/// The message ID(SMSC-assigned)of the submitted message.
 		/// </summary>
@@ -98,26 +100,9 @@ namespace AberrantSMPP.Packet.Response
 			_ResponseAfterMsgId = remainder;
 		}
 		
-		/// <summary>
-		/// Initializes this Pdu for sending purposes.
-		/// </summary>
-		protected override void InitPdu()
+		protected override void AppendPduData(ArrayList pdu)
 		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.submit_sm_resp;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(MessageId)));
-			
-			PacketBytes = EncodePduForTransmission(pdu);
 		}
 	}
 }

@@ -86,7 +86,7 @@ namespace AberrantSMPP.Utility
 			
 			if(ShortMessage == null)
 			{
-				msg = new Byte[]{0x00};
+				msg = null;
 			}
 			else if(ShortMessage is byte[])
 			{
@@ -105,9 +105,9 @@ namespace AberrantSMPP.Utility
 			//					"Short message cannot be longer than " +
 			//					MessageLcd2.SHORT_MESSAGE_LIMIT + " octets.");
 			
-			byte SmLength = (byte)msg.Length;
+			byte SmLength = msg == null ? (byte)0 : (byte)msg.Length;
 			pdu.Add(SmLength);
-			pdu.AddRange(msg);
+			if (msg != null) pdu.AddRange(msg);
 			
 			return SmLength;
 		}
@@ -248,41 +248,41 @@ namespace AberrantSMPP.Utility
 		/// </summary>
 		/// <param name="pdu">The PDU to operate on.</param>
 		/// <param name="val">The value to insert.</param>
-		public static void SetMessagePayload(Pdu pdu, object val)
+		public static void SetMessagePayload(Pdu pdu, DataCoding coding, object val)
 		{
-			if(val != null)
+			byte[] encodedValue = null;
+
+			if (val == null)
+			{
+				pdu.SetOptionalParamBytes((ushort)Pdu.OptionalParamCodes.message_payload, new byte[] { 0 });
+			}
+			else if(val is string)
+			{
+				encodedValue = GetEncodedText(coding, val as string);
+			}
+			else if(val is byte[])
+			{
+				encodedValue =(byte[])val;
+			}
+			else
+			{
+				throw new ArgumentException("Message Payload must be a string or byte array.");
+			}
+			
+			if (encodedValue != null) 
+			{
+				const int MAX_PAYLOAD_LENGTH = 64000;
+				if(encodedValue.Length < MAX_PAYLOAD_LENGTH)
 				{
-					byte[] encodedValue;
-					if(val is string)
-					{
-						encodedValue = Encoding.ASCII.GetBytes((string)val);
-					}
-					else if(val is byte[])
-					{
-						encodedValue =(byte[])val;
-					}
-					else
-					{
-						throw new ArgumentException("Message Payload must be a string or byte array.");
-					}
-					
-					const int MAX_PAYLOAD_LENGTH = 64000;
-					if(encodedValue.Length < MAX_PAYLOAD_LENGTH)
-					{
-						pdu.SetOptionalParamBytes(
-							(ushort)Pdu.OptionalParamCodes.message_payload, encodedValue);
-					}
-					else
-					{
-						throw new ArgumentException(
-							"Message Payload must be " + MAX_PAYLOAD_LENGTH + " characters or less in size.");
-					}
+					pdu.SetOptionalParamBytes(
+						(ushort)Pdu.OptionalParamCodes.message_payload, encodedValue);
 				}
 				else
 				{
-					pdu.SetOptionalParamBytes(
-						(ushort)Pdu.OptionalParamCodes.message_payload, new byte[]{0});
+					throw new ArgumentException(
+						"Message Payload must be " + MAX_PAYLOAD_LENGTH + " characters or less in size.");
 				}
+			}
 		}
 	}
 }

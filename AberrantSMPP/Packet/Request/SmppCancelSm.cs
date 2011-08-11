@@ -38,7 +38,7 @@ namespace AberrantSMPP.Packet.Request
 	/// defaulted to null, then the source address in the cancel_sm command should also
 	/// be null.
 	/// </summary>
-	public class SmppCancelSm : MessageLcd6
+	public class SmppCancelSm : SmppRequest1
 	{
 		#region private fields
 		
@@ -51,7 +51,8 @@ namespace AberrantSMPP.Packet.Request
 		#endregion private fields
 		
 		#region properties
-		
+		protected override CommandId DefaultCommandId { get { return CommandId.cancel_sm; } }
+
 		/// <summary>
 		/// Message ID of the message to be cancelled. This must be the SMSC assigned Message 
 		/// ID of the original message.  Set to null if cancelling a group of messages.
@@ -203,23 +204,8 @@ namespace AberrantSMPP.Packet.Request
 		
 		#endregion constructors
 		
-		/// <summary>
-		/// Initializes this Pdu.
-		/// </summary>
-		protected override void InitPdu()
+		protected override void AppendPduData(ArrayList pdu)
 		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.cancel_sm;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(ServiceType)));
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(MessageId)));
 			pdu.Add((byte)SourceAddressTon);
@@ -228,8 +214,6 @@ namespace AberrantSMPP.Packet.Request
 			pdu.Add((byte)DestinationAddressTon);
 			pdu.Add((byte)DestinationAddressNpi);
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(DestinationAddress)));
-			
-			PacketBytes = EncodePduForTransmission(pdu);
 		}
 		
 		/// <summary>

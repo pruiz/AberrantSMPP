@@ -43,38 +43,23 @@ namespace AberrantSMPP.Packet
 		#endregion constants
 		
 		#region private fields
-		
 		private static uint _StaticSequenceNumber = 0;
-		private uint _CommandStatus;
-		private CommandIdType _CommandID;
+		private uint _CommandStatus = 0;
+		private CommandId _CommandID;
 		private TlvTable _tlvTable = new TlvTable();
 		private uint _CustomSequenceNumber = 0;
 		private uint _SequenceNumber = 0;
-		
-		private byte[] _PacketBytes = new byte[0];
 		private uint _CommandLength;
-		
+		private byte[] _PacketBytes = null;
 		#endregion private fields
 		
 		#region properties
-		
 		/// <summary>
-		/// Gets or sets the byte response from the SMSC.  This will return a clone of the 
-		/// byte array upon a "get" request. 
+		/// Gets the default command id to set when creating this kind of PDU.
 		/// </summary>
-		public byte[] PacketBytes
-		{
-			get
-			{
-				return(byte[])_PacketBytes.Clone();
-			}
-			
-			set
-			{
-				_PacketBytes = value;
-			}
-		}
-		
+		/// <value>The default command id.</value>
+		protected abstract CommandId DefaultCommandId { get; }
+
 		/// <summary>
 		/// Defines the overall length of the Pdu in octets(i.e. bytes).
 		/// </summary>
@@ -124,7 +109,7 @@ namespace AberrantSMPP.Packet
 		/// <summary>
 		/// The command ID of this Pdu.
 		/// </summary>
-		protected CommandIdType CommandID
+		protected CommandId CommandID
 		{
 			get
 			{
@@ -136,6 +121,25 @@ namespace AberrantSMPP.Packet
 			}
 		}
 		
+		/// <summary>
+		/// Gets or sets the byte response from the SMSC.  This will return a clone of the
+		/// byte array upon a "get" request.
+		/// </summary>
+		public byte[] PacketBytes
+		{
+			get
+			{
+				if (_PacketBytes == null) return null;
+
+				return (byte[])_PacketBytes.Clone();
+			}
+
+			private set
+			{
+				_PacketBytes = value;
+			}
+		}
+
 		#endregion properties
 		
 		#region constructors
@@ -145,7 +149,8 @@ namespace AberrantSMPP.Packet
 		/// </summary>
 		protected Pdu()
 		{
-			InitPdu();
+			CommandStatus = 0;
+			CommandID = DefaultCommandId;
 		}
 		
 		/// <summary>
@@ -154,9 +159,6 @@ namespace AberrantSMPP.Packet
 		/// <param name="incomingBytes">The incoming bytes to translate to a Pdu.</param>
 		protected Pdu(byte[] incomingBytes)
 		{
-			#if DEBUG
-			Console.WriteLine("In Pdu byte[] constructor");
-			#endif
 			_PacketBytes = incomingBytes;
 			_CommandLength = DecodeCommandLength(_PacketBytes);
 			_CommandID = DecodeCommandId(_PacketBytes);
@@ -171,35 +173,44 @@ namespace AberrantSMPP.Packet
 		#endregion constructors
 		
 		#region overridable methods
-		
-		/// <summary>
-		/// Initializes this Pdu.  Override to add more functionality, but don't forget to 
-		/// call this one.
-		/// </summary>
-		protected virtual void InitPdu()
-		{
-			CommandStatus = 0;
-			CommandID = Pdu.CommandIdType.generic_nack;
-		}
-		
+				
 		///<summary>
 		/// Gets the hex encoding(big-endian)of this Pdu.
 		///</summary>
 		///<return>The hex-encoded version of the Pdu</return>
-		public abstract void ToMsbHexEncoding();
-		/*public virtual void ToMsbHexEncoding()
+		public byte[] GetEncodedPdu()
 		{
-			throw new NotImplementedException("GetMSBHexEncoding is not implemented in Pdu.");
-		}*/
-		
+			var pdu = GetPduHeader();
+			AppendPduData(pdu);
+			return EncodePduForTransmission(pdu);
+		}
+
+		/// <summary>
+		/// Fills the specified pdu with data from instance's properties.
+		/// </summary>
+		/// <param name="pdu">The pdu.</param>
+		protected abstract void AppendPduData(ArrayList pdu);
+
+		/// <summary>
+		/// Takes the given Pdu, calculates its length(trimming it beforehand), inserting
+		/// its length, and copying it to a byte array.
+		/// </summary>
+		/// <param name="pdu">The Pdu to encode.</param>
+		/// <returns>The byte array representation of the Pdu.</returns>
+		protected byte[] EncodePduForTransmission(ArrayList pdu)
+		{
+			AddTlvBytes(ref pdu);
+			pdu = InsertLengthIntoPdu(pdu);
+			byte[] result = new byte[pdu.Count];
+			pdu.CopyTo(result);
+
+			return result;
+		}
+
 		/// <summary>
 		/// Decodes the bind response from the SMSC.  This version throws a NotImplementedException.
 		/// </summary>
 		protected abstract void DecodeSmscResponse();
-		/*protected virtual void DecodeSmscResponse()
-		{
-			throw new NotImplementedException("DecodeSmscResponse is not implemented in Pdu.");
-		}*/
 		
 		#endregion overridable methods
 
@@ -224,23 +235,7 @@ namespace AberrantSMPP.Packet
 			
 			return pdu;
 		}
-		
-		/// <summary>
-		/// Takes the given Pdu, calculates its length(trimming it beforehand), inserting
-		/// its length, and copying it to a byte array.
-		/// </summary>
-		/// <param name="pdu">The Pdu to encode.</param>
-		/// <returns>The byte array representation of the Pdu.</returns>
-		protected byte[] EncodePduForTransmission(ArrayList pdu)
-		{
-			AddTlvBytes(ref pdu);
-			pdu = InsertLengthIntoPdu(pdu);
-			byte[] result = new byte[pdu.Count];
-			pdu.CopyTo(result);
-			
-			return result;
-		}
-		
+				
 		/// <summary>
 		/// Retrieves the given bytes from the TLV table and converts them into a
 		/// host order UInt16.
@@ -334,6 +329,8 @@ namespace AberrantSMPP.Packet
 		/// Generates a monotonically increasing sequence number for each Pdu.  When it
 		/// hits the the 32 bit unsigned int maximum, it starts over.
 		/// </summary>
+		// FIXME: Sequence number shoule be provided by caller session instance,
+		//		  as this is a per-connection detail. (pruiz)
 		private void GenerateSequenceNumber()
 		{
 			if(_CustomSequenceNumber == 0)
@@ -1093,122 +1090,7 @@ namespace AberrantSMPP.Packet
 			/// DPFSet
 			/// </summary>
 			DPFSet = 1
-		}
-		
-		/// <summary>
-		/// Enumeration of all the Pdu command types.
-		/// </summary>
-		public enum CommandIdType : uint
-		{
-			/// <summary>
-			/// generic_nack
-			/// </summary>
-			generic_nack = 0x80000000,
-			/// <summary>
-			/// bind_receiver
-			/// </summary>
-			bind_receiver = 0x00000001,
-			/// <summary>
-			/// bind_receiver_resp
-			/// </summary>
-			bind_receiver_resp = 0x80000001,
-			/// <summary>
-			/// bind_transmitter
-			/// </summary>
-			bind_transmitter = 0x00000002,
-			/// <summary>
-			/// bind_transmitter_resp
-			/// </summary>
-			bind_transmitter_resp = 0x80000002,
-			/// <summary>
-			/// query_sm
-			/// </summary>
-			query_sm = 0x00000003,
-			/// <summary>
-			/// query_sm_resp
-			/// </summary>
-			query_sm_resp = 0x80000003,
-			/// <summary>
-			/// submit_sm
-			/// </summary>
-			submit_sm = 0x00000004,
-			/// <summary>
-			/// submit_sm_resp
-			/// </summary>
-			submit_sm_resp = 0x80000004,
-			/// <summary>
-			/// deliver_sm
-			/// </summary>
-			deliver_sm = 0x00000005,
-			/// <summary>
-			/// deliver_sm_resp
-			/// </summary>
-			deliver_sm_resp = 0x80000005,
-			/// <summary>
-			/// unbind
-			/// </summary>
-			unbind = 0x00000006,
-			/// <summary>
-			/// unbind_resp
-			/// </summary>
-			unbind_resp = 0x80000006,
-			/// <summary>
-			/// replace_sm
-			/// </summary>
-			replace_sm = 0x00000007,
-			/// <summary>
-			/// replace_sm_resp
-			/// </summary>
-			replace_sm_resp = 0x80000007,
-			/// <summary>
-			/// cancel_sm
-			/// </summary>
-			cancel_sm = 0x00000008,
-			/// <summary>
-			/// cancel_sm_resp
-			/// </summary>
-			cancel_sm_resp = 0x80000008,
-			/// <summary>
-			/// bind_transceiver
-			/// </summary>
-			bind_transceiver = 0x00000009,
-			/// <summary>
-			/// bind_transceiver_resp
-			/// </summary>
-			bind_transceiver_resp = 0x80000009,
-			/// <summary>
-			/// outbind
-			/// </summary>
-			outbind = 0x0000000B,
-			/// <summary>
-			/// enquire_link
-			/// </summary>
-			enquire_link = 0x00000015,
-			/// <summary>
-			/// enquire_link_resp
-			/// </summary>
-			enquire_link_resp = 0x80000015,
-			/// <summary>
-			/// submit_multi
-			/// </summary>
-			submit_multi = 0x00000021,
-			/// <summary>
-			/// submit_multi_resp
-			/// </summary>
-			submit_multi_resp = 0x80000021,
-			/// <summary>
-			/// alert_notification
-			/// </summary>
-			alert_notification = 0x00000102,
-			/// <summary>
-			/// data_sm
-			/// </summary>
-			data_sm = 0x00000103,
-			/// <summary>
-			/// data_sm_resp
-			/// </summary>
-			data_sm_resp = 0x80000103
-		}
+		}		
 		
 		#endregion enumerations
 		
@@ -1251,17 +1133,17 @@ namespace AberrantSMPP.Packet
 		/// </summary>
 		/// <param name="response">The Pdu response packet.</param>
 		/// <returns>The ID of the Pdu command(e.g. cancel_sm_resp).</returns>
-		public static CommandIdType DecodeCommandId(byte[] response)
+		public static CommandId DecodeCommandId(byte[] response)
 		{
 			uint id = 0;
 			try
 			{
 				id = UnsignedNumConverter.SwapByteOrdering(BitConverter.ToUInt32(response, 4));
-				return(CommandIdType)id;
+				return(CommandId)id;
 			}
 			catch		//possible that we are reading a bad command
 			{
-				return CommandIdType.generic_nack;
+				return CommandId.generic_nack;
 			}
 		}
 		

@@ -25,11 +25,13 @@ namespace AberrantSMPP.Packet.Request
 	/// <summary>
 	/// Defines an outbind response(really a request TO us)from the SMSC.
 	/// </summary>
-	public class SmppOutbind : Pdu
+	public class SmppOutbind : SmppRequest
 	{
 		private string _SystemId = string.Empty;
 		private string _Password = string.Empty;
 		
+		protected override CommandId DefaultCommandId { get { return CommandId.outbind; } }
+
 		/// <summary>
 		/// The ID of the SMSC.
 		/// </summary>
@@ -91,26 +93,10 @@ namespace AberrantSMPP.Packet.Request
 			TranslateTlvDataIntoTable(remainder);
 		}
 		
-		/// <summary>
-		/// Initializes this Pdu.
-		/// </summary>
-		protected override void InitPdu()
+		protected override void AppendPduData(ArrayList pdu)
 		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.outbind;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(SystemId)));
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(Password)));
-			PacketBytes = EncodePduForTransmission(pdu);
 		}
 	}
 }

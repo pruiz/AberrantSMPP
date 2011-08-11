@@ -24,8 +24,10 @@ namespace AberrantSMPP.Packet.Response
 	/// <summary>
 	/// This class defines an ESME originated deliver_sm_resp.
 	/// </summary>
-	public class SmppDeliverSmResp : Pdu
+	public class SmppDeliverSmResp : SmppResponse
 	{
+		protected override CommandId DefaultCommandId { get { return CommandId.deliver_sm_resp; } }
+
 		#region constructors
 		
 		/// <summary>
@@ -43,25 +45,10 @@ namespace AberrantSMPP.Packet.Response
 		
 		#endregion constructors
 		
-		/// <summary>
-		/// Initializes this Pdu.
-		/// </summary>
-		protected override void InitPdu()
+		protected override void AppendPduData(ArrayList pdu)
 		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.deliver_sm_resp;
-		}
-		
-		/// <summary>
-		/// Creates the byte encoding for this Pdu.
-		/// </summary>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
 			//the message_id is unused and is always set to null
 			pdu.Add((byte)0x00);
-			PacketBytes = EncodePduForTransmission(pdu);
 		}
 		
 		/// <summary>

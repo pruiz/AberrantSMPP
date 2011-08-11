@@ -26,7 +26,7 @@ namespace AberrantSMPP.Packet.Response
 	/// <summary>
 	/// This class defines the response to a query_sm Pdu.
 	/// </summary>
-	public class SmppQuerySmResp : Pdu
+	public class SmppQuerySmResp : SmppResponse
 	{
 		private string _MessageId = string.Empty;
 		private string _FinalDate = string.Empty;
@@ -34,7 +34,8 @@ namespace AberrantSMPP.Packet.Response
 		private byte _ErrorCode = 0;
 		
 		#region mandatory parameters
-		
+		protected override CommandId DefaultCommandId { get { return CommandId.query_sm_resp; } }
+
 		/// <summary>
 		/// SMSC Message ID of the message whose state is being queried.
 		/// </summary>
@@ -148,29 +149,12 @@ namespace AberrantSMPP.Packet.Response
 			TranslateTlvDataIntoTable(remainder, 2);
 		}
 		
-		/// <summary>
-		/// Initializes this Pdu for sending purposes.
-		/// </summary>
-		protected override void InitPdu()
+		protected override void AppendPduData(ArrayList pdu)
 		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.query_sm_resp;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(MessageId)));
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(FinalDate)));
 			pdu.Add((byte)MessageStatus);
 			pdu.Add(ErrorCode);
-			
-			PacketBytes = EncodePduForTransmission(pdu);
 		}
 		#endregion
 

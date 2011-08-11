@@ -24,8 +24,10 @@ namespace AberrantSMPP.Packet.Response
 	/// <summary>
 	/// Response Pdu for the cancel_sm command.
 	/// </summary>
-	public class SmppCancelSmResp : Pdu
+	public class SmppCancelSmResp : SmppResponse
 	{
+		protected override CommandId DefaultCommandId { get { return CommandId.cancel_sm_resp; } }
+
 		#region constructors
 		
 		/// <summary>
@@ -49,27 +51,6 @@ namespace AberrantSMPP.Packet.Response
 		protected override void DecodeSmscResponse()
 		{
 			TranslateTlvDataIntoTable(BytesAfterHeader);
-		}
-		
-		/// <summary>
-		/// Initializes this Pdu for sending purposes.
-		/// </summary>
-		protected override void InitPdu()
-		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.cancel_sm_resp;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
-			
-			PacketBytes = EncodePduForTransmission(pdu);
-		}
+		}		
 	}
 }

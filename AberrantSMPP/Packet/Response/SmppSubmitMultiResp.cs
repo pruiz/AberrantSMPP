@@ -29,7 +29,9 @@ namespace AberrantSMPP.Packet.Response
 	{
 		private byte _NumberUnsuccessful = 0;
 		private UnsuccessAddress[] _UnsuccessfulAddresses = new UnsuccessAddress[0];
-		
+
+		protected override CommandId DefaultCommandId { get { return CommandId.submit_multi_resp; } }
+
 		/// <summary>
 		/// The number of messages that could not be delivered.  The mutator is not 
 		/// provided as setting the unsucess addresses will set it.
@@ -108,22 +110,8 @@ namespace AberrantSMPP.Packet.Response
 			TranslateTlvDataIntoTable(remainder);
 		}
 		
-		/// <summary>
-		/// Initializes this Pdu.
-		/// </summary>
-		protected override void InitPdu()
+		protected override void AppendPduData(ArrayList pdu)
 		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.submit_multi_resp;
-		}
-		
-		/// <summary>
-		/// Creates the byte encoding for this Pdu.
-		/// </summary>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(MessageId)));
 			pdu.Add(NumberUnsuccessful);
 			//add the unsuccess addresses
@@ -138,8 +126,6 @@ namespace AberrantSMPP.Packet.Response
 				pdu.AddRange(BitConverter.GetBytes(
 					UnsignedNumConverter.SwapByteOrdering(unsuccessfulAddresses[i].ErrorStatusCode)));
 			}
-//
-			PacketBytes = EncodePduForTransmission(pdu);
 		}
 	}
 }

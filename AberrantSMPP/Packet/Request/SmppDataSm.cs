@@ -27,14 +27,15 @@ namespace AberrantSMPP.Packet.Request
 	/// This command is used to transfer data between the SMSC and the ESME(and can be
 	/// used by both).  This is an alternative to the submit_sm and deliver_sm commands.
 	/// </summary>
-	public class SmppDataSm : MessageLcd3
+	public class SmppDataSm : SmppRequest3
 	{
 		private TonType _DestinationAddressTon = Pdu.TonType.International;
 		private NpiType _DestinationAddressNpi = Pdu.NpiType.ISDN;
 		private string _DestinationAddress = string.Empty;
 		
 		#region mandatory parameters
-		
+		protected override CommandId DefaultCommandId { get { return CommandId.data_sm; } }
+
 		/// <summary>
 		/// Type of number of destination SME address of the message(s)to be cancelled.  
 		/// This must match that supplied in the original message submission request.  
@@ -459,23 +460,8 @@ namespace AberrantSMPP.Packet.Request
 		
 		#endregion constructors
 		
-		/// <summary>
-		/// Initializes this Pdu.
-		/// </summary>
-		protected override void InitPdu()
+		protected override void AppendPduData(ArrayList pdu)
 		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.data_sm;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(ServiceType)));
 			pdu.Add((byte)SourceAddressTon);
 			pdu.Add((byte)SourceAddressNpi);
@@ -486,8 +472,6 @@ namespace AberrantSMPP.Packet.Request
 			pdu.Add(EsmClass);
 			pdu.Add((byte)RegisteredDelivery);
 			pdu.Add((byte)DataCoding);
-			
-			PacketBytes = EncodePduForTransmission(pdu);
 		}
 		
 		/// <summary>

@@ -24,7 +24,7 @@ namespace AberrantSMPP.Packet.Request
 	/// Provides some common attributes for data_sm, submit_sm, submit_multi,
 	/// and replace_sm.
 	/// </summary>
-	public abstract class MessageLcd4 : MessageLcd6
+	public abstract class SmppRequest2 : SmppRequest1
 	{
 		/// <summary>
 		/// The registered delivery type of the message.
@@ -57,14 +57,14 @@ namespace AberrantSMPP.Packet.Request
 		/// source address NPI to ISDN, source address to "", and registered delivery type to 
 		/// none.
 		/// </summary>
-		protected MessageLcd4(): base()
+		protected SmppRequest2(): base()
 		{}
 		
 		/// <summary>
 		/// Creates a new MessageLcd4 for incoming PDUs.
 		/// </summary>
 		/// <param name="incomingBytes">The incoming bytes to decode.</param>
-		protected MessageLcd4(byte[] incomingBytes): base(incomingBytes)
+		protected SmppRequest2(byte[] incomingBytes): base(incomingBytes)
 		{}
 		
 		#endregion constructors

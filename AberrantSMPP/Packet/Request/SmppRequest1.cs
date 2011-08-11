@@ -24,7 +24,7 @@ namespace AberrantSMPP.Packet.Request
 	/// Provides some common attributes for data_sm, query_sm, submit_sm, submit_multi,
 	/// cancel_sm, and replace_sm.
 	/// </summary>
-	public abstract class MessageLcd6 : Pdu
+	public abstract class SmppRequest1 : Pdu
 	{
 		#region private fields
 		
@@ -120,14 +120,14 @@ namespace AberrantSMPP.Packet.Request
 		/// Groups construction tasks for subclasses.  Sets source address TON to 
 		/// international, source address NPI to ISDN, and source address to "".
 		/// </summary>
-		protected MessageLcd6(): base()
+		protected SmppRequest1(): base()
 		{}
 		
 		/// <summary>
 		/// Creates a new MessageLcd6 for incoming PDUs.
 		/// </summary>
 		/// <param name="incomingBytes">The incoming bytes to decode.</param>
-		protected MessageLcd6(byte[] incomingBytes): base(incomingBytes)
+		protected SmppRequest1(byte[] incomingBytes): base(incomingBytes)
 		{}
 		
 		#endregion constructors

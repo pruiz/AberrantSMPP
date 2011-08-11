@@ -26,10 +26,12 @@ namespace AberrantSMPP.Packet.Request
 	/// <summary>
 	/// This class defines a query_sm ESME originated Pdu.
 	/// </summary>
-	public class SmppQuerySm : MessageLcd6
+	public class SmppQuerySm : SmppRequest1
 	{
 		private string _MessageId = string.Empty;
-		
+
+		protected override CommandId DefaultCommandId { get { return CommandId.query_sm; } }
+
 		/// <summary>
 		/// The ID of the message.
 		/// </summary>
@@ -78,28 +80,12 @@ namespace AberrantSMPP.Packet.Request
 		
 		#endregion constructors
 		
-		/// <summary>
-		/// Initializes this Pdu.
-		/// </summary>
-		protected override void InitPdu()
+		protected override void AppendPduData(ArrayList pdu)
 		{
-			base.InitPdu();
-			CommandStatus = 0;
-			CommandID = CommandIdType.query_sm;
-		}
-		
-		///<summary>
-		/// Gets the hex encoding(big-endian)of this Pdu.
-		///</summary>
-		///<return>The hex-encoded version of the Pdu</return>
-		public override void ToMsbHexEncoding()
-		{
-			ArrayList pdu = GetPduHeader();
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(MessageId)));
 			pdu.Add((byte)SourceAddressTon);
 			pdu.Add((byte)SourceAddressNpi);
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(SourceAddress)));
-			PacketBytes = EncodePduForTransmission(pdu);
 		}
 		
 		/// <summary>

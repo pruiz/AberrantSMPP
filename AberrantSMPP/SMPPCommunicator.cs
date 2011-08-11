@@ -529,8 +529,8 @@ namespace AberrantSMPP
 			{
 				try
 				{
-					packet.ToMsbHexEncoding();
-					asClient.Send(packet.PacketBytes);
+					var bytes = packet.GetEncodedPdu();
+					asClient.Send(bytes);
 					sendFailed = false;
 				}
 				catch(Exception exc)
