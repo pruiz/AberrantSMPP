@@ -106,28 +106,17 @@ namespace AberrantSMPP.Packet.Request
 		/// <summary>
 		/// Indicates to the SMSC that there are further messages for the same destination.
 		/// </summary>
-		public bool MoreMessagesToSend
+		public bool? MoreMessagesToSend
 		{
 			get
 			{
-				byte[] bytes = GetOptionalParamBytes((ushort)OptionalParamCodes.more_messages_to_send);
-					
-				return(bytes[0] == 0)? false : true;
+				return GetOptionalParamByte<bool>(OptionalParamCodes.more_messages_to_send);
 			}
 			
 			set
 			{
-				byte sendMore;
-				if(value == false)
-				{
-					sendMore =(byte)0x00;
-				}
-				else
-				{
-					sendMore =(byte)0x01;
-				}
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.more_messages_to_send, new Byte[] {sendMore});
+				//byte? data = value.HasValue ? new Nullable<byte>(Convert.ToByte(value.Value)) : null;
+				SetOptionalParamByte(Pdu.OptionalParamCodes.more_messages_to_send, value);
 			}
 		}
 		
@@ -138,45 +127,40 @@ namespace AberrantSMPP.Packet.Request
 		/// 0 to 255(IS-95 CDMA)
 		/// 0 to 15(CMT-136 TDMA)
 		/// </summary>
-		public byte UserResponseCode
+		public byte? UserResponseCode
 		{
 			get
 			{
-				return GetOptionalParamBytes(
-					(ushort)OptionalParamCodes.user_response_code)[0];
+				return GetOptionalParamByte(OptionalParamCodes.user_response_code);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.user_response_code, new Byte[] {value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.user_response_code, value);
 			}
 		}
 		
 		/// <summary>
 		/// Used to indicate the number of messages stored in a mailbox.
 		/// </summary>
-		public byte NumberOfMessages
+		public byte? NumberOfMessages
 		{
 			get
 			{
-				return GetOptionalParamBytes(
-					(ushort)OptionalParamCodes.number_of_messages)[0];
+				return GetOptionalParamByte(OptionalParamCodes.number_of_messages);
 			}
 			
 			set
 			{
 				const int MAX_NUM_MSGS = 99;
-				
-				if(value <= MAX_NUM_MSGS)
+
+				if(value == null || value <= MAX_NUM_MSGS)
 				{
-					SetOptionalParamBytes(
-						(ushort)Pdu.OptionalParamCodes.number_of_messages, new Byte[] {value});
+					SetOptionalParamByte(Pdu.OptionalParamCodes.number_of_messages, value);
 				}
 				else
 				{
-					throw new ArgumentException(
-						"number_of_messages must be between 0 and " + MAX_NUM_MSGS + ".");
+					throw new ArgumentException(	"number_of_messages must be between 0 and " + MAX_NUM_MSGS + ".");
 				}
 			}
 		}
@@ -188,18 +172,16 @@ namespace AberrantSMPP.Packet.Request
 		/// controls the MS users reply method to an SMS delivery message received from
 		/// the ESME.
 		/// </summary>
-		public ItsReplyTypeType ItsReplyType
+		public ItsReplyTypeType? ItsReplyType
 		{
 			get
 			{
-				return (ItsReplyTypeType)GetOptionalParamBytes(
-					(ushort)OptionalParamCodes.its_reply_type)[0];
+				return GetOptionalParamByte<ItsReplyTypeType>(OptionalParamCodes.its_reply_type);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.its_reply_type, new Byte[] {(byte)value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.its_reply_type, value);
 			}
 		}
 		
@@ -215,7 +197,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString((ushort)OptionalParamCodes.its_session_info);
+				return GetOptionalParamString(OptionalParamCodes.its_session_info);
 			}
 			
 			set
@@ -235,25 +217,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString((ushort)OptionalParamCodes.ussd_service_op);
+				return GetOptionalParamString(OptionalParamCodes.ussd_service_op);
 			}
 			
 			set
 			{
-				if(value == null)
-				{
-					SetOptionalParamString(
-						(ushort)Pdu.OptionalParamCodes.ussd_service_op, string.Empty);
-				}
-				else if(value.Length == 1)
-				{
-					SetOptionalParamString(
-						(ushort)Pdu.OptionalParamCodes.ussd_service_op, value);
-				}
-				else
-				{
-					throw new ArgumentException("ussd_service_op must have length 1");
-				}
+				SetOptionalParamString(Pdu.OptionalParamCodes.ussd_service_op, value);
 			}
 		}
 		

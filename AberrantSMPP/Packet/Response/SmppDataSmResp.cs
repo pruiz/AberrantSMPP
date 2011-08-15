@@ -36,21 +36,24 @@ namespace AberrantSMPP.Packet.Response
 		/// <summary>
 		/// Indicates the reason for delivery failure.
 		/// </summary>
-		public DeliveryFailureReason DeliveryFailureReason
+		public DeliveryFailureReason? DeliveryFailureReason
 		{
 			get
 			{
-				return(DeliveryFailureReason)
-					GetOptionalParamBytes((ushort)
-					Pdu.OptionalParamCodes.delivery_failure_reason)[0];
+				return GetOptionalParamByte<DeliveryFailureReason>(Pdu.OptionalParamCodes.delivery_failure_reason);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(UInt16)Pdu.OptionalParamCodes.delivery_failure_reason,
-					BitConverter.GetBytes(
-					UnsignedNumConverter.SwapByteOrdering((byte)value)));
+				if (value.HasValue)
+				{
+					SetOptionalParamBytes(Pdu.OptionalParamCodes.delivery_failure_reason,
+						BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering((byte)value)));
+				}
+				else
+				{
+					SetOptionalParamBytes(Pdu.OptionalParamCodes.delivery_failure_reason, null);
+				}
 			}
 		}
 		
@@ -62,8 +65,7 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return GetOptionalParamString((ushort)
-					Pdu.OptionalParamCodes.network_error_code);
+				return GetOptionalParamString(Pdu.OptionalParamCodes.network_error_code);
 			}
 			
 			set
@@ -79,22 +81,16 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return GetOptionalParamString((ushort)
-					Pdu.OptionalParamCodes.additional_status_info_text);
+				return GetOptionalParamString(Pdu.OptionalParamCodes.additional_status_info_text);
 			}
 			
 			set
 			{
 				const int MAX_STATUS_LEN = 264;
-				if(value == null)
+
+				if (value == null || value.Length <= MAX_STATUS_LEN)
 				{
-					SetOptionalParamString(
-						(ushort)Pdu.OptionalParamCodes.additional_status_info_text, string.Empty);
-				}
-				else if(value.Length <= MAX_STATUS_LEN)
-				{
-					SetOptionalParamString(
-						(ushort)Pdu.OptionalParamCodes.additional_status_info_text, value);
+					SetOptionalParamString(Pdu.OptionalParamCodes.additional_status_info_text, value);
 				}
 				else
 				{
@@ -107,21 +103,24 @@ namespace AberrantSMPP.Packet.Response
 		/// <summary>
 		/// Indicates whether the Delivery Pending Flag was set.
 		/// </summary>
-		public DpfResultType DpfResult
+		public DpfResultType? DpfResult
 		{
 			get
 			{
-				return(DpfResultType)
-					GetOptionalParamBytes((ushort)
-					Pdu.OptionalParamCodes.dpf_result)[0];
+				return GetOptionalParamByte<DpfResultType>(Pdu.OptionalParamCodes.dpf_result);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(UInt16)Pdu.OptionalParamCodes.dpf_result,
-					BitConverter.GetBytes(
-					UnsignedNumConverter.SwapByteOrdering((byte)value)));
+				if (value.HasValue)
+				{
+					SetOptionalParamBytes(Pdu.OptionalParamCodes.dpf_result,
+						BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering((byte)value)));
+				}
+				else
+				{
+					SetOptionalParamBytes(Pdu.OptionalParamCodes.dpf_result, null);
+				}
 			}
 		}
 		

@@ -280,16 +280,16 @@ namespace AberrantSMPP.Packet.Request
 		/// <summary>
 		/// The message reference number assigned by the ESME.
 		/// </summary>
-		public UInt16 UserMessageReference
+		public UInt16? UserMessageReference
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv((ushort)OptionalParamCodes.user_message_reference);
+				return GetHostOrderUInt16FromTlv(OptionalParamCodes.user_message_reference);
 			}
 			
 			set
 			{
-				SetHostOrderValueIntoTlv((UInt16)Pdu.OptionalParamCodes.user_message_reference, value);
+				SetHostOrderValueIntoTlv(Pdu.OptionalParamCodes.user_message_reference, value);
 			}
 		}
 		
@@ -297,16 +297,16 @@ namespace AberrantSMPP.Packet.Request
 		/// The port number associated with the source address of the message.  This
 		/// parameter will be present for WAP applications.
 		/// </summary>
-		public UInt16 SourcePort
+		public UInt16? SourcePort
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv((ushort)OptionalParamCodes.source_port);
+				return GetHostOrderUInt16FromTlv(OptionalParamCodes.source_port);
 			}
 			
 			set
 			{
-				SetHostOrderValueIntoTlv((UInt16)Pdu.OptionalParamCodes.source_port, value);
+				SetHostOrderValueIntoTlv(Pdu.OptionalParamCodes.source_port, value);
 			}
 		}
 		
@@ -314,49 +314,48 @@ namespace AberrantSMPP.Packet.Request
 		/// The port number associated with the destination address of the message.  This
 		/// parameter will be present for WAP applications.
 		/// </summary>
-		public UInt16 DestinationPort
+		public UInt16? DestinationPort
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv((ushort)OptionalParamCodes.destination_port);
+				return GetHostOrderUInt16FromTlv(OptionalParamCodes.destination_port);
 			}
 			
 			set
 			{
-				SetHostOrderValueIntoTlv((UInt16)Pdu.OptionalParamCodes.destination_port, value);
+				SetHostOrderValueIntoTlv(Pdu.OptionalParamCodes.destination_port, value);
 			}
 		}
 		
 		/// <summary>
 		/// The reference number for a particular concatenated short message.
 		/// </summary>
-		public UInt16 SarMsgRefNumber
+		public UInt16? SarMsgRefNumber
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv((ushort)OptionalParamCodes.sar_msg_ref_num);
+				return GetHostOrderUInt16FromTlv(OptionalParamCodes.sar_msg_ref_num);
 			}
 			
 			set
 			{
-				SetHostOrderValueIntoTlv((UInt16)Pdu.OptionalParamCodes.sar_msg_ref_num, value);
+				SetHostOrderValueIntoTlv(Pdu.OptionalParamCodes.sar_msg_ref_num, value);
 			}
 		}
 		
 		/// <summary>
 		/// Total number of short message fragments within the concatenated short message.
 		/// </summary>
-		public byte SarTotalSegments
+		public byte? SarTotalSegments
 		{
 			get
 			{
-				return GetOptionalParamBytes((ushort)OptionalParamCodes.sar_total_segments)[0];
+				return GetOptionalParamByte(OptionalParamCodes.sar_total_segments);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.sar_total_segments, new Byte[] {value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.sar_total_segments, value);
 			}
 		}
 		
@@ -364,70 +363,64 @@ namespace AberrantSMPP.Packet.Request
 		/// The sequence number of a particular short message fragment within the 
 		/// concatenated short message.
 		/// </summary>
-		public byte SarSegmentSeqnum
+		public byte? SarSegmentSeqnum
 		{
 			get
 			{
-				return GetOptionalParamBytes((ushort)OptionalParamCodes.sar_segment_seqnum)[0];
+				return GetOptionalParamByte(OptionalParamCodes.sar_segment_seqnum);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.sar_segment_seqnum, new Byte[] {value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.sar_segment_seqnum, value);
 			}
 		}
 		
 		/// <summary>
 		/// A user response code. The actual response codes are SMS application specific.
 		/// </summary>
-		public byte UserResponseCode
+		public byte? UserResponseCode
 		{
 			get
 			{
-				return GetOptionalParamBytes((ushort)OptionalParamCodes.user_response_code)[0];
+				return GetOptionalParamByte(OptionalParamCodes.user_response_code);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.user_response_code, new Byte[] {value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.user_response_code, value);
 			}
 		}
 		
 		/// <summary>
 		/// Indicates a level of privacy associated with the message.
 		/// </summary>
-		public PrivacyType PrivacyIndicator
+		public PrivacyType? PrivacyIndicator
 		{
 			get
 			{
-				return(PrivacyType)
-					GetOptionalParamBytes((ushort)OptionalParamCodes.privacy_indicator)[0];
+				return GetOptionalParamByte<PrivacyType>(OptionalParamCodes.privacy_indicator);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.privacy_indicator, new Byte[] {(byte)value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.privacy_indicator, value);
 			}
 		}
 		
 		/// <summary>
 		/// Defines the type of payload(e.g. WDP, WCMP, etc.)
 		/// </summary>
-		public PayloadTypeType PayloadType
+		public PayloadTypeType? PayloadType
 		{
 			get
 			{
-				return(PayloadTypeType)
-					GetOptionalParamBytes((ushort)OptionalParamCodes.payload_type)[0];
+				return GetOptionalParamByte<PayloadTypeType>(OptionalParamCodes.payload_type);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.payload_type, new Byte[] {(byte)value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.payload_type, value);
 			}
 		}
 		
@@ -439,7 +432,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString((ushort)OptionalParamCodes.message_payload);
+				return GetOptionalParamString(OptionalParamCodes.message_payload);
 			}
 			
 			set
@@ -456,7 +449,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString((ushort)OptionalParamCodes.callback_num);
+				return GetOptionalParamString(OptionalParamCodes.callback_num);
 			}
 			
 			set
@@ -473,7 +466,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString((ushort)OptionalParamCodes.source_subaddress);
+				return GetOptionalParamString(OptionalParamCodes.source_subaddress);
 			}
 			
 			set
@@ -490,7 +483,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString((ushort)OptionalParamCodes.dest_subaddress);
+				return GetOptionalParamString(OptionalParamCodes.dest_subaddress);
 			}
 			
 			set
@@ -502,18 +495,16 @@ namespace AberrantSMPP.Packet.Request
 		/// <summary>
 		/// The language of the short message.
 		/// </summary>
-		public LanguageIndicator LanguageIndicator
+		public LanguageIndicator? LanguageIndicator
 		{
 			get
 			{
-				return(LanguageIndicator)
-					GetOptionalParamBytes((ushort)OptionalParamCodes.language_indicator)[0];
+				return GetOptionalParamByte<LanguageIndicator>(OptionalParamCodes.language_indicator);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.language_indicator, new Byte[] {(byte)value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.language_indicator, value);
 			}
 		}
 		
@@ -529,7 +520,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString((ushort)OptionalParamCodes.its_session_info);
+				return GetOptionalParamString(OptionalParamCodes.its_session_info);
 			}
 			
 			set
@@ -546,7 +537,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString((ushort)OptionalParamCodes.network_error_code);
+				return GetOptionalParamString(OptionalParamCodes.network_error_code);
 			}
 			
 			set
@@ -558,18 +549,16 @@ namespace AberrantSMPP.Packet.Request
 		/// <summary>
 		/// Indicates to the ESME the final message state for an SMSC Delivery Receipt.
 		/// </summary>
-		public MessageStateType MessageState
+		public MessageStateType? MessageState
 		{
 			get
 			{
-				return(MessageStateType)
-					GetOptionalParamBytes((ushort)OptionalParamCodes.message_state)[0];
+				return GetOptionalParamByte<MessageStateType>(OptionalParamCodes.message_state);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.message_state, new Byte[] {(byte)value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.message_state, value);
 			}
 		}
 		
@@ -580,7 +569,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString((ushort)OptionalParamCodes.receipted_message_id);
+				return GetOptionalParamString(OptionalParamCodes.receipted_message_id);
 			}
 			
 			set

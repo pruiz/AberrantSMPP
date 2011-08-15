@@ -16,17 +16,19 @@
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
 using System;
+using System.Linq;
 using System.Net.Sockets;
 using System.Collections;
 using System.Threading;
+using System.Timers;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+
 using AberrantSMPP.Packet.Request;
 using AberrantSMPP.Utility;
 using AberrantSMPP.Packet.Response;
 using AberrantSMPP.Packet;
 using AberrantSMPP.EventObjects;
-using System.Timers;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 
 namespace AberrantSMPP 
 {
@@ -55,6 +57,7 @@ namespace AberrantSMPP
 		private int _SleepTimeAfterSocketFailure;
 		private bool _SentUnbindPacket = true;  //default to true since we start out unbound
 		private string username;
+		private Random _random = new Random();
 		
 		/// <summary>
 		/// Required designer variable.
@@ -62,7 +65,6 @@ namespace AberrantSMPP
 		protected Container components = null;
 
 		#region properties
-		
 		/// <summary>
 		/// The username to use for software validation.
 		/// </summary>
@@ -512,16 +514,13 @@ namespace AberrantSMPP
 
 		#endregion constructors
 
-		
-		private void delTest() {
-		
-		}
 		/// <summary>
 		/// Sends a user-specified Pdu(see the RoaminSMPP base library for
 		/// Pdu types).  This allows complete flexibility for sending Pdus.
 		/// </summary>
 		/// <param name="packet">The Pdu to send.</param>
-		public void SendPdu(Pdu packet)
+		/// <returns>Boolean indicating wether the PDU was sent.</returns>
+		public bool SendPdu(Pdu packet)
 		{
 			bool sendFailed = true;
 			
@@ -532,6 +531,7 @@ namespace AberrantSMPP
 					var bytes = packet.GetEncodedPdu();
 					asClient.Send(bytes);
 					sendFailed = false;
+					return true;
 				}
 				catch(Exception exc)
 				{
@@ -554,6 +554,8 @@ namespace AberrantSMPP
 					}
 				}
 			}
+
+			return false;
 		}
 
 		/// <summary>
@@ -697,8 +699,15 @@ namespace AberrantSMPP
 		#endregion internal methods
 
 		#region private methods
-		
-				/// <summary>
+		private byte GetRandomByte()
+		{
+			lock (_random)
+			{
+				return Convert.ToByte(_random.Next(254));
+			}
+		}
+
+		/// <summary>
 		/// Goes through the packets in the queue and fires events for them.  Called by the
 		/// threads in the ThreadPool.
 		/// </summary>

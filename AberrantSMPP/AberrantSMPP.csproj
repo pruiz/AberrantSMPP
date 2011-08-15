@@ -10,9 +10,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>AberrantSMPP</RootNamespace>
     <AssemblyName>AberrantSMPP</AssemblyName>
-    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile />
+    <TargetFrameworkProfile>Client</TargetFrameworkProfile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -110,6 +110,7 @@
     <Compile Include="SMPPCommunicator.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="SmppSarMethod.cs" />
     <Compile Include="Utility\DestinationAddress.cs" />
     <Compile Include="Utility\GSMEncoding.cs" />
     <Compile Include="Utility\PduFactory.cs" />

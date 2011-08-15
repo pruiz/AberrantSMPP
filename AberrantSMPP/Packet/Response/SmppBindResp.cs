@@ -55,8 +55,7 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return GetOptionalParamString((ushort)
-					Pdu.OptionalParamCodes.SC_interface_version);
+				return GetOptionalParamString(Pdu.OptionalParamCodes.SC_interface_version);
 			}
 			
 			set
@@ -66,8 +65,7 @@ namespace AberrantSMPP.Packet.Response
 				{
 					version = string.Empty;
 				}
-				SetOptionalParamString(
-					(ushort)Pdu.OptionalParamCodes.SC_interface_version, version);
+				SetOptionalParamString(Pdu.OptionalParamCodes.SC_interface_version, version);
 			}
 		}
 		

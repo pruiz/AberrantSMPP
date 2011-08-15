@@ -109,36 +109,32 @@ namespace AberrantSMPP.Packet.Request
 		/// <summary>
 		/// The correct network associated with the originating device.
 		/// </summary>
-		public NetworkType SourceNetworkType
+		public NetworkType? SourceNetworkType
 		{
 			get
 			{
-				return(NetworkType)GetOptionalParamBytes(
-					(ushort)OptionalParamCodes.source_network_type)[0];
+				return GetOptionalParamByte<NetworkType>(OptionalParamCodes.source_network_type);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.source_network_type, new Byte[] {(byte)value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.source_network_type, value);
 			}
 		}
 		
 		/// <summary>
 		/// The correct bearer type for the delivering the user data to the destination.
 		/// </summary>
-		public BearerType SourceBearerType
+		public BearerType? SourceBearerType
 		{
 			get
 			{
-				return(BearerType)GetOptionalParamBytes(
-					(ushort)OptionalParamCodes.source_bearer_type)[0];
+				return GetOptionalParamByte<BearerType>(OptionalParamCodes.source_bearer_type);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.source_bearer_type, new Byte[] {(byte)value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.source_bearer_type, value);
 			}
 		}
 		
@@ -146,62 +142,48 @@ namespace AberrantSMPP.Packet.Request
 		/// The telematics identifier associated with the source.  The value part
 		/// has yet to be defined in the specs as of 07/20/2004.
 		/// </summary>
-		public UInt16 SourceTelematicsId
+		public UInt16? SourceTelematicsId
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv((ushort)Pdu.OptionalParamCodes.source_telematics_id);
+				return GetHostOrderUInt16FromTlv(Pdu.OptionalParamCodes.source_telematics_id);
 			}
 			
 			set
 			{
-				if(value < UInt16.MaxValue)
-				{
-					SetOptionalParamBytes(
-						(UInt16)Pdu.OptionalParamCodes.source_telematics_id,
-						BitConverter.GetBytes(
-						UnsignedNumConverter.SwapByteOrdering(value)));
-				}
-				else
-				{
-					throw new ArgumentException("source_telematics_id value too large.");
-				}
+				SetHostOrderValueIntoTlv(Pdu.OptionalParamCodes.source_telematics_id, value);
 			}
 		}
 		
 		/// <summary>
 		/// The correct network for the destination device.
 		/// </summary>
-		public NetworkType DestNetworkType
+		public NetworkType? DestNetworkType
 		{
 			get
 			{
-				return(NetworkType)GetOptionalParamBytes(
-					(ushort)OptionalParamCodes.dest_network_type)[0];
+				return GetOptionalParamByte<NetworkType>(OptionalParamCodes.dest_network_type);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.dest_network_type, new Byte[] {(byte)value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.dest_network_type, value);
 			}
 		}
 		
 		/// <summary>
 		/// The correct bearer type for the delivering the user data to the destination.
 		/// </summary>
-		public BearerType DestBearerType
+		public BearerType? DestBearerType
 		{
 			get
 			{
-				return(BearerType)GetOptionalParamBytes(
-					(ushort)OptionalParamCodes.dest_bearer_type)[0];
+				return GetOptionalParamByte<BearerType>(OptionalParamCodes.dest_bearer_type);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.dest_bearer_type, new Byte[] {(byte)value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.dest_bearer_type, value);
 			}
 		}
 		
@@ -209,26 +191,16 @@ namespace AberrantSMPP.Packet.Request
 		/// The telematics identifier associated with the destination.  The value part
 		/// has yet to be defined in the specs as of 07/20/2004.
 		/// </summary>
-		public UInt16 DestTelematicsId
+		public UInt16? DestTelematicsId
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv((ushort)Pdu.OptionalParamCodes.dest_telematics_id);
+				return GetHostOrderUInt16FromTlv(Pdu.OptionalParamCodes.dest_telematics_id);
 			}
 			
 			set
 			{
-				if(value < UInt16.MaxValue)
-				{
-					SetOptionalParamBytes(
-						(UInt16)Pdu.OptionalParamCodes.dest_telematics_id,
-						BitConverter.GetBytes(
-						UnsignedNumConverter.SwapByteOrdering(value)));
-				}
-				else
-				{
-					throw new ArgumentException("dest_telematics_id value too large.");
-				}
+				SetHostOrderValueIntoTlv(OptionalParamCodes.dest_telematics_id, value);
 			}
 		}
 		
@@ -236,73 +208,50 @@ namespace AberrantSMPP.Packet.Request
 		/// If true, this indicates that there are more messages to follow for the
 		/// destination SME.
 		/// </summary>
-		public bool MoreMessagesToSend
+		public bool? MoreMessagesToSend
 		{
 			get
 			{
-				byte sendMore = GetOptionalParamBytes(
-					(ushort)OptionalParamCodes.more_messages_to_send)[0];
-				
-				return (sendMore == 0) ? false : true;
+				var val = GetOptionalParamByte(OptionalParamCodes.more_messages_to_send);
+				return val.GetValueOrDefault(0x00) == 0x00 ? false : true;
 			}
 			
 			set
 			{
-				byte sendMore;
-				if(value == false)
-				{
-					sendMore =(byte)0x00;
-				}
-				else
-				{
-					sendMore =(byte)0x01;
-				}
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.more_messages_to_send, new Byte[] {sendMore});
+				byte? sendMore = !value.HasValue ? null : new Nullable<byte>(value.Value ? (byte)0x01 : (byte)0x00);
+				SetOptionalParamByte(Pdu.OptionalParamCodes.more_messages_to_send, sendMore);
 			}
 		}
 		
 		/// <summary>
 		/// Time to live as a relative time in seconds from submission.
 		/// </summary>
-		public UInt32 QosTimeToLive
+		public UInt32? QosTimeToLive
 		{
 			get
 			{
-				return GetHostOrderUInt32FromTlv((ushort)Pdu.OptionalParamCodes.qos_time_to_live);
+				return GetHostOrderUInt32FromTlv(Pdu.OptionalParamCodes.qos_time_to_live);
 			}
 			
 			set
 			{
-				if(value < UInt32.MaxValue)
-				{
-					SetOptionalParamBytes(
-						(ushort)Pdu.OptionalParamCodes.qos_time_to_live,
-						BitConverter.GetBytes(
-						UnsignedNumConverter.SwapByteOrdering(value)));
-				}
-				else
-				{
-					throw new ArgumentException("qos_time_to_live value too large.");
-				}
+				SetHostOrderValueIntoTlv(OptionalParamCodes.qos_time_to_live, value);
 			}
 		}
 		
 		/// <summary>
 		/// Sets the Delivery Pending Flag on delivery failure.
 		/// </summary>
-		public DpfResultType SetDpf
+		public DpfResultType? SetDpf
 		{
 			get
 			{
-				return(DpfResultType)GetOptionalParamBytes(
-					(ushort)OptionalParamCodes.set_dpf)[0];
+				return GetOptionalParamByte<DpfResultType>(OptionalParamCodes.set_dpf);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.set_dpf, new Byte[] {(byte)value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.set_dpf, value);
 			}
 		}
 		
@@ -314,7 +263,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString((ushort)Pdu.OptionalParamCodes.receipted_message_id);
+				return GetOptionalParamString(Pdu.OptionalParamCodes.receipted_message_id);
 			}
 			
 			set
@@ -327,18 +276,16 @@ namespace AberrantSMPP.Packet.Request
 		/// Message State.  Should be present for SMSC Delivery Receipts and Intermediate
 		/// Notifications.
 		/// </summary>
-		public MessageStateType MessageState
+		public MessageStateType? MessageState
 		{
 			get
 			{
-				return (MessageStateType)GetOptionalParamBytes(
-					(ushort)OptionalParamCodes.message_state)[0];
+				return GetOptionalParamByte<MessageStateType>(OptionalParamCodes.message_state);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.message_state, new Byte[] {(byte)value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.message_state, value);
 			}
 		}
 		
@@ -350,7 +297,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString((ushort)Pdu.OptionalParamCodes.network_error_code);
+				return GetOptionalParamString(Pdu.OptionalParamCodes.network_error_code);
 			}
 			
 			set
@@ -362,38 +309,34 @@ namespace AberrantSMPP.Packet.Request
 		/// <summary>
 		/// A user response code. The actual response codes are implementation specific.
 		/// </summary>
-		public byte UserResponseCode
+		public byte? UserResponseCode
 		{
 			get
 			{
-				return GetOptionalParamBytes(
-					(ushort)OptionalParamCodes.user_response_code)[0];
+				return GetOptionalParamByte(OptionalParamCodes.user_response_code);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.user_response_code,new Byte[] {value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.user_response_code, value);
 			}
 		}
 		
 		/// <summary>
 		/// Indicates the number of messages stored in a mail box.
 		/// </summary>
-		public byte NumberOfMessages
+		public byte? NumberOfMessages
 		{
 			get
 			{
-				return GetOptionalParamBytes(
-					(ushort)OptionalParamCodes.number_of_messages)[0];
+				return GetOptionalParamByte(OptionalParamCodes.number_of_messages);
 			}
 			
 			set
 			{
-				if(value <= 99)
+				if(value == null || value <= 99)
 				{
-					SetOptionalParamBytes(
-						(ushort)Pdu.OptionalParamCodes.number_of_messages, new Byte[] {value});
+					SetOptionalParamByte(Pdu.OptionalParamCodes.number_of_messages, value);
 				}
 				else
 				{
@@ -406,18 +349,16 @@ namespace AberrantSMPP.Packet.Request
 		/// Indicates and controls the MS users reply method to an SMS delivery message
 		/// received from the network.
 		/// </summary>
-		public ItsReplyTypeType ItsReplyType
+		public ItsReplyTypeType? ItsReplyType
 		{
 			get
 			{
-				return (ItsReplyTypeType)GetOptionalParamBytes(
-					(ushort)OptionalParamCodes.its_reply_type)[0];
+				return GetOptionalParamByte<ItsReplyTypeType>(OptionalParamCodes.its_reply_type);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.its_reply_type, new Byte[] {(byte)value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.its_reply_type, value);
 			}
 		}
 		
@@ -430,7 +371,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString((ushort)Pdu.OptionalParamCodes.its_session_info);
+				return GetOptionalParamString(Pdu.OptionalParamCodes.its_session_info);
 			}
 			
 			set

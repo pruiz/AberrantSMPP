@@ -18,7 +18,9 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Text;
+
 using AberrantSMPP.Packet;
 
 namespace AberrantSMPP.Utility
@@ -42,6 +44,12 @@ namespace AberrantSMPP.Utility
 		{
 		}
 
+		/// <summary>
+		/// Gets the encoded representation of the specified text.
+		/// </summary>
+		/// <param name="coding">The coding.</param>
+		/// <param name="text">The text.</param>
+		/// <returns></returns>
 		public static byte[] GetEncodedText(DataCoding coding, string text)
 		{
 			switch (coding)
@@ -73,7 +81,78 @@ namespace AberrantSMPP.Utility
 					throw new ArgumentException("Invalid (or unsupported) DataCoding value.");
 			}
 		}
-		
+
+		/// <summary>
+		/// Gets the maximum length of each segment of a concatenated 
+		/// message of totalBytes size using the specified data_coding.
+		/// </summary>
+		/// <param name="coding">The coding.</param>
+		/// <param name="totalbytes">The totalbytes.</param>
+		/// <returns></returns>
+		public static int GetMaxSegmentLength(DataCoding coding, int totalbytes)
+		{
+			switch (coding)
+			{
+				case DataCoding.IA5_ASCII:
+				case DataCoding.SMSCDefault:
+					return totalbytes <= 160 ? 160 : 153;
+				case DataCoding.UCS2:
+					return totalbytes <= 70 ? 70 : 67;
+				case DataCoding.Latin1:
+				case DataCoding.OctetUnspecifiedA:
+				case DataCoding.OctetUnspecifiedB:
+				case DataCoding.Cyrillic:
+				case DataCoding.ExtendedKanjiJIS:
+				case DataCoding.JIS:
+				case DataCoding.KS_C:
+				case DataCoding.Latin_Hebrew:
+				case DataCoding.MusicCodes:
+				case DataCoding.Pictogram:
+					return totalbytes <= 140 ? 140 : 134;
+				default:
+					throw new InvalidOperationException("Invalid or unsuported encoding for text message ");
+			}
+		}
+
+		/// <summary>
+		/// Splits the message into segments of at most maxLen bytes.
+		/// If udhRef is not null, the appropiate User Data Header will be 
+		/// prepended to each segment, using it's value as re-assembly reference id.
+		/// </summary>
+		/// <param name="bytes">The bytes.</param>
+		/// <param name="maxLen">The max len.</param>
+		/// <param name="udhRef">The udh ref.</param>
+		/// <returns></returns>
+		public static IEnumerable<byte[]> SplitMessage(byte[] bytes, int maxLen, byte? udhRef)
+		{
+			if (bytes.Length <= maxLen)
+				return new[] { bytes };
+
+			var totalSegments = (bytes.Length / maxLen);
+			var segments = new List<byte[]>();
+
+			for (var i = 0; i <= totalSegments; i++)
+			{
+				var len = i == totalSegments ? bytes.Length - (maxLen * i) : maxLen;
+				var segment = new byte[udhRef.HasValue ? 6 + len : len];
+
+				if (udhRef.HasValue)
+				{
+					segment[0] = 5;		// Header len (not counting this len indicator byte)
+					segment[1] = 0x00;	// Segmentation & re-assemly (with 8 bit reference) IE
+					segment[2] = 0x03;	// IE data length.
+					segment[3] = udhRef.Value;
+					segment[4] = Convert.ToByte(totalSegments);
+					segment[5] = Convert.ToByte(i + 1);
+				}
+
+				Array.Copy(bytes, maxLen * i, segment, udhRef.HasValue ? 6 : 0, len);
+				segments.Add(segment);
+			}
+
+			return segments;
+		}
+
 		/// <summary>
 		/// Inserts the short message into the PDU ArrayList.
 		/// </summary>
@@ -123,12 +202,12 @@ namespace AberrantSMPP.Utility
 			if(val == null)
 			{
 				pdu.SetOptionalParamString(
-					(ushort)Pdu.OptionalParamCodes.receipted_message_id, string.Empty);
+					Pdu.OptionalParamCodes.receipted_message_id, string.Empty);
 			}
 			else if(val.Length <= MAX_RECEIPTED_ID_LEN)
 			{
 				pdu.SetOptionalParamString(
-					(ushort)Pdu.OptionalParamCodes.receipted_message_id, val);
+					Pdu.OptionalParamCodes.receipted_message_id, val);
 			}
 			else
 			{
@@ -152,7 +231,7 @@ namespace AberrantSMPP.Utility
 			else
 			{
 				pdu.SetOptionalParamString(
-					(ushort)Pdu.OptionalParamCodes.network_error_code,val);
+					Pdu.OptionalParamCodes.network_error_code,val);
 			}
 		}
 		
@@ -168,12 +247,12 @@ namespace AberrantSMPP.Utility
 			if(val == null)
 			{
 				pdu.SetOptionalParamString(
-					(ushort)Pdu.OptionalParamCodes.its_session_info, string.Empty);
+					Pdu.OptionalParamCodes.its_session_info, string.Empty);
 			}
 			else if(val.Length == MAX_ITS)
 			{
 				pdu.SetOptionalParamString(
-					(ushort)Pdu.OptionalParamCodes.its_session_info, val);
+					Pdu.OptionalParamCodes.its_session_info, val);
 			}
 			else
 			{
@@ -191,7 +270,7 @@ namespace AberrantSMPP.Utility
 			if(val.Length >= SUBADDRESS_MIN && val.Length <= SUBADDRESS_MAX)
 			{
 				pdu.SetOptionalParamString(
-					(ushort)Pdu.OptionalParamCodes.dest_subaddress, val);
+					Pdu.OptionalParamCodes.dest_subaddress, val);
 			}
 			else
 			{
@@ -211,7 +290,7 @@ namespace AberrantSMPP.Utility
 			if(val.Length >= SUBADDRESS_MIN && val.Length <= SUBADDRESS_MAX)
 			{
 				pdu.SetOptionalParamString(
-					(ushort)Pdu.OptionalParamCodes.source_subaddress, val);
+					Pdu.OptionalParamCodes.source_subaddress, val);
 			}
 			else
 			{
@@ -233,7 +312,7 @@ namespace AberrantSMPP.Utility
 			if(val.Length >= CALLBACK_NUM_MIN && val.Length <= CALLBACK_NUM_MAX)
 			{
 				pdu.SetOptionalParamString(
-					(ushort)Pdu.OptionalParamCodes.callback_num, val);
+					Pdu.OptionalParamCodes.callback_num, val);
 			}
 			else
 			{
@@ -254,7 +333,7 @@ namespace AberrantSMPP.Utility
 
 			if (val == null)
 			{
-				pdu.SetOptionalParamBytes((ushort)Pdu.OptionalParamCodes.message_payload, new byte[] { 0 });
+				pdu.SetOptionalParamBytes(Pdu.OptionalParamCodes.message_payload, new byte[] { 0 });
 			}
 			else if(val is string)
 			{
@@ -275,7 +354,7 @@ namespace AberrantSMPP.Utility
 				if(encodedValue.Length < MAX_PAYLOAD_LENGTH)
 				{
 					pdu.SetOptionalParamBytes(
-						(ushort)Pdu.OptionalParamCodes.message_payload, encodedValue);
+						Pdu.OptionalParamCodes.message_payload, encodedValue);
 				}
 				else
 				{

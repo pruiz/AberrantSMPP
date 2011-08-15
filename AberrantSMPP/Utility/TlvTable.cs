@@ -123,7 +123,8 @@ namespace AberrantSMPP.Utility
 			//set it up for the next run
 			index += length;
 		}
-		
+
+#if false // Deprecated API
 		/// <summary>
 		/// Gets the optional parameter bytes associated with the given tag.
 		/// </summary>
@@ -140,7 +141,7 @@ namespace AberrantSMPP.Utility
 			else
 			{
 				byte[] bVal = (byte[])val;
-				#if DEBUG
+#if DEBUG
 				StringBuilder sb = new StringBuilder();
 				sb.Append("Getting tag " + UnsignedNumConverter.SwapByteOrdering(tag));
 				sb.Append("\nValue: ");
@@ -153,7 +154,7 @@ namespace AberrantSMPP.Utility
 				
 				Console.WriteLine(sb);
 				
-				#endif
+#endif
 				return bVal;
 			}
 		}
@@ -179,7 +180,7 @@ namespace AberrantSMPP.Utility
 		/// <param name="val">The value of this TLV.</param>
 		public void SetOptionalParamBytes(UInt16 tag, byte[] val)
 		{
-			#if DEBUG
+#if DEBUG
 			StringBuilder sb = new StringBuilder();
 			sb.Append("Setting tag " + UnsignedNumConverter.SwapByteOrdering(tag));
 			sb.Append("\nValue: ");
@@ -192,7 +193,7 @@ namespace AberrantSMPP.Utility
 			
 			Console.WriteLine(sb);
 			
-			#endif
+#endif
 			if(val != null)
 			{
 				if(val.Length > UInt16.MaxValue)
@@ -246,7 +247,93 @@ namespace AberrantSMPP.Utility
 		{
 			UpdateOptionalParamBytes(tag, Encoding.ASCII.GetBytes(val));
 		}
-		
+#endif
+
+		#region NEW API
+		/// <summary>
+		/// Gets the bytes.
+		/// </summary>
+		/// <param name="tag">The tag.</param>
+		/// <returns></returns>
+		public byte[] GetBytes(UInt16 tag)
+		{
+			if (!tlvTable.ContainsKey(tag) || tlvTable[tag] == null)
+				throw new ApplicationException("TLV tag " + tag + " not found.");
+
+			return (byte[])tlvTable[tag];
+		}
+		/// <summary>
+		/// Gets the byte.
+		/// </summary>
+		/// <param name="tag">The tag.</param>
+		/// <returns></returns>
+		public byte GetByte(UInt16 tag)
+		{
+			return GetBytes(tag)[0];
+		}
+		/// <summary>
+		/// Gets the string.
+		/// </summary>
+		/// <param name="tag">The tag.</param>
+		/// <returns></returns>
+		public string GetString(UInt16 tag)
+		{
+			return Encoding.ASCII.GetString(GetBytes(tag));
+		}
+		/// <summary>
+		/// Sets the specified tag.
+		/// </summary>
+		/// <param name="tag">The tag.</param>
+		/// <param name="value">The value.</param>
+		public void Set(UInt16 tag, byte value)
+		{
+			Set(tag, new[] { value });
+		}
+		/// <summary>
+		/// Sets the specified tag.
+		/// </summary>
+		/// <param name="tag">The tag.</param>
+		/// <param name="value">The value.</param>
+		public void Set(UInt16 tag, byte[] value)
+		{
+			if (value == null)
+				throw new ArgumentNullException("value");
+
+			if (value.Length > UInt16.MaxValue)
+				throw new ArgumentException("Parameter value for tag '" + tag + "' is too large.");
+			
+			tlvTable[tag] = value;
+		}
+		/// <summary>
+		/// Sets the specified tag.
+		/// </summary>
+		/// <param name="tag">The tag.</param>
+		/// <param name="value">The value.</param>
+		public void Set(UInt16 tag, string value)
+		{
+			Set(tag, Encoding.ASCII.GetBytes(value));
+		}
+		/// <summary>
+		/// Determines whether this TlvTable contains the specified key.
+		/// </summary>
+		/// <param name="tag">The tag.</param>
+		/// <returns>
+		/// 	<c>true</c> if contains the key; otherwise, <c>false</c>.
+		/// </returns>
+		public bool ContainsKey(UInt16 tag)
+		{
+			return tlvTable.ContainsKey(tag);
+		}
+		/// <summary>
+		/// Removes the specified tag.
+		/// </summary>
+		/// <param name="tag">The tag.</param>
+		public void Remove(UInt16 tag)
+		{
+			tlvTable.Remove(tag);
+		}
+		#endregion
+
 		/// <summary>
 		/// Iterates through the hashtable, gathering the tag, length, and
 		/// value as it goes.  For each entry, it encodes the TLV into a byte

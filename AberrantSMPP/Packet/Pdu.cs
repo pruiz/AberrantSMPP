@@ -234,59 +234,7 @@ namespace AberrantSMPP.Packet
 			pdu.TrimToSize();
 			
 			return pdu;
-		}
-				
-		/// <summary>
-		/// Retrieves the given bytes from the TLV table and converts them into a
-		/// host order UInt16.
-		/// </summary>
-		/// <param name="tag">The TLV tag to use for retrieval</param>
-		/// <returns>The host order result.</returns>
-		protected UInt16 GetHostOrderUInt16FromTlv(ushort tag)
-		{
-			return UnsignedNumConverter.SwapByteOrdering(
-				BitConverter.ToUInt16(GetOptionalParamBytes(tag), 0));
-		}
-		
-		/// <summary>
-		/// Retrieves the given bytes from the TLV table and converts them into a
-		/// host order UInt32.
-		/// </summary>
-		/// <param name="tag">The TLV tag to use for retrieval</param>
-		/// <returns>The host order result.</returns>
-		protected UInt32 GetHostOrderUInt32FromTlv(ushort tag)
-		{
-			return UnsignedNumConverter.SwapByteOrdering(
-				BitConverter.ToUInt32(GetOptionalParamBytes(tag), 0));
-		}
-		
-		/// <summary>
-		/// Takes the given value and puts it into the TLV table, accounting for 
-		/// network byte ordering.
-		/// </summary>
-		/// <param name="tag">The TLV tag to use for retrieval</param>
-		/// <param name="val">The value to put into the table</param>
-		protected void SetHostOrderValueIntoTlv(UInt16 tag, UInt16 val)
-		{
-			SetOptionalParamBytes(
-						tag,
-						BitConverter.GetBytes(
-						UnsignedNumConverter.SwapByteOrdering(val)));
-		}
-		
-		/// <summary>
-		/// Takes the given value and puts it into the TLV table, accounting for 
-		/// network byte ordering.
-		/// </summary>
-		/// <param name="tag">The TLV tag to use for retrieval</param>
-		/// <param name="val">The value to put into the table</param>
-		protected void SetHostOrderValueIntoTlv(UInt16 tag, UInt32 val)
-		{
-			SetOptionalParamBytes(
-						tag,
-						BitConverter.GetBytes(
-						UnsignedNumConverter.SwapByteOrdering(val)));
-		}
+		}				
 		
 		/// <summary>
 		/// What remains after the header is stripped off the Pdu.  Subclasses
@@ -351,78 +299,231 @@ namespace AberrantSMPP.Packet
 		#endregion
 
 		#region TLV table methods
+		/// <summary>
+		/// Determines whether [contains optional parameter] [specified by tag].
+		/// </summary>
+		/// <param name="tag">The tag.</param>
+		/// <returns>
+		/// 	<c>true</c> if [contains optional parameter] [specified by tag]; otherwise, <c>false</c>.
+		/// </returns>
+		public bool ContainsOptionalParameter(OptionalParamCodes tag)
+		{
+			return _tlvTable.ContainsKey(UnsignedNumConverter.SwapByteOrdering((ushort)tag));
+		}
 
 		/// <summary>
 		/// Gets the optional parameter string associated with
 		/// the given tag.
 		/// </summary>
 		/// <param name="tag">The tag in TLV.</param>
-		/// <returns>The optional parameter string, the empty
-		/// string if not found.</returns>
-		public string GetOptionalParamString(UInt16 tag)
+		/// <returns>The optional parameter string, or null if not found.</returns>
+		public string GetOptionalParamString(OptionalParamCodes tag)
 		{
-			return _tlvTable.GetOptionalParamString(UnsignedNumConverter.SwapByteOrdering(tag));
+			//return _tlvTable.GetOptionalParamString(UnsignedNumConverter.SwapByteOrdering(tag));
+			return this.ContainsOptionalParameter(tag) ? 
+				_tlvTable.GetString(UnsignedNumConverter.SwapByteOrdering((ushort)tag)) : null;
 		}
-		
 		/// <summary>
 		/// Gets the optional parameter bytes associated with
 		/// the given tag.
 		/// </summary>
 		/// <param name="tag">The tag in TLV.</param>
-		/// <returns>The optional parameter bytes, null if
-		/// not found.</returns>
-		public byte[] GetOptionalParamBytes(UInt16 tag)
+		/// <returns>The optional parameter bytes, or null if not found</returns>
+		public byte[] GetOptionalParamBytes(OptionalParamCodes tag)
 		{
-			return _tlvTable.GetOptionalParamBytes(UnsignedNumConverter.SwapByteOrdering(tag));
+			//return _tlvTable.GetOptionalParamBytes(UnsignedNumConverter.SwapByteOrdering(tag));
+			return this.ContainsOptionalParameter(tag) ?
+				_tlvTable.GetBytes(UnsignedNumConverter.SwapByteOrdering((ushort)tag)) : null;
 		}
-		
 		/// <summary>
-		/// Sets the given TLV(as a string)into the table.  This ignores
-		/// null values.  This will reverse the byte order in the tag for you 
-		///(necessary for encoding).
+		/// Gets the optional parameter of type T associated with
+		/// the given tag.
+		/// </summary>
+		/// <param name="tag">The tag.</param>
+		/// <returns>The optional parameter value, or null if not found</returns>
+		public byte? GetOptionalParamByte(OptionalParamCodes tag)
+		{
+			return this.GetOptionalParamByte<byte>(tag);
+		}
+		/// <summary>
+		/// Gets the optional parameter of type T associated with
+		/// the given tag.
+		/// </summary>
+		/// <param name="tag">The tag.</param>
+		/// <returns>The optional parameter value, or null if not found</returns>
+		public T? GetOptionalParamByte<T>(OptionalParamCodes tag)
+			where T : struct
+		{
+			if (!this.ContainsOptionalParameter(tag))
+				return new Nullable<T>(default(T));
+
+			var data = _tlvTable.GetByte(UnsignedNumConverter.SwapByteOrdering((ushort)tag));
+			return (T)Convert.ChangeType(data, typeof(T));
+		}
+		/// <summary>
+		/// Retrieves the given bytes from the TLV table and converts them into a
+		/// host order UInt16.
+		/// </summary>
+		/// <param name="tag">The TLV tag to use for retrieval</param>
+		/// <returns>The host order result.</returns>
+		protected UInt16? GetHostOrderUInt16FromTlv(OptionalParamCodes tag)
+		{
+			var data = GetOptionalParamBytes(tag);
+
+			return data == null ? new Nullable<UInt16>() :
+				UnsignedNumConverter.SwapByteOrdering(BitConverter.ToUInt16(data, 0));
+		}
+		/// <summary>
+		/// Retrieves the given bytes from the TLV table and converts them into a
+		/// host order UInt32.
+		/// </summary>
+		/// <param name="tag">The TLV tag to use for retrieval</param>
+		/// <returns>The host order result.</returns>
+		protected UInt32? GetHostOrderUInt32FromTlv(OptionalParamCodes tag)
+		{
+			var data = GetOptionalParamBytes(tag);
+
+			return data == null ? new Nullable<UInt32>() :
+				UnsignedNumConverter.SwapByteOrdering(BitConverter.ToUInt32(data, 0));
+		}
+
+		/// <summary>
+		/// Sets the given TLV(as a string)into the table.
+		/// This will reverse the byte order in the tag for you (necessary for encoding).
+		/// If the value is null, the parameter TLV will be removed instead.
 		/// </summary>
 		/// <param name="tag">The tag for this TLV.</param>
 		/// <param name="val">The value of this TLV.</param>
-		public void SetOptionalParamString(UInt16 tag, string val)
+		public void SetOptionalParamString(OptionalParamCodes tag, string val)
 		{
-			_tlvTable.SetOptionalParamString(UnsignedNumConverter.SwapByteOrdering(tag), val);
+			if (val == null)
+			{
+				if (this.ContainsOptionalParameter(tag))
+					this.RemoveOptionalParameter(tag);
+			}
+			else
+			{
+				_tlvTable.Set(UnsignedNumConverter.SwapByteOrdering((ushort)tag), val);
+			}
 		}
-		
+		/// <summary>
+		/// Sets the given TLV(as a byte) into the table.  This will not take
+		/// care of big-endian/little-endian issues, although it will reverse the byte order 
+		/// in the tag for you (necessary for encoding). 
+		/// If the value is null, the parameter TLV will be removed instead.
+		/// </summary>
+		/// <param name="tag">The tag for this TLV.</param>
+		/// <param name="val">The value of this TLV.</param>
+		/*public void SetOptionalParamByte(OptionalParamCodes tag, byte? val)
+		{
+			if (!val.HasValue)
+			{
+				if (this.ContainsOptionalParameter(tag))
+					this.RemoveOptionalParameter(tag);
+			}
+			else
+			{
+				_tlvTable.Set(UnsignedNumConverter.SwapByteOrdering((ushort)tag), val.Value);
+			}
+		}*/
+		/// <summary>
+		/// Sets the given TLV(as a byte) into the table.  This will not take
+		/// care of big-endian/little-endian issues, although it will reverse the byte order 
+		/// in the tag for you (necessary for encoding). 
+		/// If the value is null, the parameter TLV will be removed instead.
+		/// </summary>
+		/// <param name="tag">The tag for this TLV.</param>
+		/// <param name="val">The value of this TLV.</param>
+		public void SetOptionalParamByte<T>(OptionalParamCodes tag, T? val)
+			where T : struct
+		{
+			if (!val.HasValue)
+			{
+				if (this.ContainsOptionalParameter(tag))
+					this.RemoveOptionalParameter(tag);
+			}
+			else
+			{
+				_tlvTable.Set(UnsignedNumConverter.SwapByteOrdering((ushort)tag), Convert.ToByte(val.Value));
+			}
+		}
 		/// <summary>
 		/// Sets the given TLV(as a byte array)into the table.  This will not take
 		/// care of big-endian/little-endian issues, although it will reverse the byte order 
-		/// in the tag for you(necessary for encoding).  This ignores null values.
-		/// </summary>
-		/// <param name="tag">The tag for this TLV.</param>
-		/// <param name="val">The value of this TLV.</param>
-		public void SetOptionalParamBytes(UInt16 tag, byte[] val)
-		{
-			_tlvTable.SetOptionalParamBytes(UnsignedNumConverter.SwapByteOrdering(tag), val);
-		}
-		
-		/// <summary>
-		/// Allows the updating of TLV values.  This will not take care of 
-		/// big-endian/little-endian issues, although it will reverse the byte order 
 		/// in the tag for you(necessary for encoding).
+		/// If the value is null, the parameter TLV will be removed instead.
 		/// </summary>
 		/// <param name="tag">The tag for this TLV.</param>
 		/// <param name="val">The value of this TLV.</param>
-		public void UpdateOptionalParamBytes(UInt16 tag, byte[] val)
+		public void SetOptionalParamBytes(OptionalParamCodes tag, byte[] val)
 		{
-			_tlvTable.UpdateOptionalParamBytes(UnsignedNumConverter.SwapByteOrdering(tag), val);
+			if (val == null)
+			{
+				if (this.ContainsOptionalParameter(tag))
+					this.RemoveOptionalParameter(tag);
+			}
+			else
+			{
+				_tlvTable.Set(UnsignedNumConverter.SwapByteOrdering((ushort)tag), val);
+			}
 		}
-		
 		/// <summary>
-		/// Allows the updating of TLV values.  This will reverse the byte order in the tag for you 
-		///(necessary for encoding).
+		/// Takes the given value and puts it into the TLV table, accounting for 
+		/// network byte ordering.
 		/// </summary>
-		/// <param name="tag">The tag for this TLV.</param>
-		/// <param name="val">The value of this TLV.</param>
-		public void UpdateOptionalParamString(UInt16 tag, string val)
+		/// <param name="tag">The TLV tag to use for retrieval</param>
+		/// <param name="val">The value to put into the table</param>
+		protected void SetHostOrderValueIntoTlv(OptionalParamCodes tag, UInt16? val)
 		{
-			_tlvTable.UpdateOptionalParamString(UnsignedNumConverter.SwapByteOrdering(tag), val);
+			if (!val.HasValue)
+			{
+				if (this.ContainsOptionalParameter(tag))
+					RemoveOptionalParameter(tag);
+			}
+			else
+			{
+				if (val.Value >= UInt16.MaxValue) {
+					var msg = string.Format("Value too large for ushort TLV '{0}'", tag);
+					throw new ArgumentOutOfRangeException(msg);
+				}
+
+				SetOptionalParamBytes(tag, BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering(val.Value)));
+			}
 		}
-		
+		/// <summary>
+		/// Takes the given value and puts it into the TLV table, accounting for 
+		/// network byte ordering.
+		/// </summary>
+		/// <param name="tag">The TLV tag to use for retrieval</param>
+		/// <param name="val">The value to put into the table</param>
+		protected void SetHostOrderValueIntoTlv(OptionalParamCodes tag, UInt32? val)
+		{
+			if (!val.HasValue)
+			{
+				if (this.ContainsOptionalParameter(tag))
+					RemoveOptionalParameter(tag);
+			}
+			else
+			{
+				if (val.Value < UInt32.MaxValue)
+				{
+					var msg = string.Format("Value too large for uint TLV '{0}'", tag);
+					throw new ArgumentOutOfRangeException(msg);
+				}
+
+				SetOptionalParamBytes(tag, BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering(val.Value)));
+			}
+		}
+
+		/// <summary>
+		/// Removes the optional parameter.
+		/// </summary>
+		/// <param name="tag">The tag.</param>
+		public void RemoveOptionalParameter(OptionalParamCodes tag)
+		{
+			_tlvTable.Remove(UnsignedNumConverter.SwapByteOrdering((ushort)tag));
+		}
+
 		/// <summary>
 		/// Takes the given bytes and attempts to insert them into the TLV table.
 		/// </summary>

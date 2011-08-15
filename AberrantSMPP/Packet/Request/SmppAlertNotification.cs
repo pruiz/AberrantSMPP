@@ -169,18 +169,16 @@ namespace AberrantSMPP.Packet.Request
 		/// <summary>
 		/// The status of the mobile station.
 		/// </summary>
-		public AvailabilityStatusType MSAvailabilityStatus
+		public AvailabilityStatusType? MSAvailabilityStatus
 		{
 			get
 			{
-				return(AvailabilityStatusType)GetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.ms_availability_status)[0];
+				return GetOptionalParamByte<AvailabilityStatusType>(Pdu.OptionalParamCodes.ms_availability_status);
 			}
 			
 			set
 			{
-				SetOptionalParamBytes(
-					(ushort)Pdu.OptionalParamCodes.ms_availability_status, new Byte[] {(byte)value});
+				SetOptionalParamByte(Pdu.OptionalParamCodes.ms_availability_status, value);
 			}
 		}
 		
