@@ -591,10 +591,10 @@ namespace AberrantSMPP
 				// Remove UDH header (if set).
 				pdu.EsmClass &= ((byte)~NetworkFeatures.UDHI);
 				// Remove SMPP segmentation properties..
-				pdu.MoreMessagesToSend = false;
-				pdu.NumberOfMessages = (byte)1;
-				pdu.SarTotalSegments = (byte)1;
-				pdu.SarMsgRefNumber = 0;
+				pdu.MoreMessagesToSend = null;
+				pdu.NumberOfMessages = null;
+				pdu.SarTotalSegments = null;
+				pdu.SarMsgRefNumber = null;
 				pdu.MessagePayload = data;
 				return this.SendPdu(pdu) ? 1 : 0;
 			}
