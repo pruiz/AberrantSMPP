@@ -44,11 +44,9 @@ namespace AberrantSMPP.Packet
 		#endregion constants
 		
 		#region private fields
-		private static uint _StaticSequenceNumber = 0;
 		private uint _CommandStatus = 0;
 		private CommandId _CommandID;
 		private TlvTable _tlvTable = new TlvTable();
-		private uint _CustomSequenceNumber = 0;
 		private uint _SequenceNumber = 0;
 		private uint _CommandLength;
 		private byte[] _PacketBytes = null;
@@ -88,7 +86,7 @@ namespace AberrantSMPP.Packet
 			}
 			set
 			{
-				_CustomSequenceNumber = value;
+				_SequenceNumber = value;
 			}
 		}
 		
@@ -266,37 +264,10 @@ namespace AberrantSMPP.Packet
 			ArrayList pdu = new ArrayList();
 			pdu.AddRange(BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering((uint)_CommandID)));
 			pdu.AddRange(BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering(_CommandStatus)));
-			
-			//increase the sequence number
-			GenerateSequenceNumber();			
 			pdu.AddRange(BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering(_SequenceNumber)));
 			pdu.TrimToSize();
 			return pdu;
 		}
-		
-		/// <summary>
-		/// Generates a monotonically increasing sequence number for each Pdu.  When it
-		/// hits the the 32 bit unsigned int maximum, it starts over.
-		/// </summary>
-		// FIXME: Sequence number shoule be provided by caller session instance,
-		//		  as this is a per-connection detail. (pruiz)
-		private void GenerateSequenceNumber()
-		{
-			if(_CustomSequenceNumber == 0)
-			{
-				_StaticSequenceNumber++;
-				if(_StaticSequenceNumber >= UInt32.MaxValue)
-				{
-					_StaticSequenceNumber = 1;
-				}
-				_SequenceNumber = _StaticSequenceNumber;
-			}
-			else
-			{
-				_SequenceNumber = _CustomSequenceNumber;
-			}
-		}
-
 		#endregion
 
 		#region TLV table methods

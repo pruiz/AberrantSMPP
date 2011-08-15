@@ -59,6 +59,7 @@ namespace AberrantSMPP
 		private bool _SentUnbindPacket = true;  //default to true since we start out unbound
 		private string username;
 		private Random _random = new Random();
+		private uint _SequenceNumber = 0;
 		
 		/// <summary>
 		/// Required designer variable.
@@ -529,6 +530,9 @@ namespace AberrantSMPP
 			{
 				try
 				{
+					if (packet.SequenceNumber != 0)
+						packet.SequenceNumber = GenerateSequenceNumber();
+
 					var bytes = packet.GetEncodedPdu();
 					asClient.Send(bytes);
 					sendFailed = false;
@@ -576,10 +580,11 @@ namespace AberrantSMPP
 				throw new ArgumentException("Short Message must be a string or byte array.");
 
 			var bytes = data is string ? PduUtil.GetEncodedText(pdu.DataCoding, data as string) : data as byte[];
+			var maxSegmentLen = PduUtil.GetMaxSegmentLength(pdu.DataCoding, bytes.Length);
 
 			// Remove/Reset data from PDU..
 			pdu.ShortMessage = pdu.MessagePayload = null;
-
+			
 			// Sending as payload means avoiding all the data splitting logic.. (which is great ;))
 			if (method == SmppSarMethod.SendAsPayload)
 			{
@@ -595,13 +600,26 @@ namespace AberrantSMPP
 			}
 
 			// Else.. let's do segmentation and the other crappy stuff..
-			var maxSegmentLen = PduUtil.GetMaxSegmentLength(pdu.DataCoding, bytes.Length);
 			var segmentCid = correlationId.HasValue ? correlationId.Value : GetRandomByte();
 			var udhref = method == SmppSarMethod.UserDataHeader ? new Nullable<byte>(segmentCid) : null;
 			var segments = PduUtil.SplitMessage(bytes, maxSegmentLen, udhref);
 			var totalSegments = segments.Count();
 			var segno = 0;
 			var sent = 0;
+
+			// If just one segment, send it w/o SAR parameters..
+			if (totalSegments < 2)
+			{
+				// Remove UDH header (if set).
+				pdu.EsmClass &= ((byte)~NetworkFeatures.UDHI);
+				// Remove SMPP segmentation properties..
+				pdu.MoreMessagesToSend = null;
+				pdu.NumberOfMessages = null;
+				pdu.SarTotalSegments = null;
+				pdu.SarMsgRefNumber = null;
+				pdu.ShortMessage = data;
+				return this.SendPdu(pdu) ? 1 : 0;
+			}
 
 			foreach (var segment in segments)
 			{
@@ -784,6 +802,23 @@ namespace AberrantSMPP
 		#endregion internal methods
 
 		#region private methods
+		/// <summary>
+		/// Generates a monotonically increasing sequence number for each Pdu.  When it
+		/// hits the the 32 bit unsigned int maximum, it starts over.
+		/// </summary>
+		private uint GenerateSequenceNumber()
+		{
+			lock (this)
+			{
+				_SequenceNumber++;
+				if (_SequenceNumber >= UInt32.MaxValue)
+				{
+					_SequenceNumber = 1;
+				}
+				return _SequenceNumber;
+			}
+		}
+
 		private byte GetRandomByte()
 		{
 			lock (_random)
