@@ -560,6 +560,90 @@ namespace AberrantSMPP
 		}
 
 		/// <summary>
+		/// Sends a long message possibly by splitting it on multiple SMPP PDUs.
+		/// </summary>
+		/// <param name="pdu">The base pdu to use.</param>
+		/// <param name="method">The segmentation & reasembly method tu use when splitting the message.</param>
+		/// <param name="correlationId">The correlation id to set to each message part. (If null, a random one will be chosen)</param>
+		/// <returns>The number of PDUs sent</returns>
+		public int SendLongMessage(SmppSubmitSm pdu, SmppSarMethod method, byte? correlationId)
+		{
+			if (pdu == null) throw new ArgumentNullException("pdu");
+
+			var data = pdu.MessagePayload != null ? pdu.MessagePayload : pdu.ShortMessage;
+
+			if (data != null && !(data is string || data is byte[]))
+				throw new ArgumentException("Short Message must be a string or byte array.");
+
+			var bytes = data is string ? PduUtil.GetEncodedText(pdu.DataCoding, data as string) : data as byte[];
+
+			// Remove/Reset data from PDU..
+			pdu.ShortMessage = pdu.MessagePayload = null;
+
+			// Sending as payload means avoiding all the data splitting logic.. (which is great ;))
+			if (method == SmppSarMethod.SendAsPayload)
+			{
+				// Remove UDH header (if set).
+				pdu.EsmClass &= ((byte)~NetworkFeatures.UDHI);
+				// Remove SMPP segmentation properties..
+				pdu.MoreMessagesToSend = false;
+				pdu.NumberOfMessages = (byte)1;
+				pdu.SarTotalSegments = (byte)1;
+				pdu.SarMsgRefNumber = 0;
+				pdu.MessagePayload = data;
+				return this.SendPdu(pdu) ? 1 : 0;
+			}
+
+			// Else.. let's do segmentation and the other crappy stuff..
+			var maxSegmentLen = PduUtil.GetMaxSegmentLength(pdu.DataCoding, bytes.Length);
+			var segmentCid = correlationId.HasValue ? correlationId.Value : GetRandomByte();
+			var udhref = method == SmppSarMethod.UserDataHeader ? new Nullable<byte>(segmentCid) : null;
+			var segments = PduUtil.SplitMessage(bytes, maxSegmentLen, udhref);
+			var totalSegments = segments.Count();
+			var segno = 0;
+			var sent = 0;
+
+			foreach (var segment in segments)
+			{
+				segno++;
+
+				// Set current segment bytes as short message..
+				pdu.ShortMessage = segment;
+
+				switch (method)
+				{
+					case SmppSarMethod.UserDataHeader:
+						pdu.EsmClass |= (byte)NetworkFeatures.UDHI; // Set UDH flag..
+						// Ensure SMPP segmentation fields are not set.
+						pdu.MoreMessagesToSend = null;
+						pdu.NumberOfMessages = null;
+						pdu.SarTotalSegments = null;
+						pdu.SarMsgRefNumber = null;
+						pdu.SarSegmentSeqnum = null;
+						break;
+					case SmppSarMethod.UseSmppSegmentation:
+						pdu.EsmClass &= ((byte)~NetworkFeatures.UDHI); // Remove UDH header (if set).
+						// Fill-in SMPP segmentation fields..
+						pdu.MoreMessagesToSend = segno != totalSegments;
+						pdu.NumberOfMessages = (byte)totalSegments;
+						pdu.SarTotalSegments = (byte)totalSegments;
+						pdu.SarMsgRefNumber = segmentCid;
+						pdu.SarSegmentSeqnum = (byte)segno;
+						break;
+				}
+
+				//Console.WriteLine("segno = {0} -- bytes => {1} -- Num: {2}, More == {3}, Total: {4}... ref => {5} --- CLASS: {6}", 
+				//	segno, segment.Count(), segno, segno != totalSegments, totalSegments, segmentCid, pdu.EsmClass
+				//);
+
+				if (this.SendPdu(pdu))
+					sent++;
+			}
+
+			return sent;
+		}
+
+		/// <summary>
 		/// Connects and binds the SMPPCommunicator to the SMSC, using the
 		/// values that have been set in the constructor and through the
 		/// properties.  This will also start the timer that sends enquire_link packets 
