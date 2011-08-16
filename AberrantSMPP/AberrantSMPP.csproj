@@ -75,6 +75,7 @@
     <Compile Include="Packet\DeliveryFailureReason.cs" />
     <Compile Include="Packet\EsmClass.cs" />
     <Compile Include="Packet\LanguageIndicator.cs" />
+    <Compile Include="Packet\OptionalParameters.cs" />
     <Compile Include="Packet\Pdu.cs" />
     <Compile Include="Packet\Request\SmppRequest.cs" />
     <Compile Include="Packet\Request\SmppSubmit.cs" />

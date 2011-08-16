@@ -41,19 +41,19 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return GetOptionalParamByte<DeliveryFailureReason>(Pdu.OptionalParamCodes.delivery_failure_reason);
+				return GetOptionalParamByte<DeliveryFailureReason>(OptionalParamCodes.delivery_failure_reason);
 			}
 			
 			set
 			{
 				if (value.HasValue)
 				{
-					SetOptionalParamBytes(Pdu.OptionalParamCodes.delivery_failure_reason,
+					SetOptionalParamBytes(OptionalParamCodes.delivery_failure_reason,
 						BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering((byte)value)));
 				}
 				else
 				{
-					SetOptionalParamBytes(Pdu.OptionalParamCodes.delivery_failure_reason, null);
+					SetOptionalParamBytes(OptionalParamCodes.delivery_failure_reason, null);
 				}
 			}
 		}
@@ -66,7 +66,7 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return GetOptionalParamString(Pdu.OptionalParamCodes.network_error_code);
+				return GetOptionalParamString(OptionalParamCodes.network_error_code);
 			}
 			
 			set
@@ -82,7 +82,7 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return GetOptionalParamString(Pdu.OptionalParamCodes.additional_status_info_text);
+				return GetOptionalParamString(OptionalParamCodes.additional_status_info_text);
 			}
 			
 			set
@@ -91,7 +91,7 @@ namespace AberrantSMPP.Packet.Response
 
 				if (value == null || value.Length <= MAX_STATUS_LEN)
 				{
-					SetOptionalParamString(Pdu.OptionalParamCodes.additional_status_info_text, value);
+					SetOptionalParamString(OptionalParamCodes.additional_status_info_text, value);
 				}
 				else
 				{
@@ -108,19 +108,19 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return GetOptionalParamByte<DpfResultType>(Pdu.OptionalParamCodes.dpf_result);
+				return GetOptionalParamByte<DpfResultType>(OptionalParamCodes.dpf_result);
 			}
 			
 			set
 			{
 				if (value.HasValue)
 				{
-					SetOptionalParamBytes(Pdu.OptionalParamCodes.dpf_result,
+					SetOptionalParamBytes(OptionalParamCodes.dpf_result,
 						BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering((byte)value)));
 				}
 				else
 				{
-					SetOptionalParamBytes(Pdu.OptionalParamCodes.dpf_result, null);
+					SetOptionalParamBytes(OptionalParamCodes.dpf_result, null);
 				}
 			}
 		}

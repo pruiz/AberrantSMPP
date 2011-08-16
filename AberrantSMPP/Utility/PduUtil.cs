@@ -203,12 +203,12 @@ namespace AberrantSMPP.Utility
 			if(val == null)
 			{
 				pdu.SetOptionalParamString(
-					Pdu.OptionalParamCodes.receipted_message_id, string.Empty);
+					OptionalParamCodes.receipted_message_id, string.Empty);
 			}
 			else if(val.Length <= MAX_RECEIPTED_ID_LEN)
 			{
 				pdu.SetOptionalParamString(
-					Pdu.OptionalParamCodes.receipted_message_id, val);
+					OptionalParamCodes.receipted_message_id, val);
 			}
 			else
 			{
@@ -232,7 +232,7 @@ namespace AberrantSMPP.Utility
 			else
 			{
 				pdu.SetOptionalParamString(
-					Pdu.OptionalParamCodes.network_error_code,val);
+					OptionalParamCodes.network_error_code,val);
 			}
 		}
 		
@@ -248,12 +248,12 @@ namespace AberrantSMPP.Utility
 			if(val == null)
 			{
 				pdu.SetOptionalParamString(
-					Pdu.OptionalParamCodes.its_session_info, string.Empty);
+					OptionalParamCodes.its_session_info, string.Empty);
 			}
 			else if(val.Length == MAX_ITS)
 			{
 				pdu.SetOptionalParamString(
-					Pdu.OptionalParamCodes.its_session_info, val);
+					OptionalParamCodes.its_session_info, val);
 			}
 			else
 			{
@@ -271,7 +271,7 @@ namespace AberrantSMPP.Utility
 			if(val.Length >= SUBADDRESS_MIN && val.Length <= SUBADDRESS_MAX)
 			{
 				pdu.SetOptionalParamString(
-					Pdu.OptionalParamCodes.dest_subaddress, val);
+					OptionalParamCodes.dest_subaddress, val);
 			}
 			else
 			{
@@ -291,7 +291,7 @@ namespace AberrantSMPP.Utility
 			if(val.Length >= SUBADDRESS_MIN && val.Length <= SUBADDRESS_MAX)
 			{
 				pdu.SetOptionalParamString(
-					Pdu.OptionalParamCodes.source_subaddress, val);
+					OptionalParamCodes.source_subaddress, val);
 			}
 			else
 			{
@@ -313,7 +313,7 @@ namespace AberrantSMPP.Utility
 			if(val.Length >= CALLBACK_NUM_MIN && val.Length <= CALLBACK_NUM_MAX)
 			{
 				pdu.SetOptionalParamString(
-					Pdu.OptionalParamCodes.callback_num, val);
+					OptionalParamCodes.callback_num, val);
 			}
 			else
 			{
@@ -334,7 +334,7 @@ namespace AberrantSMPP.Utility
 
 			if (val == null)
 			{
-				pdu.SetOptionalParamBytes(Pdu.OptionalParamCodes.message_payload, new byte[] { 0 });
+				pdu.SetOptionalParamBytes(OptionalParamCodes.message_payload, new byte[] { 0 });
 			}
 			else if(val is string)
 			{
@@ -355,7 +355,7 @@ namespace AberrantSMPP.Utility
 				if(encodedValue.Length < MAX_PAYLOAD_LENGTH)
 				{
 					pdu.SetOptionalParamBytes(
-						Pdu.OptionalParamCodes.message_payload, encodedValue);
+						OptionalParamCodes.message_payload, encodedValue);
 				}
 				else
 				{

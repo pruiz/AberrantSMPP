@@ -117,7 +117,7 @@ namespace AberrantSMPP.Packet.Request
 			set
 			{
 				//byte? data = value.HasValue ? new Nullable<byte>(Convert.ToByte(value.Value)) : null;
-				SetOptionalParamByte(Pdu.OptionalParamCodes.more_messages_to_send, value);
+				SetOptionalParamByte(OptionalParamCodes.more_messages_to_send, value);
 			}
 		}
 		
@@ -137,7 +137,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.user_response_code, value);
+				SetOptionalParamByte(OptionalParamCodes.user_response_code, value);
 			}
 		}
 		
@@ -157,7 +157,7 @@ namespace AberrantSMPP.Packet.Request
 
 				if(value == null || value <= MAX_NUM_MSGS)
 				{
-					SetOptionalParamByte(Pdu.OptionalParamCodes.number_of_messages, value);
+					SetOptionalParamByte(OptionalParamCodes.number_of_messages, value);
 				}
 				else
 				{
@@ -182,7 +182,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.its_reply_type, value);
+				SetOptionalParamByte(OptionalParamCodes.its_reply_type, value);
 			}
 		}
 		
@@ -223,7 +223,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamString(Pdu.OptionalParamCodes.ussd_service_op, value);
+				SetOptionalParamString(OptionalParamCodes.ussd_service_op, value);
 			}
 		}
 		

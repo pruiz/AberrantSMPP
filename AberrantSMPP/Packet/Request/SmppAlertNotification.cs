@@ -174,12 +174,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte<AvailabilityStatusType>(Pdu.OptionalParamCodes.ms_availability_status);
+				return GetOptionalParamByte<AvailabilityStatusType>(OptionalParamCodes.ms_availability_status);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.ms_availability_status, value);
+				SetOptionalParamByte(OptionalParamCodes.ms_availability_status, value);
 			}
 		}
 		

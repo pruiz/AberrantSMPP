@@ -119,13 +119,13 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv(Pdu.OptionalParamCodes.source_port);
+				return GetHostOrderUInt16FromTlv(OptionalParamCodes.source_port);
 			}
 			set
 			{
 				if(value == null || value < UInt16.MaxValue)
 				{
-					SetHostOrderValueIntoTlv(Pdu.OptionalParamCodes.source_port, value);
+					SetHostOrderValueIntoTlv(OptionalParamCodes.source_port, value);
 				}
 				else
 				{
@@ -145,7 +145,7 @@ namespace AberrantSMPP.Packet.Request
 			}
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.source_addr_subunit, value);
+				SetOptionalParamByte(OptionalParamCodes.source_addr_subunit, value);
 			}
 		}
 		
@@ -157,13 +157,13 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv(Pdu.OptionalParamCodes.destination_port);
+				return GetHostOrderUInt16FromTlv(OptionalParamCodes.destination_port);
 			}
 			set
 			{
 				if(value == null || value < UInt16.MaxValue)
 				{
-					SetHostOrderValueIntoTlv(Pdu.OptionalParamCodes.destination_port, value);
+					SetHostOrderValueIntoTlv(OptionalParamCodes.destination_port, value);
 				}
 				else
 				{
@@ -181,11 +181,11 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv(Pdu.OptionalParamCodes.sar_msg_ref_num);
+				return GetHostOrderUInt16FromTlv(OptionalParamCodes.sar_msg_ref_num);
 			}
 			set
 			{
-				SetHostOrderValueIntoTlv(Pdu.OptionalParamCodes.sar_msg_ref_num, value);
+				SetHostOrderValueIntoTlv(OptionalParamCodes.sar_msg_ref_num, value);
 			}
 		}
 		
@@ -206,7 +206,7 @@ namespace AberrantSMPP.Packet.Request
 			{
 				if(value == null || (value >= SAR_MIN && value <= SAR_MAX))
 				{
-					SetOptionalParamByte(Pdu.OptionalParamCodes.sar_total_segments, value);
+					SetOptionalParamByte(OptionalParamCodes.sar_total_segments, value);
 				}
 				else
 				{
@@ -231,7 +231,7 @@ namespace AberrantSMPP.Packet.Request
 			{
 				if(value == null || (value >= SAR_MIN && value <= SAR_MAX))
 				{
-					SetOptionalParamByte(Pdu.OptionalParamCodes.sar_segment_seqnum, value);
+					SetOptionalParamByte(OptionalParamCodes.sar_segment_seqnum, value);
 				}
 				else
 				{
@@ -252,7 +252,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.payload_type, value);
+				SetOptionalParamByte(OptionalParamCodes.payload_type, value);
 			}
 		}
 		
@@ -286,7 +286,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.privacy_indicator, value);
+				SetOptionalParamByte(OptionalParamCodes.privacy_indicator, value);
 			}
 		}
 		
@@ -297,13 +297,13 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{				
-				return GetHostOrderUInt16FromTlv(Pdu.OptionalParamCodes.user_message_reference);
+				return GetHostOrderUInt16FromTlv(OptionalParamCodes.user_message_reference);
 			}
 			set
 			{
 				if(value == null || value < UInt16.MaxValue)
 				{
-					SetHostOrderValueIntoTlv(Pdu.OptionalParamCodes.user_message_reference, value);
+					SetHostOrderValueIntoTlv(OptionalParamCodes.user_message_reference, value);
 				}
 				else
 				{
@@ -327,7 +327,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.ms_msg_wait_facilities, value);
+				SetOptionalParamByte(OptionalParamCodes.ms_msg_wait_facilities, value);
 			}
 		}
 		
@@ -344,7 +344,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.ms_validity, value);
+				SetOptionalParamByte(OptionalParamCodes.ms_validity, value);
 			}
 		}
 		
@@ -356,12 +356,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv(Pdu.OptionalParamCodes.sms_signal);
+				return GetHostOrderUInt16FromTlv(OptionalParamCodes.sms_signal);
 			}
 			
 			set
 			{
-				SetHostOrderValueIntoTlv(Pdu.OptionalParamCodes.sms_signal, value);
+				SetHostOrderValueIntoTlv(OptionalParamCodes.sms_signal, value);
 			}
 		}
 		
@@ -377,7 +377,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.dest_addr_subunit, value);
+				SetOptionalParamByte(OptionalParamCodes.dest_addr_subunit, value);
 			}
 		}
 		
@@ -406,7 +406,7 @@ namespace AberrantSMPP.Packet.Request
 			set
 			{
 				SetOptionalParamBytes(
-					Pdu.OptionalParamCodes.alert_on_message_delivery, new Byte[0]);
+					OptionalParamCodes.alert_on_message_delivery, new Byte[0]);
 			}
 		}
 		
@@ -422,7 +422,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.language_indicator, value);
+				SetOptionalParamByte(OptionalParamCodes.language_indicator, value);
 			}
 		}
 		
@@ -438,7 +438,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.display_time, value);
+				SetOptionalParamByte(OptionalParamCodes.display_time, value);
 			}
 		}
 		
@@ -473,7 +473,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.callback_num_pres_ind, value);
+				SetOptionalParamByte(OptionalParamCodes.callback_num_pres_ind, value);
 			}
 		}
 		
@@ -495,7 +495,7 @@ namespace AberrantSMPP.Packet.Request
 				if(value == null || value.Length <= CALLBACK_ATAG_MAX)
 				{
 					SetOptionalParamString(
-						Pdu.OptionalParamCodes.callback_num_atag, value);
+						OptionalParamCodes.callback_num_atag, value);
 				}
 				else
 				{

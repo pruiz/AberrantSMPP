@@ -119,7 +119,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.source_network_type, value);
+				SetOptionalParamByte(OptionalParamCodes.source_network_type, value);
 			}
 		}
 		
@@ -135,7 +135,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.source_bearer_type, value);
+				SetOptionalParamByte(OptionalParamCodes.source_bearer_type, value);
 			}
 		}
 		
@@ -147,12 +147,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv(Pdu.OptionalParamCodes.source_telematics_id);
+				return GetHostOrderUInt16FromTlv(OptionalParamCodes.source_telematics_id);
 			}
 			
 			set
 			{
-				SetHostOrderValueIntoTlv(Pdu.OptionalParamCodes.source_telematics_id, value);
+				SetHostOrderValueIntoTlv(OptionalParamCodes.source_telematics_id, value);
 			}
 		}
 		
@@ -168,7 +168,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.dest_network_type, value);
+				SetOptionalParamByte(OptionalParamCodes.dest_network_type, value);
 			}
 		}
 		
@@ -184,7 +184,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.dest_bearer_type, value);
+				SetOptionalParamByte(OptionalParamCodes.dest_bearer_type, value);
 			}
 		}
 		
@@ -196,7 +196,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv(Pdu.OptionalParamCodes.dest_telematics_id);
+				return GetHostOrderUInt16FromTlv(OptionalParamCodes.dest_telematics_id);
 			}
 			
 			set
@@ -220,7 +220,7 @@ namespace AberrantSMPP.Packet.Request
 			set
 			{
 				byte? sendMore = !value.HasValue ? null : new Nullable<byte>(value.Value ? (byte)0x01 : (byte)0x00);
-				SetOptionalParamByte(Pdu.OptionalParamCodes.more_messages_to_send, sendMore);
+				SetOptionalParamByte(OptionalParamCodes.more_messages_to_send, sendMore);
 			}
 		}
 		
@@ -231,7 +231,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetHostOrderUInt32FromTlv(Pdu.OptionalParamCodes.qos_time_to_live);
+				return GetHostOrderUInt32FromTlv(OptionalParamCodes.qos_time_to_live);
 			}
 			
 			set
@@ -252,7 +252,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.set_dpf, value);
+				SetOptionalParamByte(OptionalParamCodes.set_dpf, value);
 			}
 		}
 		
@@ -264,7 +264,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString(Pdu.OptionalParamCodes.receipted_message_id);
+				return GetOptionalParamString(OptionalParamCodes.receipted_message_id);
 			}
 			
 			set
@@ -286,7 +286,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.message_state, value);
+				SetOptionalParamByte(OptionalParamCodes.message_state, value);
 			}
 		}
 		
@@ -298,7 +298,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString(Pdu.OptionalParamCodes.network_error_code);
+				return GetOptionalParamString(OptionalParamCodes.network_error_code);
 			}
 			
 			set
@@ -319,7 +319,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.user_response_code, value);
+				SetOptionalParamByte(OptionalParamCodes.user_response_code, value);
 			}
 		}
 		
@@ -337,7 +337,7 @@ namespace AberrantSMPP.Packet.Request
 			{
 				if(value == null || value <= 99)
 				{
-					SetOptionalParamByte(Pdu.OptionalParamCodes.number_of_messages, value);
+					SetOptionalParamByte(OptionalParamCodes.number_of_messages, value);
 				}
 				else
 				{
@@ -359,7 +359,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.its_reply_type, value);
+				SetOptionalParamByte(OptionalParamCodes.its_reply_type, value);
 			}
 		}
 		
@@ -372,7 +372,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString(Pdu.OptionalParamCodes.its_session_info);
+				return GetOptionalParamString(OptionalParamCodes.its_session_info);
 			}
 			
 			set

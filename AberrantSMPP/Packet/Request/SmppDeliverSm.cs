@@ -290,7 +290,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetHostOrderValueIntoTlv(Pdu.OptionalParamCodes.user_message_reference, value);
+				SetHostOrderValueIntoTlv(OptionalParamCodes.user_message_reference, value);
 			}
 		}
 		
@@ -307,7 +307,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetHostOrderValueIntoTlv(Pdu.OptionalParamCodes.source_port, value);
+				SetHostOrderValueIntoTlv(OptionalParamCodes.source_port, value);
 			}
 		}
 		
@@ -324,7 +324,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetHostOrderValueIntoTlv(Pdu.OptionalParamCodes.destination_port, value);
+				SetHostOrderValueIntoTlv(OptionalParamCodes.destination_port, value);
 			}
 		}
 		
@@ -340,7 +340,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetHostOrderValueIntoTlv(Pdu.OptionalParamCodes.sar_msg_ref_num, value);
+				SetHostOrderValueIntoTlv(OptionalParamCodes.sar_msg_ref_num, value);
 			}
 		}
 		
@@ -356,7 +356,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.sar_total_segments, value);
+				SetOptionalParamByte(OptionalParamCodes.sar_total_segments, value);
 			}
 		}
 		
@@ -373,7 +373,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.sar_segment_seqnum, value);
+				SetOptionalParamByte(OptionalParamCodes.sar_segment_seqnum, value);
 			}
 		}
 		
@@ -389,7 +389,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.user_response_code, value);
+				SetOptionalParamByte(OptionalParamCodes.user_response_code, value);
 			}
 		}
 		
@@ -405,7 +405,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.privacy_indicator, value);
+				SetOptionalParamByte(OptionalParamCodes.privacy_indicator, value);
 			}
 		}
 		
@@ -421,7 +421,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.payload_type, value);
+				SetOptionalParamByte(OptionalParamCodes.payload_type, value);
 			}
 		}
 		
@@ -505,7 +505,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.language_indicator, value);
+				SetOptionalParamByte(OptionalParamCodes.language_indicator, value);
 			}
 		}
 		
@@ -559,7 +559,7 @@ namespace AberrantSMPP.Packet.Request
 			
 			set
 			{
-				SetOptionalParamByte(Pdu.OptionalParamCodes.message_state, value);
+				SetOptionalParamByte(OptionalParamCodes.message_state, value);
 			}
 		}
 		
