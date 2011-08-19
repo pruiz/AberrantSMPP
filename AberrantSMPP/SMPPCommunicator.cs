@@ -20,6 +20,7 @@ using System;
 using System.Linq;
 using System.Net.Sockets;
 using System.Collections;
+using System.Collections.Generic;
 using System.Threading;
 using System.Timers;
 using System.ComponentModel;
@@ -521,8 +522,8 @@ namespace AberrantSMPP
 		/// Pdu types).  This allows complete flexibility for sending Pdus.
 		/// </summary>
 		/// <param name="packet">The Pdu to send.</param>
-		/// <returns>Boolean indicating wether the PDU was sent.</returns>
-		public bool SendPdu(Pdu packet)
+		/// <returns>The sequence number of the sent PDU, or null if failed.</returns>
+		public uint? SendPdu(Pdu packet)
 		{
 			bool sendFailed = true;
 			
@@ -530,13 +531,13 @@ namespace AberrantSMPP
 			{
 				try
 				{
-					if (packet.SequenceNumber != 0)
+					if (packet.SequenceNumber == 0)
 						packet.SequenceNumber = GenerateSequenceNumber();
 
 					var bytes = packet.GetEncodedPdu();
 					asClient.Send(bytes);
 					sendFailed = false;
-					return true;
+					return packet.SequenceNumber;
 				}
 				catch(Exception exc)
 				{
@@ -560,7 +561,7 @@ namespace AberrantSMPP
 				}
 			}
 
-			return false;
+			return null;
 		}
 
 		/// <summary>
@@ -569,8 +570,8 @@ namespace AberrantSMPP
 		/// <param name="pdu">The base pdu to use.</param>
 		/// <param name="method">The segmentation & reasembly method tu use when splitting the message.</param>
 		/// <param name="correlationId">The correlation id to set to each message part. (If null, a random one will be chosen)</param>
-		/// <returns>The number of PDUs sent</returns>
-		public int SendLongMessage(SmppSubmitSm pdu, SmppSarMethod method, byte? correlationId)
+		/// <returns>The list of sequence numbers of PDUs sent</returns>
+		public IEnumerable<uint> SendLongMessage(SmppSubmitSm pdu, SmppSarMethod method, byte? correlationId)
 		{
 			if (pdu == null) throw new ArgumentNullException("pdu");
 
@@ -598,16 +599,18 @@ namespace AberrantSMPP
 				pdu.SarTotalSegments = null;
 				pdu.SarMsgRefNumber = null;
 				pdu.MessagePayload = data;
-				return this.SendPdu(pdu) ? 1 : 0;
+
+				var seq = this.SendPdu(pdu);
+				return seq.HasValue ? new[] { seq.Value } : new uint[] {};
 			}
 
 			// Else.. let's do segmentation and the other crappy stuff..
+			var result = new List<uint>();
 			var segmentCid = correlationId.HasValue ? correlationId.Value : GetRandomByte();
 			var udhref = method == SmppSarMethod.UserDataHeader ? new Nullable<byte>(segmentCid) : null;
 			var segments = PduUtil.SplitMessage(bytes, maxSegmentLen, udhref);
 			var totalSegments = segments.Count();
 			var segno = 0;
-			var sent = 0;
 
 			// If just one segment, send it w/o SAR parameters..
 			if (totalSegments < 2)
@@ -622,7 +625,9 @@ namespace AberrantSMPP
 				pdu.SarTotalSegments = null;
 				pdu.SarMsgRefNumber = null;
 				pdu.ShortMessage = data;
-				return this.SendPdu(pdu) ? 1 : 0;
+
+				var seq = this.SendPdu(pdu);
+				return seq.HasValue ? new[] { seq.Value } : new uint[] { };
 			}
 
 			foreach (var segment in segments)
@@ -660,11 +665,11 @@ namespace AberrantSMPP
 				//	segno, segment.Count(), segno, segno != totalSegments, totalSegments, segmentCid, pdu.EsmClass
 				//);
 
-				if (this.SendPdu(pdu))
-					sent++;
+				var seq = this.SendPdu(pdu);
+				if (seq.HasValue) result.Add(seq.Value);
 			}
 
-			return sent;
+			return result;
 		}
 
 		/// <summary>
