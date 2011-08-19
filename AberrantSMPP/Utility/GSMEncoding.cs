@@ -156,6 +156,35 @@ namespace AberrantSMPP.Utility
 			}
 		}
 
+		private static bool IsValidChar(char character)
+		{
+			var @byte = NOCHAR;
+			var escape = false;
+
+			if (character < Ucs2ToGsm.Length)
+			{
+				@byte = Ucs2ToGsm[character];
+
+				if (@byte == ESCAPE)
+				{
+					escape = true;
+					@byte = Ucs2ToGsmExtended[character];
+				}
+			}
+			else if (character >= Ucs2GclToGsmBase && character <= Ucs2GclToGsmMax)
+			{
+				escape = true;
+				@byte = Ucs2GclToGsm[character - Ucs2GclToGsmBase];
+			}
+			else if (character == '\x20AC') // Euro sign.
+			{
+				escape = true;
+				@byte = 0x65;
+			}
+
+			return @byte != NOCHAR;
+		}
+
 		private int GetBytesInternal(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex)
 		{
 			var outpos = byteIndex;

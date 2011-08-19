@@ -84,6 +84,44 @@ namespace AberrantSMPP.Utility
 		}
 
 		/// <summary>
+		/// Gets the decoded representation of the specified data.
+		/// </summary>
+		/// <param name="coding">The coding.</param>
+		/// <param name="data">The data.</param>
+		/// <returns></returns>
+		public static string GetDecodedText(DataCoding coding, byte[] data)
+		{
+			switch (coding)
+			{
+				case DataCoding.SMSCDefault:
+				//return GSM7BitEncoding.GetBytes(text);
+				case DataCoding.OctetUnspecifiedA:
+				case DataCoding.OctetUnspecifiedB:
+					return new GSMEncoding().GetString(data);
+				case DataCoding.IA5_ASCII:
+					return Encoding.ASCII.GetString(data);
+				case DataCoding.Latin1:
+					return Encoding.GetEncoding("iso-8859-1").GetString(data);
+				case DataCoding.JIS:
+				case DataCoding.ExtendedKanjiJIS:
+					return Encoding.GetEncoding("EUC-JP").GetString(data);
+				case DataCoding.Cyrillic:
+					return Encoding.GetEncoding("iso-8859-5").GetString(data);
+				case DataCoding.Latin_Hebrew:
+					return Encoding.GetEncoding("iso-8859-8").GetString(data);
+				case DataCoding.UCS2:
+					// 1201 == Unicode Big Endian (FFFE)!
+					return Encoding.GetEncoding(1201).GetString(data);
+				case DataCoding.MusicCodes:
+					return Encoding.GetEncoding("iso-2022-jp").GetString(data);
+				case DataCoding.KS_C:
+					return Encoding.GetEncoding("ks_c_5601-1987").GetString(data);
+				default:
+					throw new ArgumentException("Invalid (or unsupported) DataCoding value.");
+			}
+		}
+
+		/// <summary>
 		/// Gets the maximum length of each segment of a concatenated 
 		/// message of totalBytes size using the specified data_coding.
 		/// </summary>
