@@ -588,6 +588,8 @@ namespace AberrantSMPP
 			// Sending as payload means avoiding all the data splitting logic.. (which is great ;))
 			if (method == SmppSarMethod.SendAsPayload)
 			{
+				// Remove sequenceNumber.
+				pdu.SequenceNumber = 0;
 				// Remove UDH header (if set).
 				pdu.EsmClass &= ((byte)~NetworkFeatures.UDHI);
 				// Remove SMPP segmentation properties..
@@ -610,6 +612,8 @@ namespace AberrantSMPP
 			// If just one segment, send it w/o SAR parameters..
 			if (totalSegments < 2)
 			{
+				// Remove sequenceNumber.
+				pdu.SequenceNumber = 0;
 				// Remove UDH header (if set).
 				pdu.EsmClass &= ((byte)~NetworkFeatures.UDHI);
 				// Remove SMPP segmentation properties..
@@ -625,6 +629,8 @@ namespace AberrantSMPP
 			{
 				segno++;
 
+				// Remove sequenceNumber.
+				pdu.SequenceNumber = 0;
 				// Set current segment bytes as short message..
 				pdu.ShortMessage = segment;
 

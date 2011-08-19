@@ -128,6 +128,16 @@ namespace AberrantSMPP.Utility
 		private DecoderFallbackBuffer _decoderFb = null;
 		#endregion
 
+		#region Properties
+		public override string EncodingName
+		{
+			get
+			{
+				return "GSMEncoding";
+			}
+		}
+		#endregion
+
 		#region .ctors
 		public GSMEncoding() : this (false)
 		{
