@@ -18,6 +18,7 @@
  */
 
 using System;
+using System.IO;
 using System.Net.Sockets;
 
 namespace AberrantSMPP
@@ -72,7 +73,7 @@ namespace AberrantSMPP
 		private SocketClosingHandler _SocketCloseHandler;
 		private ErrorHandler _ErrorHandler;
 		private bool _IsDisposed;
-		private string _ServerIPAddress;
+		private string _ServerAddress;
 		private Int16 _ServerPort;
 		private object _StateObject;
 		private byte[] _Buffer;
@@ -81,18 +82,16 @@ namespace AberrantSMPP
 		#endregion private fields
 
 		#region properties
-
 		/// <summary>
-		/// The server IP address to connect to.
+		/// The server address to connect to.
 		/// </summary>
-		public string ServerIPAddress
+		public string ServerAddress
 		{
 			get
 			{
-				return _ServerIPAddress;
+				return _ServerAddress;
 			}
 		}
-
 		/// <summary>
 		/// The server port to connect to.
 		/// </summary>
@@ -103,7 +102,6 @@ namespace AberrantSMPP
 				return _ServerPort;
 			}
 		}
-
 		/// <summary>
 		/// A user set state object to associate some state with a connection.
 		/// </summary>
@@ -118,7 +116,6 @@ namespace AberrantSMPP
 				_StateObject = value;
 			}
 		}
-
 		/// <summary>
 		/// Buffer to hold data coming in from the socket.
 		/// </summary>
@@ -129,7 +126,14 @@ namespace AberrantSMPP
 				return _Buffer;
 			}
 		}
-
+		/// <summary>
+		/// Gets a value indicating whether this <see cref="AsyncSocketClient"/> is connected.
+		/// </summary>
+		/// <value><c>true</c> if connected; otherwise, <c>false</c>.</value>
+		public bool Connected
+		{
+			get { return _NetworkStream != null; }
+		}
 		#endregion properties
 
 		/// <summary>
@@ -204,34 +208,26 @@ namespace AberrantSMPP
 		/// <param name="port">The port to connect to.</param>
 		public void Connect(String IPAddress, Int16 port)
 		{
-			try
-			{
-				//do we already have an open connection?
-				if (_NetworkStream == null)
-				{
-					_ServerIPAddress = IPAddress;
-					_ServerPort = port;
+			//do we already have an open connection?
+			if (_NetworkStream != null)
+				throw new InvalidOperationException("Already connected to remote host.");
+			
+			_ServerAddress = IPAddress;
+			_ServerPort = port;
 
-					//attempt to establish the connection
-					_TcpClient = new TcpClient(_ServerIPAddress, _ServerPort);
-					_NetworkStream = _TcpClient.GetStream();
+			//attempt to establish the connection
+			_TcpClient = new TcpClient(_ServerAddress, _ServerPort);
+			_NetworkStream = _TcpClient.GetStream();
 
-					//set some socket options
-					_TcpClient.ReceiveBufferSize = BUFFER_SIZE;
-					_TcpClient.SendBufferSize = BUFFER_SIZE;
-					_TcpClient.NoDelay = true;
-					//if the connection is dropped, drop all associated data
-					_TcpClient.LingerState = new LingerOption(false, 0);
+			//set some socket options
+			_TcpClient.ReceiveBufferSize = BUFFER_SIZE;
+			_TcpClient.SendBufferSize = BUFFER_SIZE;
+			_TcpClient.NoDelay = true;
+			//if the connection is dropped, drop all associated data
+			_TcpClient.LingerState = new LingerOption(false, 0);
 
-					//start receiving messages
-					Receive();
-				}
-			}
-			catch (SocketException exc)
-			{
-				//the connect failed..pass the word on
-				throw new Exception(exc.Message, exc.InnerException);
-			}
+			//start receiving messages
+			Receive();
 		}
 
 		///<summary>
@@ -242,17 +238,16 @@ namespace AberrantSMPP
 			//close down the connection, making sure it exists first
 			if (_NetworkStream != null)
 			{
-				_NetworkStream.Close();
+				Helper.ShallowExceptions(() => _NetworkStream.Close());
 			}
 			if (_TcpClient != null)
 			{
-				_TcpClient.Close();
+				Helper.ShallowExceptions(() => _TcpClient.Close());
 			}
 
 			//prep for garbage collection-we may want to use this instance again
 			_NetworkStream = null;
 			_TcpClient = null;
-
 		}
 
 		///<summary>
@@ -263,24 +258,11 @@ namespace AberrantSMPP
 		/// </param>
 		public void Send(byte[] buffer)
 		{
-			//send the data; don't worry about receiving any state information
-			//back;
-			try
-			{
-				if (_NetworkStream != null && _NetworkStream.CanWrite)
-				{
-					_NetworkStream.BeginWrite(
-						buffer, 0, buffer.Length, _CallbackWriteMethod, null);
-				}
-				else
-				{
-					throw new Exception("Socket is closed, cannot Send().");
-				}
-			}
-			catch
-			{
-				throw;
-			}
+			if (_NetworkStream == null)
+				throw new IOException("Socket is closed, cannot Send().");
+
+			//send the data; don't worry about receiving any state information back;
+			_NetworkStream.BeginWrite(buffer, 0, buffer.Length, _CallbackWriteMethod, null);
 		}
 
 		/// <summary>
@@ -288,25 +270,13 @@ namespace AberrantSMPP
 		/// </summary>
 		public void Receive()
 		{
-			try
-			{
-				if (_NetworkStream != null && _NetworkStream.CanRead)
-				{
-					//_Buffer = new byte[clientBufferSize];
-					_Buffer = new byte[BUFFER_SIZE];
+			if (_NetworkStream == null)
+				throw new IOException("Socket is closed, cannot Receive().");
+
+			//_Buffer = new byte[clientBufferSize];
+			_Buffer = new byte[BUFFER_SIZE];
 					
-					_NetworkStream.BeginRead(
-						_Buffer, 0, _Buffer.Length, _CallbackReadMethod, null);
-				}
-				else
-				{
-					throw new Exception("Socket is closed, cannot Receive().");
-				}
-			}
-			catch
-			{
-				throw;
-			}
+			_NetworkStream.BeginRead(_Buffer, 0, _Buffer.Length, _CallbackReadMethod, null);
 		}
 
 		#endregion public methods
@@ -323,11 +293,7 @@ namespace AberrantSMPP
 		{
 			try
 			{
-				//check to be sure the network stream is valid before writing
-				if (_NetworkStream.CanWrite)
-				{
-					_NetworkStream.EndWrite(state);
-				}
+				_NetworkStream.EndWrite(state);
 			}
 			catch
 			{}
@@ -343,25 +309,21 @@ namespace AberrantSMPP
 		{
 			try
 			{
-				//check the stream to be sure it is valid
-				if (_NetworkStream.CanRead)
-				{
-					int bytesReceived = _NetworkStream.EndRead(state);
+				int bytesReceived = _NetworkStream.EndRead(state);
 
-					//if there are bytes to process, do so.  Otherwise, the
-					//connection has been lost, so clean it up
-					if (bytesReceived > 0)
+				//if there are bytes to process, do so.  Otherwise, the
+				//connection has been lost, so clean it up
+				if (bytesReceived > 0)
+				{
+					try
 					{
-						try
-						{
-							//send the incoming message to the message handler
-							_MessageHandler(this);
-						}
-						finally
-						{
-							//start listening again
-							Receive();
-						}
+						//send the incoming message to the message handler
+						_MessageHandler(this);
+					}
+					finally
+					{
+						//start listening again
+						Receive();
 					}
 				}
 			}

@@ -70,6 +70,7 @@
     <Compile Include="EventObject\SubmitSmRespEventArgs.cs" />
     <Compile Include="EventObject\UnbindEventArgs.cs" />
     <Compile Include="EventObject\UnbindRespEventArgs.cs" />
+    <Compile Include="Helper.cs" />
     <Compile Include="Packet\CommandId.cs" />
     <Compile Include="Packet\DataCoding.cs" />
     <Compile Include="Packet\DeliveryFailureReason.cs" />

@@ -17,6 +17,7 @@
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
 using System;
+using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Collections;
@@ -54,11 +55,12 @@ namespace AberrantSMPP
 		private string _Password;
 		private string _SystemId;
 		private string _SystemType;
-		private System.Timers.Timer timer;
 		private int _EnquireLinkInterval;
+		private System.Timers.Timer _EnquireLinkTimer;
+		private int _ResponseTimeout;
+		//private System.Timers.Timer _ResponseTimmer;
 		private int _SleepTimeAfterSocketFailure;
 		private bool _SentUnbindPacket = true;  //default to true since we start out unbound
-		private string username;
 		private Random _random = new Random();
 		private uint _SequenceNumber = 0;
 		
@@ -68,17 +70,6 @@ namespace AberrantSMPP
 		protected Container components = null;
 
 		#region properties
-		/// <summary>
-		/// The username to use for software validation.
-		/// </summary>
-		public string Username
-		{
-			set
-			{
-				username = value;
-			}
-		}
-
 		/// <summary>
 		/// Accessor to determine if we have sent the unbind packet out.  Once the packet is 
 		/// sent, you can consider this object to be unbound.
@@ -90,7 +81,6 @@ namespace AberrantSMPP
 				return _SentUnbindPacket;
 			}
 		}
-		
 		/// <summary>
 		/// The port on the SMSC to connect to.
 		/// </summary>
@@ -105,7 +95,6 @@ namespace AberrantSMPP
 				_Port = value;
 			}
 		}
-		
 		/// <summary>
 		/// The binding type(receiver, transmitter, or transceiver)to use 
 		/// when connecting to the SMSC.
@@ -165,7 +154,6 @@ namespace AberrantSMPP
 				_Password = value;
 			}
 		}
-		
 		/// <summary>
 		/// The host to bind this SMPPCommunicator to.
 		/// </summary>
@@ -194,7 +182,6 @@ namespace AberrantSMPP
 				_NpiType = value;
 			}
 		}
-
 		/// <summary>
 		/// The type of number that this SMPPCommunicator should use.  
 		/// </summary>
@@ -209,7 +196,6 @@ namespace AberrantSMPP
 				_TonType = value;
 			}
 		}
-
 		/// <summary>
 		/// The SMPP specification version to use.
 		/// </summary>
@@ -224,7 +210,6 @@ namespace AberrantSMPP
 				_Version = value;
 			}
 		}
-
 		/// <summary>
 		/// The address range of this SMPPCommunicator.
 		/// </summary>
@@ -239,7 +224,6 @@ namespace AberrantSMPP
 				_AddressRange = value;
 			}
 		}
-
 		/// <summary>
 		/// Set to the number of seconds that should elapse in between enquire_link 
 		/// packets.  Setting this to anything other than 0 will enable the timer, setting 
@@ -259,7 +243,6 @@ namespace AberrantSMPP
 					_EnquireLinkInterval = value;
 			}
 		}
-
 		/// <summary>
 		/// Sets the number of seconds that the system will wait before trying to rebind 
 		/// after a total network failure(due to cable problems, etc).  Negative values are 
@@ -547,8 +530,12 @@ namespace AberrantSMPP
 					}
 
 					//try to stay alive
-					if((exc.Message.ToLower().IndexOf("socket is closed")>= 0 || 
-						exc.Message.ToLower().IndexOf("unable to write data to the transport connection")>= 0))
+					// FIXME: This is CRAP and should instead catch 'SocketException' and/or IOException..
+					if (exc.Message.ToLower().IndexOf("socket is closed")>= 0
+						|| exc.Message.ToLower().IndexOf("unable to write data to the transport connection")>= 0
+						|| exc is SocketException
+						|| exc is IOException
+						)
 					{
 						System.Threading.Thread.Sleep(SleepTimeAfterSocketFailure * 1000);
 						Bind();
@@ -682,8 +669,11 @@ namespace AberrantSMPP
 		{
 			try
 			{
-				if(asClient != null)
-					asClient.Disconnect();
+				if (asClient != null)
+				{
+					//asClient.Disconnect();
+					asClient.Dispose();
+				}
 			}
 			catch
 			{
@@ -715,18 +705,18 @@ namespace AberrantSMPP
 
 				if(_EnquireLinkInterval > 0)
 				{
-					if(timer == null)
+					if(_EnquireLinkTimer == null)
 					{
-						timer = new System.Timers.Timer();
-						timer.Elapsed += new ElapsedEventHandler(TimerElapsed);
+						_EnquireLinkTimer = new System.Timers.Timer();
+						_EnquireLinkTimer.Elapsed += new ElapsedEventHandler(EnquireLinkTimerElapsed);
 					}
 
-					if(timer != null)		//reset the old timer
+					if(_EnquireLinkTimer != null)		//reset the old timer
 					{
-						timer.Stop();
+						_EnquireLinkTimer.Stop();
 
-						timer.Interval = EnquireLinkInterval * 1000;
-						timer.Start();
+						_EnquireLinkTimer.Interval = EnquireLinkInterval * 1000;
+						_EnquireLinkTimer.Start();
 					}
 				}
 			} 
@@ -747,8 +737,8 @@ namespace AberrantSMPP
 		/// </summary>
 		public void Unbind()
 		{
-			if(timer != null)
-				timer.Stop();
+			if(_EnquireLinkTimer != null)
+				_EnquireLinkTimer.Stop();
 			
 			if(!_SentUnbindPacket)
 			{
@@ -768,6 +758,7 @@ namespace AberrantSMPP
 		{
 			try 
 			{
+				// OPTIMIZE: Use a single PduFactory instance, instead of a new one each time.
 				Queue responseQueue = new PduFactory().GetPduQueue(client.Buffer);
 				ThreadPool.QueueUserWorkItem(new WaitCallback(ProcessPduQueue), responseQueue);
 			} 
@@ -800,8 +791,7 @@ namespace AberrantSMPP
 		/// </summary>
 		/// <param name="client">The client to receive messages from.</param>
 		/// <param name="exception">The generated exception.</param>
-		internal void ClientErrorHandler(AsyncSocketClient client,
-			Exception exception)
+		internal void ClientErrorHandler(AsyncSocketClient client, Exception exception)
 		{
 			//fire off an error handler
 			if(OnError != null)
@@ -849,9 +839,20 @@ namespace AberrantSMPP
 
 			foreach(Pdu response in responseQueue)
 			{
-				//based on each Pdu, fire off an event
-				if(response != null)
-					FireEvents(response);
+				try
+				{
+					//based on each Pdu, fire off an event
+					if (response != null)
+						FireEvents(response);
+				}
+				catch (Exception exception)
+				{
+					if (OnError != null)
+					{
+						CommonErrorEventArgs e = new CommonErrorEventArgs(exception);
+						OnError(this, e);
+					}
+				}
 			}
 		}
 		
@@ -860,7 +861,7 @@ namespace AberrantSMPP
 		/// </summary>
 		/// <param name="sender"></param>
 		/// <param name="ea"></param>
-		private void TimerElapsed(object sender, ElapsedEventArgs ea)
+		private void EnquireLinkTimerElapsed(object sender, ElapsedEventArgs ea)
 		{
 			SendPdu(new SmppEnquireLink());
 		}
