@@ -19,6 +19,7 @@
 
 using System;
 using System.IO;
+using System.Collections.Generic;
 using System.Net.Sockets;
 
 namespace AberrantSMPP
@@ -60,11 +61,13 @@ namespace AberrantSMPP
 			AsyncSocketClient asyncSocketClient, Exception exception);
 	
 		#endregion delegates
-		//one MB
-		private const int BUFFER_SIZE = 1048576;
+		
+		//private const int BUFFER_SIZE = 1048576; // One MB
+		private const int BUFFER_SIZE = 262144;
 
 		#region private fields
-
+		private readonly Queue<byte[]> _SendQueue = new Queue<byte[]>();
+		private readonly byte[] _Buffer;
 		private NetworkStream _NetworkStream;
 		private TcpClient _TcpClient;
 		private AsyncCallback _CallbackReadMethod;
@@ -76,9 +79,7 @@ namespace AberrantSMPP
 		private string _ServerAddress;
 		private Int16 _ServerPort;
 		private object _StateObject;
-		private byte[] _Buffer;
-		//private int clientBufferSize;
-
+		private bool _SendPending;
 		#endregion private fields
 
 		#region properties
@@ -185,7 +186,6 @@ namespace AberrantSMPP
 		}
 
 		#region public methods
-
 		/// <summary>
 		/// Sets the disposed flag to true and disconnects the socket.
 		/// </summary>
@@ -204,15 +204,15 @@ namespace AberrantSMPP
 		/// Connects the socket to the given IP address and port.
 		/// This also calls Receive().
 		/// </summary>
-		/// <param name="IPAddress">The IP address of the server.</param>
+		/// <param name="address">The IP address of the server.</param>
 		/// <param name="port">The port to connect to.</param>
-		public void Connect(String IPAddress, Int16 port)
+		public void Connect(String address, Int16 port)
 		{
 			//do we already have an open connection?
 			if (_NetworkStream != null)
 				throw new InvalidOperationException("Already connected to remote host.");
 			
-			_ServerAddress = IPAddress;
+			_ServerAddress = address;
 			_ServerPort = port;
 
 			//attempt to establish the connection
@@ -245,6 +245,8 @@ namespace AberrantSMPP
 				Helper.ShallowExceptions(() => _TcpClient.Close());
 			}
 
+			Helper.ShallowExceptions(() => _SendQueue.Clear());
+
 			//prep for garbage collection-we may want to use this instance again
 			_NetworkStream = null;
 			_TcpClient = null;
@@ -258,27 +260,37 @@ namespace AberrantSMPP
 		/// </param>
 		public void Send(byte[] buffer)
 		{
-			if (_NetworkStream == null)
+			if (_TcpClient == null || !_TcpClient.Connected)
 				throw new IOException("Socket is closed, cannot Send().");
 
-			//send the data; don't worry about receiving any state information back;
-			_NetworkStream.BeginWrite(buffer, 0, buffer.Length, _CallbackWriteMethod, null);
+			lock (_SendQueue)
+			{
+				if (_SendPending)
+				{
+					_SendQueue.Enqueue(buffer);
+				}
+				else 
+				{
+					//send the data; don't worry about receiving any state information back;
+					_NetworkStream.BeginWrite(buffer, 0, buffer.Length, _CallbackWriteMethod, null);
+					_SendPending = true;
+				}
+			}
 		}
 
 		/// <summary>
 		/// Asynchronously receives data from the socket.
 		/// </summary>
-		public void Receive()
+		// XXX: Method is now private as it's called internally only. (pruiz)
+		private void Receive()
 		{
-			if (_NetworkStream == null)
+			if (_TcpClient == null || !_TcpClient.Connected)
 				throw new IOException("Socket is closed, cannot Receive().");
 
-			//_Buffer = new byte[clientBufferSize];
-			_Buffer = new byte[BUFFER_SIZE];
-					
+			Array.Clear(_Buffer, 0, _Buffer.Length); // Clear contents..
+
 			_NetworkStream.BeginRead(_Buffer, 0, _Buffer.Length, _CallbackReadMethod, null);
 		}
-
 		#endregion public methods
 
 		#region private methods
@@ -297,6 +309,21 @@ namespace AberrantSMPP
 			}
 			catch
 			{}
+
+			// If there are more packets to send..
+
+			lock (_SendQueue)
+			{
+				_SendPending = false;
+
+				if (_SendQueue.Count == 0)
+					return;
+
+				// Send another packet..
+				Send(_SendQueue.Dequeue());
+				// Reduce queue internal space..
+				_SendQueue.TrimExcess();
+			}
 		}
 
 		/// <summary>

@@ -261,7 +261,12 @@ namespace AberrantSMPP
 					_SleepTimeAfterSocketFailure = value;
 			}
 		}
-		#endregion properties
+		/// <summary>
+		/// Gets a value indicating whether this <see cref="SMPPCommunicator"/> is connected.
+		/// </summary>
+		/// <value><c>true</c> if connected; otherwise, <c>false</c>.</value>
+		public bool Connected { get { return asClient.Connected; } }
+		#endregion
 		
 		#region events
 		/// <summary>
@@ -464,7 +469,6 @@ namespace AberrantSMPP
 		#endregion delegates
 
 		#region constructors
-		
 		/// <summary>
 		/// Creates a default SMPPCommunicator, with port 9999, bindtype set to 
 		/// transceiver, host set to localhost, NPI type set to ISDN, TON type 
@@ -497,7 +501,6 @@ namespace AberrantSMPP
 			
 			InitializeComponent();
 		}
-
 		#endregion constructors
 
 		/// <summary>
@@ -508,9 +511,9 @@ namespace AberrantSMPP
 		/// <returns>The sequence number of the sent PDU, or null if failed.</returns>
 		public uint? SendPdu(Pdu packet)
 		{
-			bool sendFailed = true;
+			bool keepTrying = true;
 			
-			while(sendFailed)
+			while(keepTrying)
 			{
 				try
 				{
@@ -519,7 +522,7 @@ namespace AberrantSMPP
 
 					var bytes = packet.GetEncodedPdu();
 					asClient.Send(bytes);
-					sendFailed = false;
+					keepTrying = false;
 					return packet.SequenceNumber;
 				}
 				catch(Exception exc)
@@ -543,7 +546,7 @@ namespace AberrantSMPP
 					else	
 					{
 						//don't know what happened, but kick out
-						sendFailed = false;
+						keepTrying = false;
 					}
 				}
 			}
