@@ -1,0 +1,9 @@
+TODO
+====
+
+- Rename SMPPCommunicator to SmppChannel.
+- Avoid SmppChannel from inheriting from Component, as it has no design-time enhancements.
+- Create a fully Synchronous SmppSession API.
+- Review concurrency issues..
+- Change ReBindTimer by a AutoResetEvent which also allows checking periodically 
+  if we need to reconnect, but which can be signalled explicitly to try to reconnect now.

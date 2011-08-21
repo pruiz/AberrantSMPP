@@ -29,6 +29,8 @@ namespace AberrantSMPP
 	/// </summary>
 	internal class AsyncSocketClient : IDisposable
 	{
+		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
 		#region delegates
 
 		/// <summary>
@@ -153,6 +155,8 @@ namespace AberrantSMPP
 		                         MessageHandler msgHandler, SocketClosingHandler closingHandler,
 		                         ErrorHandler errHandler)
 		{
+			_Log.DebugFormat("Initializing new instance ({0}).", this.GetHashCode());
+
 			//allocate buffer
 //			clientBufferSize = bufferSize;
 //			_Buffer = new byte[clientBufferSize];
@@ -193,6 +197,7 @@ namespace AberrantSMPP
 		{
 			try
 			{
+				_Log.DebugFormat("Disposing instance ({0}).", this.GetHashCode());
 				_IsDisposed = true;
 				Disconnect();
 			}
@@ -211,7 +216,9 @@ namespace AberrantSMPP
 			//do we already have an open connection?
 			if (_NetworkStream != null)
 				throw new InvalidOperationException("Already connected to remote host.");
-			
+
+			_Log.DebugFormat("Connecting instance ({0}) to {1}:{2}.", this.GetHashCode(), address, port);
+
 			_ServerAddress = address;
 			_ServerPort = port;
 
@@ -235,6 +242,8 @@ namespace AberrantSMPP
 		/// </summary>
 		public void Disconnect()
 		{
+			_Log.DebugFormat("Disconnecting instance ({0}).", this.GetHashCode());
+
 			//close down the connection, making sure it exists first
 			if (_NetworkStream != null)
 			{
@@ -267,6 +276,7 @@ namespace AberrantSMPP
 			{
 				if (_SendPending)
 				{
+					_Log.DebugFormat("Instance {0} => Queuing data for transmission..", this.GetHashCode());
 					_SendQueue.Enqueue(buffer);
 				}
 				else 
@@ -307,8 +317,10 @@ namespace AberrantSMPP
 			{
 				_NetworkStream.EndWrite(state);
 			}
-			catch
-			{}
+			catch (Exception ex)
+			{
+				_Log.Warn(string.Format("Instance {0} => Async send failed.", this.GetHashCode()), ex);
+			}
 
 			// If there are more packets to send..
 
@@ -318,6 +330,8 @@ namespace AberrantSMPP
 
 				if (_SendQueue.Count == 0)
 					return;
+
+				_Log.DebugFormat("Instance {0} => Sending queued packet.", this.GetHashCode());
 
 				// Send another packet..
 				Send(_SendQueue.Dequeue());
@@ -347,6 +361,10 @@ namespace AberrantSMPP
 						//send the incoming message to the message handler
 						_MessageHandler(this);
 					}
+					catch (Exception ex)
+					{
+						_Log.Error(string.Format("Instance {0} => Receive message handler failed.", this.GetHashCode()), ex);
+					}
 					finally
 					{
 						//start listening again
@@ -363,6 +381,7 @@ namespace AberrantSMPP
 				}
 				finally
 				{
+					_Log.WarnFormat("Instance {0} => Connection terminated, disposing..", this.GetHashCode());
 					Dispose();
 				}
 			}
