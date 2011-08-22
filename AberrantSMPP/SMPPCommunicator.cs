@@ -640,6 +640,40 @@ namespace AberrantSMPP
 			}
 		}
 
+		public IEnumerable<SmppResponse> SendRequests(IEnumerable<SmppRequest> requests)
+		{
+			var list = new List<RequestState>();
+
+			lock (_RequestsAwaitingResponse)
+			{
+				foreach (var request in requests)
+					list.Add(new RequestState(SendPdu(request)));
+			
+				foreach (var state in list)
+					_RequestsAwaitingResponse.Add(state.SequenceNumber, state);
+			}
+
+			var signalled = WaitHandle.WaitAll(list.Select(x => x.EventHandler).ToArray());
+
+			lock (_RequestsAwaitingResponse)
+			{
+				foreach (var state in list)
+					_RequestsAwaitingResponse.Remove(state.SequenceNumber);
+
+				if (signalled)
+				{
+					return list.Select(x => x.Response);
+				}
+				else
+				{
+					throw new SmppTimeoutException(string.Format(
+						"Timeout while waiting for a responses from remote side. (Missing: {0}/{1})",
+						list.Count(x => x.Response == null), list.Count()
+					));
+				}
+			}
+		}
+
 		/// <summary>
 		/// Sends a long message possibly by splitting it on multiple SMPP PDUs.
 		/// </summary>
