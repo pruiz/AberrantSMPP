@@ -27,11 +27,12 @@ using System.Timers;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-using AberrantSMPP.Packet.Request;
-using AberrantSMPP.Utility;
-using AberrantSMPP.Packet.Response;
 using AberrantSMPP.Packet;
+using AberrantSMPP.Packet.Request;
+using AberrantSMPP.Packet.Response;
+using AberrantSMPP.Exceptions;
 using AberrantSMPP.EventObjects;
+using AberrantSMPP.Utility;
 
 namespace AberrantSMPP 
 {
@@ -44,6 +45,20 @@ namespace AberrantSMPP
 	/// </summary>
 	public class SMPPCommunicator : Component, IDisposable
 	{
+		private class RequestState 
+		{
+			public readonly uint SequenceNumber;
+			public readonly ManualResetEvent EventHandler;
+			public SmppResponse Response { get; set; }
+
+			public RequestState(uint seqno)
+			{
+				SequenceNumber = seqno;
+				EventHandler = new ManualResetEvent(false);
+				Response = null;
+			}
+		}
+
 		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
 		private readonly object _bindingLock = new object();
@@ -267,6 +282,15 @@ namespace AberrantSMPP
 				if(value >= 0)
 					_ReBindInterval = value;
 			}
+		}
+		/// <summary>
+		/// Gets or sets the response timeout (in miliseconds)
+		/// </summary>
+		/// <value>The response timeout.</value>
+		public int ResponseTimeout
+		{
+			get { return _ResponseTimeout; }
+			set { _ResponseTimeout = value; }
 		}
 		/// <summary>
 		/// Gets a value indicating whether this <see cref="SMPPCommunicator"/> is connected.
@@ -561,9 +585,10 @@ namespace AberrantSMPP
 			var bytes = packet.GetEncodedPdu();
 
 			if (asClient == null || !asClient.Connected)
-			{
 				throw new InvalidOperationException("Session not connected to remote party.");
-			}
+			
+			if (!(packet is SmppBind) && !_Bound)
+				throw new InvalidOperationException("Session not bound to remote party.");
 
 			try
 			{
@@ -579,6 +604,39 @@ namespace AberrantSMPP
 				}
 
 				throw; // Let the exception flow..
+			}
+		}
+
+		private IDictionary<uint, RequestState> _RequestsAwaitingResponse = new Dictionary<uint, RequestState>();
+
+		/// <summary>
+		/// Sends a request and waits for the appropiate response.
+		/// If no response is received before RequestTimeout seconds, an 
+		/// SmppTimeoutException is thrown.
+		/// </summary>
+		/// <param name="request">The request.</param>
+		public SmppResponse SendRequest(SmppRequest request)
+		{
+			RequestState state;
+
+			lock (_RequestsAwaitingResponse)
+			{
+				state = new RequestState(SendPdu(request));
+				_RequestsAwaitingResponse.Add(state.SequenceNumber, state);
+			}
+
+			var signalled = state.EventHandler.WaitOne(_ResponseTimeout);
+
+			lock (_RequestsAwaitingResponse)
+			{
+				_RequestsAwaitingResponse.Remove(state.SequenceNumber);
+
+				if (signalled)
+				{
+					return state.Response;
+				} else {
+					throw new SmppTimeoutException("Timeout while waiting for a response from remote side.");
+				}
 			}
 		}
 
@@ -733,7 +791,10 @@ namespace AberrantSMPP
 
 					asClient.Connect(Host, Port);
 
-					lock (this) _SequenceNumber = 1; // re-initialize seq. numbers.
+					// re-initialize seq. numbers.
+					lock (this) _SequenceNumber = 1; 
+					// SequenceNumbers are per-session, so reset waiting list..
+					lock (_RequestsAwaitingResponse) _RequestsAwaitingResponse.Clear();
 
 					SmppBind request = new SmppBind();
 					request.SystemId = SystemId;
@@ -745,7 +806,11 @@ namespace AberrantSMPP
 					request.AddressRange = AddressRange;
 					request.BindType = BindType;
 
-					SendPdu(request);
+					var response = SendRequest(request);
+
+					if (response.CommandStatus != 0)
+						throw new SmppRemoteException("Bind request failed.", response.CommandStatus);
+
 					_SentUnbindPacket = false;
 
 					// Enable/Disable enquire timer.
@@ -894,15 +959,35 @@ namespace AberrantSMPP
 		/// <param name="queueStateObj">The queue of byte packets.</param>
 		private void ProcessPduQueue(object queueStateObj)
 		{
-			Queue responseQueue = queueStateObj as Queue;
-
-			foreach(Pdu response in responseQueue)
+			foreach(Pdu packet in (queueStateObj as Queue))
 			{
+				if (packet == null) continue;
+
+				_Log.DebugFormat("Recived PDU: {0}", packet);
+
 				try
 				{
-					//based on each Pdu, fire off an event
-					if (response != null)
-						FireEvents(response);
+					// Handle packets related to a request awaiting response.
+					if (packet is SmppResponse || packet is SmppGenericNack)
+					{
+						lock (_RequestsAwaitingResponse)
+						{
+							if (_RequestsAwaitingResponse.ContainsKey(packet.SequenceNumber))
+							{
+								var state = _RequestsAwaitingResponse[packet.SequenceNumber];
+
+								// Save response at bucket..
+								state.Response = packet is SmppGenericNack ? 
+                                    new SmppGenericNackResp(packet.PacketBytes) : packet as SmppResponse;
+								// Signal response reception..
+								state.EventHandler.Set();
+								continue;
+							}
+						}
+					}
+
+					// based on each Pdu, fire off an event
+					FireEvents(packet);
 				}
 				catch (Exception exception)
 				{
@@ -918,13 +1003,24 @@ namespace AberrantSMPP
 		/// <param name="ea"></param>
 		private void EnquireLinkTimerElapsed(object sender, ElapsedEventArgs ea)
 		{
+			bool locked = false;
+
 			if (!_Bound)
 			{
 				_Log.Warn("Cannot send enquire request over an unbound session!");
 				return;
 			}
 
-			SendPdu(new SmppEnquireLink());
+			try
+			{
+				locked = Monitor.TryEnter(_EnquireLinkTimer);
+
+				SendPdu(new SmppEnquireLink());
+			}
+			finally
+			{
+				if (locked) Monitor.Exit(_EnquireLinkTimer);
+			}
 		}
 		/// <summary>
 		/// Performs a re-bind if current connection was lost.
@@ -933,8 +1029,12 @@ namespace AberrantSMPP
 		/// <param name="ea">The <see cref="System.Timers.ElapsedEventArgs"/> instance containing the event data.</param>
 		private void ReBindTimerElapsed(object sender, ElapsedEventArgs ea)
 		{
-			lock (_bindingLock)
+			var locked = false;
+
+			try
 			{
+				locked = Monitor.TryEnter(_bindingLock);
+
 				if (!_ReBindRequired)
 					return;
 
@@ -951,6 +1051,10 @@ namespace AberrantSMPP
 					Bind();
 				}
 				catch { }
+			}
+			finally
+			{
+				if (locked) Monitor.Exit(_bindingLock);
 			}
 		}
 
@@ -1235,6 +1339,7 @@ namespace AberrantSMPP
 			SystemType = null;
 			EnquireLinkInterval = 0;
 			ReBindInterval = 10;
+			ResponseTimeout = 2500;
 
 			// Initialize timers..
 			_EnquireLinkTimer = new System.Timers.Timer() { Enabled = false };

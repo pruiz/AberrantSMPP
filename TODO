@@ -7,3 +7,5 @@ TODO
 - Review concurrency issues..
 - Change ReBindTimer by a AutoResetEvent which also allows checking periodically 
   if we need to reconnect, but which can be signalled explicitly to try to reconnect now.
+- Change EnquireLinkTimer & ReBindTimer to AutoReset=false, so we avoid events from queuing 
+  when handler take too long to finish.

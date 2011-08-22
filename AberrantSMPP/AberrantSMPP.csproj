@@ -75,6 +75,8 @@
     <Compile Include="EventObject\SubmitSmRespEventArgs.cs" />
     <Compile Include="EventObject\UnbindEventArgs.cs" />
     <Compile Include="EventObject\UnbindRespEventArgs.cs" />
+    <Compile Include="Exceptions\SmppRemoteException.cs" />
+    <Compile Include="Exceptions\SmppTimeoutException.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="Packet\CommandId.cs" />
     <Compile Include="Packet\DataCoding.cs" />
