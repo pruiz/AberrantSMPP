@@ -45,6 +45,9 @@ namespace AberrantSMPP
 	/// </summary>
 	public class SMPPCommunicator : Component, IDisposable
 	{
+		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+		#region Inner classes
 		private class RequestState 
 		{
 			public readonly uint SequenceNumber;
@@ -58,8 +61,7 @@ namespace AberrantSMPP
 				Response = null;
 			}
 		}
-
-		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+		#endregion
 
 		private readonly object _bindingLock = new object();
 

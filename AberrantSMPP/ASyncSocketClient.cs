@@ -21,6 +21,7 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace AberrantSMPP
 {
@@ -68,6 +69,7 @@ namespace AberrantSMPP
 		private const int BUFFER_SIZE = 262144;
 
 		#region private fields
+		private ReaderWriterLockSlim _socketLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 		private readonly Queue<byte[]> _SendQueue = new Queue<byte[]>();
 		private readonly byte[] _Buffer;
 		private NetworkStream _NetworkStream;
@@ -135,7 +137,12 @@ namespace AberrantSMPP
 		/// <value><c>true</c> if connected; otherwise, <c>false</c>.</value>
 		public bool Connected
 		{
-			get { return _NetworkStream != null; }
+			get {
+				using (new ReadOnlyLock(_socketLock))
+				{
+					return _NetworkStream != null;
+				}
+			}
 		}
 		#endregion properties
 
@@ -156,10 +163,6 @@ namespace AberrantSMPP
 		                         ErrorHandler errHandler)
 		{
 			_Log.DebugFormat("Initializing new instance ({0}).", this.GetHashCode());
-
-			//allocate buffer
-//			clientBufferSize = bufferSize;
-//			_Buffer = new byte[clientBufferSize];
 
 			_Buffer = new byte[BUFFER_SIZE];
 			_StateObject = stateObject;
@@ -195,14 +198,16 @@ namespace AberrantSMPP
 		/// </summary>
 		public void Dispose()
 		{
-			try
+			using (new WriteLock(_socketLock))
 			{
-				_Log.DebugFormat("Disposing instance ({0}).", this.GetHashCode());
-				_IsDisposed = true;
-				Disconnect();
+				try
+				{
+					_Log.DebugFormat("Disposing instance ({0}).", this.GetHashCode());
+					_IsDisposed = true;
+					Disconnect();
+				}
+				catch { }
 			}
-			catch
-			{}
 		}
 
 		/// <summary>
@@ -213,25 +218,28 @@ namespace AberrantSMPP
 		/// <param name="port">The port to connect to.</param>
 		public void Connect(String address, Int16 port)
 		{
-			//do we already have an open connection?
-			if (_NetworkStream != null)
-				throw new InvalidOperationException("Already connected to remote host.");
+			using (new WriteLock(_socketLock))
+			{
+				//do we already have an open connection?
+				if (_NetworkStream != null)
+					throw new InvalidOperationException("Already connected to remote host.");
 
-			_Log.DebugFormat("Connecting instance ({0}) to {1}:{2}.", this.GetHashCode(), address, port);
+				_Log.DebugFormat("Connecting instance ({0}) to {1}:{2}.", this.GetHashCode(), address, port);
 
-			_ServerAddress = address;
-			_ServerPort = port;
+				_ServerAddress = address;
+				_ServerPort = port;
 
-			//attempt to establish the connection
-			_TcpClient = new TcpClient(_ServerAddress, _ServerPort);
-			_NetworkStream = _TcpClient.GetStream();
+				//attempt to establish the connection
+				_TcpClient = new TcpClient(_ServerAddress, _ServerPort);
+				_NetworkStream = _TcpClient.GetStream();
 
-			//set some socket options
-			_TcpClient.ReceiveBufferSize = BUFFER_SIZE;
-			_TcpClient.SendBufferSize = BUFFER_SIZE;
-			_TcpClient.NoDelay = true;
-			//if the connection is dropped, drop all associated data
-			_TcpClient.LingerState = new LingerOption(false, 0);
+				//set some socket options
+				_TcpClient.ReceiveBufferSize = BUFFER_SIZE;
+				_TcpClient.SendBufferSize = BUFFER_SIZE;
+				_TcpClient.NoDelay = true;
+				//if the connection is dropped, drop all associated data
+				_TcpClient.LingerState = new LingerOption(false, 0);
+			}
 
 			//start receiving messages
 			Receive();
@@ -242,23 +250,27 @@ namespace AberrantSMPP
 		/// </summary>
 		public void Disconnect()
 		{
-			_Log.DebugFormat("Disconnecting instance ({0}).", this.GetHashCode());
-
-			//close down the connection, making sure it exists first
-			if (_NetworkStream != null)
+			using (new WriteLock(_socketLock))
 			{
-				Helper.ShallowExceptions(() => _NetworkStream.Close());
-			}
-			if (_TcpClient != null)
-			{
-				Helper.ShallowExceptions(() => _TcpClient.Close());
-			}
 
-			Helper.ShallowExceptions(() => _SendQueue.Clear());
+				_Log.DebugFormat("Disconnecting instance ({0}).", this.GetHashCode());
 
-			//prep for garbage collection-we may want to use this instance again
-			_NetworkStream = null;
-			_TcpClient = null;
+				//close down the connection, making sure it exists first
+				if (_NetworkStream != null)
+				{
+					Helper.ShallowExceptions(() => _NetworkStream.Close());
+				}
+				if (_TcpClient != null)
+				{
+					Helper.ShallowExceptions(() => _TcpClient.Close());
+				}
+
+				Helper.ShallowExceptions(() => _SendQueue.Clear());
+
+				//prep for garbage collection-we may want to use this instance again
+				_NetworkStream = null;
+				_TcpClient = null;
+			}
 		}
 
 		///<summary>
@@ -269,21 +281,24 @@ namespace AberrantSMPP
 		/// </param>
 		public void Send(byte[] buffer)
 		{
-			if (_TcpClient == null || !_TcpClient.Connected)
-				throw new IOException("Socket is closed, cannot Send().");
-
-			lock (_SendQueue)
+			using (new ReadOnlyLock(_socketLock))
 			{
-				if (_SendPending)
+				if (_TcpClient == null || !_TcpClient.Connected)
+					throw new IOException("Socket is closed, cannot Send().");
+
+				lock (_SendQueue)
 				{
-					_Log.DebugFormat("Instance {0} => Queuing data for transmission..", this.GetHashCode());
-					_SendQueue.Enqueue(buffer);
-				}
-				else 
-				{
-					//send the data; don't worry about receiving any state information back;
-					_NetworkStream.BeginWrite(buffer, 0, buffer.Length, _CallbackWriteMethod, null);
-					_SendPending = true;
+					if (_SendPending)
+					{
+						_Log.DebugFormat("Instance {0} => Queuing data for transmission..", this.GetHashCode());
+						_SendQueue.Enqueue(buffer);
+					}
+					else
+					{
+						//send the data; don't worry about receiving any state information back;
+						_NetworkStream.BeginWrite(buffer, 0, buffer.Length, _CallbackWriteMethod, null);
+						_SendPending = true;
+					}
 				}
 			}
 		}
@@ -294,12 +309,15 @@ namespace AberrantSMPP
 		// XXX: Method is now private as it's called internally only. (pruiz)
 		private void Receive()
 		{
-			if (_TcpClient == null || !_TcpClient.Connected)
-				throw new IOException("Socket is closed, cannot Receive().");
+			using (new ReadOnlyLock(_socketLock))
+			{
+				if (_TcpClient == null || !_TcpClient.Connected)
+					throw new IOException("Socket is closed, cannot Receive().");
 
-			Array.Clear(_Buffer, 0, _Buffer.Length); // Clear contents..
+				Array.Clear(_Buffer, 0, _Buffer.Length); // Clear contents..
 
-			_NetworkStream.BeginRead(_Buffer, 0, _Buffer.Length, _CallbackReadMethod, null);
+				_NetworkStream.BeginRead(_Buffer, 0, _Buffer.Length, _CallbackReadMethod, null);
+			}
 		}
 		#endregion public methods
 
@@ -315,7 +333,8 @@ namespace AberrantSMPP
 		{
 			try
 			{
-				_NetworkStream.EndWrite(state);
+				using (new ReadOnlyLock(_socketLock))
+					_NetworkStream.EndWrite(state);
 			}
 			catch (Exception ex)
 			{
@@ -350,7 +369,12 @@ namespace AberrantSMPP
 		{
 			try
 			{
-				int bytesReceived = _NetworkStream.EndRead(state);
+				int bytesReceived = 0;
+
+				using (new ReadOnlyLock(_socketLock))
+				{
+					bytesReceived = _NetworkStream.EndRead(state);
+				}
 
 				//if there are bytes to process, do so.  Otherwise, the
 				//connection has been lost, so clean it up
