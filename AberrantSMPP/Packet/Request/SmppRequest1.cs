@@ -25,7 +25,7 @@ namespace AberrantSMPP.Packet.Request
 	/// Provides some common attributes for data_sm, query_sm, submit_sm, submit_multi,
 	/// cancel_sm, and replace_sm.
 	/// </summary>
-	public abstract class SmppRequest1 : Pdu
+	public abstract class SmppRequest1 : SmppRequest
 	{
 		#region private fields
 		

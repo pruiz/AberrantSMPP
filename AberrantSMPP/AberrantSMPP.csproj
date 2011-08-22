@@ -125,6 +125,7 @@
     <Compile Include="Utility\PduFactory.cs" />
     <Compile Include="Utility\PduUtil.cs" />
     <Compile Include="Utility\SmppStringUtil.cs" />
+    <Compile Include="Utility\SmppUtil.cs" />
     <Compile Include="Utility\TlvTable.cs" />
     <Compile Include="Utility\UnsignedNumConverter.cs" />
     <Compile Include="Utility\UnsuccessAddress.cs" />

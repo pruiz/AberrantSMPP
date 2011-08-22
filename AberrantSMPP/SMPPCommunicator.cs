@@ -76,8 +76,7 @@ namespace AberrantSMPP
 		private string _AddressRange;
 		private int _EnquireLinkInterval;
 		private System.Timers.Timer _EnquireLinkTimer;
-		private int _ResponseTimeout;
-		//private System.Timers.Timer _ResponseTimmer;
+		private int _ResponseTimeout;		
 		private int _ReBindInterval;
 		private System.Timers.Timer _ReBindTimer;
 		private bool _ReBindRequired = true; // True until first successfull bind.
@@ -85,7 +84,8 @@ namespace AberrantSMPP
 		private bool _SentUnbindPacket = true;  //default to true since we start out unbound
 		private Random _random = new Random();
 		private uint _SequenceNumber = 0;
-		
+		private IDictionary<uint, RequestState> _RequestsAwaitingResponse = new Dictionary<uint, RequestState>();
+
 		/// <summary>
 		/// Required designer variable.
 		/// </summary>
@@ -607,8 +607,6 @@ namespace AberrantSMPP
 			}
 		}
 
-		private IDictionary<uint, RequestState> _RequestsAwaitingResponse = new Dictionary<uint, RequestState>();
-
 		/// <summary>
 		/// Sends a request and waits for the appropiate response.
 		/// If no response is received before RequestTimeout seconds, an 
@@ -642,6 +640,7 @@ namespace AberrantSMPP
 
 		public IEnumerable<SmppResponse> SendRequests(IEnumerable<SmppRequest> requests)
 		{
+			bool signalled = false;
 			var list = new List<RequestState>();
 
 			lock (_RequestsAwaitingResponse)
@@ -653,7 +652,35 @@ namespace AberrantSMPP
 					_RequestsAwaitingResponse.Add(state.SequenceNumber, state);
 			}
 
-			var signalled = WaitHandle.WaitAll(list.Select(x => x.EventHandler).ToArray());
+			var handlers = list.Select(x => x.EventHandler).ToArray();
+
+			// WaitAll for multiple handles on an STA thread is not supported.
+			// ...so wait on each handle individually.
+			if (Thread.CurrentThread.GetApartmentState() == ApartmentState.STA)
+			{
+				var count = 0;
+
+				// FIXME: This has a worse case scenario which causes a timeout to last 
+				//		  N*_ResponseTimeout. (pruiz)
+				foreach (var handler in handlers)
+				{
+					if (WaitHandle.WaitAny(new[] { handler }, _ResponseTimeout) == 258)
+					{
+						break;
+					}
+					else
+					{
+						count++;
+					}
+				}
+
+				// Signal received signal from all handlers??
+				signalled = count == list.Count;
+			}
+			else
+			{
+				signalled = WaitHandle.WaitAll(handlers, _ResponseTimeout);
+			}
 
 			lock (_RequestsAwaitingResponse)
 			{
@@ -675,108 +702,27 @@ namespace AberrantSMPP
 		}
 
 		/// <summary>
-		/// Sends a long message possibly by splitting it on multiple SMPP PDUs.
+		/// Sends an SMS message synchronouslly, possibly splitting it on multiple PDUs 
+		/// using the specified segmentation & reassembly method.
 		/// </summary>
-		/// <param name="pdu">The base pdu to use.</param>
-		/// <param name="method">The segmentation & reasembly method tu use when splitting the message.</param>
-		/// <param name="correlationId">The correlation id to set to each message part. (If null, a random one will be chosen)</param>
-		/// <returns>The list of sequence numbers of PDUs sent</returns>
-		public IEnumerable<uint> SendLongMessage(SmppSubmitSm pdu, SmppSarMethod method, byte? correlationId)
+		/// <param name="pdu">The pdu.</param>
+		/// <param name="method">The method.</param>
+		/// <returns>The list of messageIds assigned by remote party to each submitted PDU.</returns>
+		public IEnumerable<string> Send(SmppSubmitSm pdu, SmppSarMethod method)
 		{
-			if (pdu == null) throw new ArgumentNullException("pdu");
+			var requests = SmppUtil.SplitLongMessage(pdu, method, GetRandomByte()).Cast<SmppRequest>();
+			var responses = SendRequests(requests);
 
-			var data = pdu.MessagePayload != null ? pdu.MessagePayload : pdu.ShortMessage;
-
-			if (data != null && !(data is string || data is byte[]))
-				throw new ArgumentException("Short Message must be a string or byte array.");
-
-			var bytes = data is string ? PduUtil.GetEncodedText(pdu.DataCoding, data as string) : data as byte[];
-			var maxSegmentLen = PduUtil.GetMaxSegmentLength(pdu.DataCoding, bytes.Length);
-
-			// Remove/Reset data from PDU..
-			pdu.ShortMessage = pdu.MessagePayload = null;
-
-			// Sending as payload means avoiding all the data splitting logic.. (which is great ;))
-			if (method == SmppSarMethod.SendAsPayload)
+			if (responses.Any(x => (x is SmppGenericNackResp)))
 			{
-				// Remove sequenceNumber.
-				pdu.SequenceNumber = 0;
-				// Remove UDH header (if set).
-				pdu.EsmClass &= ((byte)~NetworkFeatures.UDHI);
-				// Remove SMPP segmentation properties..
-				pdu.MoreMessagesToSend = null;
-				pdu.NumberOfMessages = null;
-				pdu.SarTotalSegments = null;
-				pdu.SarMsgRefNumber = null;
-				pdu.MessagePayload = data;
-
-				return new[] { this.SendPdu(pdu) };
+				var nack = responses.First(x => x is SmppGenericNackResp);
+				throw new SmppRemoteException(string.Format(
+					"SMPP PDU was rejected by remote party. (error: {0})",
+					nack.CommandStatus
+				), nack.CommandStatus);
 			}
 
-			// Else.. let's do segmentation and the other crappy stuff..
-			var result = new List<uint>();
-			var segmentCid = correlationId.HasValue ? correlationId.Value : GetRandomByte();
-			var udhref = method == SmppSarMethod.UserDataHeader ? new Nullable<byte>(segmentCid) : null;
-			var segments = PduUtil.SplitMessage(bytes, maxSegmentLen, udhref);
-			var totalSegments = segments.Count();
-			var segno = 0;
-
-			// If just one segment, send it w/o SAR parameters..
-			if (totalSegments < 2)
-			{
-				// Remove sequenceNumber.
-				pdu.SequenceNumber = 0;
-				// Remove UDH header (if set).
-				pdu.EsmClass &= ((byte)~NetworkFeatures.UDHI);
-				// Remove SMPP segmentation properties..
-				pdu.MoreMessagesToSend = null;
-				pdu.NumberOfMessages = null;
-				pdu.SarTotalSegments = null;
-				pdu.SarMsgRefNumber = null;
-				pdu.ShortMessage = data;
-
-				return new[] { this.SendPdu(pdu) };
-			}
-
-			foreach (var segment in segments)
-			{
-				segno++;
-
-				// Remove sequenceNumber.
-				pdu.SequenceNumber = 0;
-				// Set current segment bytes as short message..
-				pdu.ShortMessage = segment;
-
-				switch (method)
-				{
-					case SmppSarMethod.UserDataHeader:
-						pdu.EsmClass |= (byte)NetworkFeatures.UDHI; // Set UDH flag..
-						// Ensure SMPP segmentation fields are not set.
-						pdu.MoreMessagesToSend = null;
-						pdu.NumberOfMessages = null;
-						pdu.SarTotalSegments = null;
-						pdu.SarMsgRefNumber = null;
-						pdu.SarSegmentSeqnum = null;
-						break;
-					case SmppSarMethod.UseSmppSegmentation:
-						pdu.EsmClass &= ((byte)~NetworkFeatures.UDHI); // Remove UDH header (if set).
-						// Fill-in SMPP segmentation fields..
-						pdu.MoreMessagesToSend = segno != totalSegments;
-						pdu.NumberOfMessages = (byte)totalSegments;
-						pdu.SarTotalSegments = (byte)totalSegments;
-						pdu.SarMsgRefNumber = segmentCid;
-						pdu.SarSegmentSeqnum = (byte)segno;
-						break;
-				}
-
-				//Console.WriteLine("segno = {0} -- bytes => {1} -- Num: {2}, More == {3}, Total: {4}... ref => {5} --- CLASS: {6}", 
-				//	segno, segment.Count(), segno, segno != totalSegments, totalSegments, segmentCid, pdu.EsmClass
-				//);
-
-				result.Add(this.SendPdu(pdu));
-			}
-
-			return result;
+			return responses.OfType<SmppSubmitSmResp>().Select(x => x.MessageId).ToArray();
 		}
 
 		/// <summary>
@@ -1413,6 +1359,12 @@ namespace AberrantSMPP
 
 			Helper.ShallowExceptions(() => Unbind(true));
 			Helper.ShallowExceptions(() => { if (asClient != null) asClient.Dispose(); });
+
+			lock (_RequestsAwaitingResponse)
+			{
+				_RequestsAwaitingResponse.Clear();
+				_RequestsAwaitingResponse = null;
+			}
 
 			base.Dispose(disposing);
 		}
