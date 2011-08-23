@@ -578,7 +578,32 @@ namespace AberrantSMPP.Packet.Request
 				PduUtil.SetReceiptedMessageId(this, value);
 			}
 		}
-		
+
+		/// <summary>
+		/// Text(ASCII)giving additional info on the meaning of the response.
+		/// </summary>
+		public string AdditionalStatusInfoText
+		{
+			get
+			{
+				return GetOptionalParamString(OptionalParamCodes.additional_status_info_text);
+			}
+
+			set
+			{
+				const int MAX_STATUS_LEN = 264;
+
+				if (value == null || value.Length <= MAX_STATUS_LEN)
+				{
+					SetOptionalParamString(OptionalParamCodes.additional_status_info_text, value);
+				}
+				else
+				{
+					throw new ArgumentException(
+						"additional_status_info_text must have length <= " + MAX_STATUS_LEN);
+				}
+			}
+		}
 		#endregion optional parameters
 		
 		#region constructors
