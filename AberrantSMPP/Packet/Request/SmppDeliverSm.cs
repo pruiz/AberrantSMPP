@@ -604,6 +604,30 @@ namespace AberrantSMPP.Packet.Request
 				}
 			}
 		}
+
+		/// <summary>
+		/// Indicates the reason for delivery failure.
+		/// </summary>
+		public DeliveryFailureReason? DeliveryFailureReason
+		{
+			get
+			{
+				return GetOptionalParamByte<DeliveryFailureReason>(OptionalParamCodes.delivery_failure_reason);
+			}
+
+			set
+			{
+				if (value.HasValue)
+				{
+					SetOptionalParamBytes(OptionalParamCodes.delivery_failure_reason,
+						BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering((byte)value)));
+				}
+				else
+				{
+					SetOptionalParamBytes(OptionalParamCodes.delivery_failure_reason, null);
+				}
+			}
+		}
 		#endregion optional parameters
 		
 		#region constructors
