@@ -206,7 +206,10 @@ namespace AberrantSMPP
 					_IsDisposed = true;
 					Disconnect();
 				}
-				catch { }
+				catch (Exception ex)
+				{
+					_Log.Warn("Exception thrown while disposing.", ex);
+				}
 			}
 		}
 
@@ -376,7 +379,8 @@ namespace AberrantSMPP
 
 				using (new ReadOnlyLock(_socketLock))
 				{
-					bytesReceived = _NetworkStream.EndRead(state);
+					if (_NetworkStream != null)
+						bytesReceived = _NetworkStream.EndRead(state);
 				}
 
 				//if there are bytes to process, do so.  Otherwise, the
@@ -392,16 +396,14 @@ namespace AberrantSMPP
 					{
 						_Log.Error(string.Format("Instance {0} => Receive message handler failed.", this.GetHashCode()), ex);
 					}
-					finally
-					{
-						//start listening again
-						Receive();
-					}
 				}
+
+				//start listening again
+				Receive();
 			}
 			catch (Exception ex)
 			{
-				_Log.Warn("Receive failed", ex);
+				_Log.Warn("Receive failed.", ex);
 
 				//the connection has been dropped so call the CloseHandler
 				try
