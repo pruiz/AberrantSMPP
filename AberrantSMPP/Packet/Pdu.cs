@@ -327,7 +327,7 @@ namespace AberrantSMPP.Packet
 			where T : struct
 		{
 			if (!this.ContainsOptionalParameter(tag))
-				return new Nullable<T>(default(T));
+				return null;
 
 			var data = _tlvTable.GetByte(UnsignedNumConverter.SwapByteOrdering((ushort)tag));
 			return (T)Convert.ChangeType(data, typeof(T));

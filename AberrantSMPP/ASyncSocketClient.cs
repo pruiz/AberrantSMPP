@@ -334,7 +334,10 @@ namespace AberrantSMPP
 			try
 			{
 				using (new ReadOnlyLock(_socketLock))
-					_NetworkStream.EndWrite(state);
+				{
+					if (_NetworkStream != null)
+						_NetworkStream.EndWrite(state);
+				}
 			}
 			catch (Exception ex)
 			{
@@ -396,8 +399,10 @@ namespace AberrantSMPP
 					}
 				}
 			}
-			catch
+			catch (Exception ex)
 			{
+				_Log.Warn("Receive failed", ex);
+
 				//the connection has been dropped so call the CloseHandler
 				try
 				{
