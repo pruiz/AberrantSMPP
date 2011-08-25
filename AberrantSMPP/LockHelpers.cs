@@ -8,7 +8,7 @@ using Common.Logging;
 
 namespace AberrantSMPP
 {
-	public abstract class BaseLock : IDisposable
+	internal abstract class BaseLock : IDisposable
 	{
 		protected ReaderWriterLockSlim _Locks;
 
@@ -23,7 +23,7 @@ namespace AberrantSMPP
 	}
 
 
-	public class ReadLock : BaseLock
+	internal class ReadLock : BaseLock
 	{
 		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -43,7 +43,7 @@ namespace AberrantSMPP
 	}
 
 
-	public class ReadOnlyLock : BaseLock
+	internal class ReadOnlyLock : BaseLock
 	{
 		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -63,7 +63,7 @@ namespace AberrantSMPP
 	}
 
 
-	public class WriteLock : BaseLock
+	internal class WriteLock : BaseLock
 	{
 		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
