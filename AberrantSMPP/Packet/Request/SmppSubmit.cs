@@ -208,7 +208,22 @@ namespace AberrantSMPP.Packet.Request
 				return _SmLength;
 			}
 		}
-		
+
+		/// <summary>
+		/// Sets the Delivery Pending Flag on delivery failure.
+		/// </summary>
+		public DpfResultType? SetDpf
+		{
+			get
+			{
+				return GetOptionalParamByte<DpfResultType>(OptionalParamCodes.set_dpf);
+			}
+
+			set
+			{
+				SetOptionalParamByte(OptionalParamCodes.set_dpf, value);
+			}
+		}
 		#endregion properties
 		
 		#region constructors

@@ -100,31 +100,7 @@ namespace AberrantSMPP.Packet.Response
 				}
 			}
 		}
-		
-		/// <summary>
-		/// Indicates whether the Delivery Pending Flag was set.
-		/// </summary>
-		public DpfResultType? DpfResult
-		{
-			get
-			{
-				return GetOptionalParamByte<DpfResultType>(OptionalParamCodes.dpf_result);
-			}
-			
-			set
-			{
-				if (value.HasValue)
-				{
-					SetOptionalParamBytes(OptionalParamCodes.dpf_result,
-						BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering((byte)value)));
-				}
-				else
-				{
-					SetOptionalParamBytes(OptionalParamCodes.dpf_result, null);
-				}
-			}
-		}
-		
+				
 		#endregion optional parameters
 		
 		#region constructors

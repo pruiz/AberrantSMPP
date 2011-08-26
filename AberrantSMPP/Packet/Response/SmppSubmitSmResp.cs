@@ -48,7 +48,31 @@ namespace AberrantSMPP.Packet.Response
 				_MessageId = (value == null) ? string.Empty : value;
 			}
 		}
-		
+
+		/// <summary>
+		/// Indicates whether the Delivery Pending Flag was set.
+		/// </summary>
+		public DpfResultType? DpfResult
+		{
+			get
+			{
+				return GetOptionalParamByte<DpfResultType>(OptionalParamCodes.dpf_result);
+			}
+
+			set
+			{
+				if (value.HasValue)
+				{
+					SetOptionalParamBytes(OptionalParamCodes.dpf_result,
+						BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering((byte)value)));
+				}
+				else
+				{
+					SetOptionalParamBytes(OptionalParamCodes.dpf_result, null);
+				}
+			}
+		}
+
 		/// <summary>
 		/// Accessor for the submit_multi to get at the response after the message ID.
 		/// This is, in essence, set only after DecodeSmscResponse()in this base class
