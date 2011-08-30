@@ -997,6 +997,8 @@ namespace AberrantSMPP
 			{
 				locked = Monitor.TryEnter(_EnquireLinkTimer);
 
+				if (!locked) return;
+
 				SendPdu(new SmppEnquireLink());
 			}
 			finally
@@ -1017,7 +1019,7 @@ namespace AberrantSMPP
 			{
 				locked = Monitor.TryEnter(_bindingLock);
 
-				if (!_ReBindRequired)
+				if (!locked || !_ReBindRequired)
 					return;
 
 				_Log.Debug("Rebinding..");
