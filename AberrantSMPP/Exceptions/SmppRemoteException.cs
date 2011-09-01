@@ -3,6 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using AberrantSMPP;
+using AberrantSMPP.Packet;
+using AberrantSMPP.Packet.Request;
+using AberrantSMPP.Packet.Response;
+
 namespace AberrantSMPP.Exceptions
 {
 	/// <summary>
@@ -11,11 +16,9 @@ namespace AberrantSMPP.Exceptions
 	[Serializable]
 	public class SmppRemoteException : Exception
 	{
-		/// <summary>
-		/// Gets or sets the command status/error code indicated by remote party.
-		/// </summary>
-		/// <value>The error code.</value>
-		public uint ErrorCode { get; private set; }
+		public SmppRequest Request { get; set; }
+		public SmppResponse Response { get; set; }
+		public CommandStatus CommandStatus { get; set; }
 
 		protected SmppRemoteException() { }
 		protected SmppRemoteException(
@@ -23,13 +26,21 @@ namespace AberrantSMPP.Exceptions
 		  System.Runtime.Serialization.StreamingContext context)
 			: base(info, context) { }
 
-		public SmppRemoteException(string message, uint errorCode) : base(message) 
+		public SmppRemoteException(string message, CommandStatus status) 
+			: base(message) 
 		{
-			ErrorCode = errorCode;
+			CommandStatus = status;
 		}
 
-		public SmppRemoteException(string message, Exception inner) : base(message, inner) 
+		public SmppRemoteException(string message, SmppRequest request, SmppResponse response)
+			: base(message)
 		{
+			if (request == null) throw new ArgumentNullException("request");
+			if (response == null) throw new ArgumentNullException("response");
+
+			Request = request;
+			Response = response;
+			CommandStatus = response.CommandStatus;
 		}
 	}
 }

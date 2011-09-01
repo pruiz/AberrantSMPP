@@ -26,7 +26,7 @@ namespace AberrantSMPP.Utility
 				case DataCoding.SMSCDefault:
 					return totalbytes <= 160 ? 160 : 153;
 				case DataCoding.UCS2:
-					return totalbytes <= 70 ? 70 : 67;
+					//return totalbytes <= 70 ? 70 : 67;
 				case DataCoding.Latin1:
 				case DataCoding.OctetUnspecifiedA:
 				case DataCoding.OctetUnspecifiedB:
@@ -71,7 +71,7 @@ namespace AberrantSMPP.Utility
 					segment[1] = 0x00;	// Segmentation & re-assemly (with 8 bit reference) IE
 					segment[2] = 0x03;	// IE data length.
 					segment[3] = udhRef.Value;
-					segment[4] = Convert.ToByte(totalSegments);
+					segment[4] = Convert.ToByte(totalSegments + 1);
 					segment[5] = Convert.ToByte(i + 1);
 				}
 
@@ -96,6 +96,7 @@ namespace AberrantSMPP.Utility
 		{
 			if (pdu == null) throw new ArgumentNullException("pdu");
 
+			var result = new List<SmppSubmitSm>();
 			var data = pdu.MessagePayload != null ? pdu.MessagePayload : pdu.ShortMessage;
 
 			if (data != null && !(data is string || data is byte[]))
@@ -120,8 +121,7 @@ namespace AberrantSMPP.Utility
 			if (method == SmppSarMethod.SendAsPayload)
 			{
 				pdu.MessagePayload = data;
-				yield return pdu;
-				yield break;
+				return new[] { pdu };
 			}
 
 			// Else.. let's do segmentation and the other crappy stuff..
@@ -134,8 +134,7 @@ namespace AberrantSMPP.Utility
 			if (totalSegments < 2)
 			{
 				pdu.ShortMessage = data;
-				yield return pdu;
-				yield break;
+				return new[] { pdu };
 			}
 
 			// Ok, se we need segmentation, let's go ahead an use input PDU as template.
@@ -167,8 +166,10 @@ namespace AberrantSMPP.Utility
 						break;
 				}
 
-				yield return packet;
+				result.Add(packet);
 			}
+
+			return result;
 		}
 	}
 }

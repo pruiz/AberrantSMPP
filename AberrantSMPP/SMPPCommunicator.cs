@@ -718,10 +718,19 @@ namespace AberrantSMPP
 			if (responses.Any(x => (x is SmppGenericNackResp)))
 			{
 				var nack = responses.First(x => x is SmppGenericNackResp);
-				throw new SmppRemoteException(string.Format(
-					"SMPP PDU was rejected by remote party. (error: {0})",
-					nack.CommandStatus
-				), nack.CommandStatus);
+				var idx = responses.IndexWhere(x => x == nack);
+				var req = requests.ElementAt(idx);
+				var msg = string.Format("SMPP PDU was rejected by remote party. (error: {0})", nack.CommandStatus);
+				throw new SmppRemoteException(msg, req, nack);
+			}
+
+			if (responses.Any(x => x.CommandStatus != 0))
+			{
+				var res = responses.First(x => x.CommandStatus != 0);
+				var idx = responses.IndexWhere(x => x == res);
+				var req = requests.ElementAt(idx);
+				var msg = string.Format("SMPP Request returned an error status. (code: {0})", res.CommandStatus);
+				throw new SmppRemoteException(msg, req, res);
 			}
 
 			return responses.OfType<SmppSubmitSmResp>().Select(x => x.MessageId).ToArray();

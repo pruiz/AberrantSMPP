@@ -301,7 +301,7 @@ namespace AberrantSMPP.Utility
 
 			if (val == null)
 			{
-				pdu.SetOptionalParamBytes(OptionalParamCodes.message_payload, new byte[] { 0 });
+				pdu.SetOptionalParamBytes(OptionalParamCodes.message_payload, null);
 			}
 			else if(val is string)
 			{

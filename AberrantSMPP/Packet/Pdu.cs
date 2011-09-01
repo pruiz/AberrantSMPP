@@ -44,7 +44,7 @@ namespace AberrantSMPP.Packet
 		#endregion constants
 		
 		#region private fields
-		private uint _CommandStatus = 0;
+		private CommandStatus _CommandStatus = 0;
 		private CommandId _CommandID;
 		private TlvTable _tlvTable = new TlvTable();
 		private uint _SequenceNumber = 0;
@@ -93,7 +93,7 @@ namespace AberrantSMPP.Packet
 		/// <summary>
 		/// Indicates outcome of request.
 		/// </summary>
-		public uint CommandStatus
+		public CommandStatus CommandStatus
 		{
 			get
 			{
@@ -161,7 +161,7 @@ namespace AberrantSMPP.Packet
 			_PacketBytes = incomingBytes;
 			_CommandLength = DecodeCommandLength(_PacketBytes);
 			_CommandID = DecodeCommandId(_PacketBytes);
-			_CommandStatus = UnsignedNumConverter.SwapByteOrdering(BitConverter.ToUInt32(_PacketBytes, 8));
+			_CommandStatus = (CommandStatus)UnsignedNumConverter.SwapByteOrdering(BitConverter.ToUInt32(_PacketBytes, 8));
 			_SequenceNumber = UnsignedNumConverter.SwapByteOrdering(BitConverter.ToUInt32(_PacketBytes, 12));
 			_PacketBytes = TrimResponsePdu(_PacketBytes);
 			
@@ -263,7 +263,7 @@ namespace AberrantSMPP.Packet
 		{
 			ArrayList pdu = new ArrayList();
 			pdu.AddRange(BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering((uint)_CommandID)));
-			pdu.AddRange(BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering(_CommandStatus)));
+			pdu.AddRange(BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering((uint)_CommandStatus)));
 			pdu.AddRange(BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering(_SequenceNumber)));
 			pdu.TrimToSize();
 			return pdu;
@@ -1096,6 +1096,14 @@ namespace AberrantSMPP.Packet
 				try { 
 					value = property.GetValue(this, null);
 				} catch { }
+
+				if (value is byte[])
+				{
+					var ba = value as byte[];
+					var hex = new StringBuilder(ba.Length * 2);
+					foreach (byte b in ba) hex.AppendFormat("{0:x2}", b);
+					value = hex.ToString();
+				}
 
 				sb.AppendFormat("{0}:{1} ", property.Name, value);
 			}
