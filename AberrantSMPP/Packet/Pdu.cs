@@ -813,7 +813,7 @@ namespace AberrantSMPP.Packet
 			/// </summary>
 			Unknown = 0x00,
 			/// <summary>
-			/// International
+			/// International (E.164)
 			/// </summary>
 			International = 0x01,
 			/// <summary>
