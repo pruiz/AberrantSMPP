@@ -662,6 +662,8 @@ namespace AberrantSMPP
 			{
 				var count = 0;
 
+				_Log.Debug("Running under STA threads, waiting for SMPP responses using WaitAny workaround.");
+
 				// FIXME: This has a worse case scenario which causes a timeout to last 
 				//		  N*_ResponseTimeout. (pruiz)
 				foreach (var handler in handlers)
@@ -681,7 +683,7 @@ namespace AberrantSMPP
 			}
 			else
 			{
-				signalled = WaitHandle.WaitAll(handlers, _ResponseTimeout);
+				signalled = WaitHandle.WaitAll(handlers, _ResponseTimeout*handlers.Length);
 			}
 
 			lock (_RequestsAwaitingResponse)
@@ -876,7 +878,7 @@ namespace AberrantSMPP
 		{
 			lock (_bindingLock)
 			{
-				_Log.Debug("Socket closed, scheduling a rebind operation.");
+				_Log.Warn("Socket closed, scheduling a rebind operation.");
 				_ReBindRequired = true;
 			}
 

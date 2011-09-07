@@ -72,7 +72,6 @@ namespace AberrantSMPP
 		private ReaderWriterLockSlim _socketLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 		private readonly Queue<byte[]> _SendQueue = new Queue<byte[]>();
 		private readonly byte[] _Buffer;
-		private NetworkStream _NetworkStream;
 		private TcpClient _TcpClient;
 		private AsyncCallback _CallbackReadMethod;
 		private AsyncCallback _CallbackWriteMethod;
@@ -140,7 +139,7 @@ namespace AberrantSMPP
 			get {
 				using (new ReadOnlyLock(_socketLock))
 				{
-					return _NetworkStream != null;
+					return _TcpClient != null && _TcpClient.Connected;
 				}
 			}
 		}
@@ -224,7 +223,7 @@ namespace AberrantSMPP
 			using (new WriteLock(_socketLock))
 			{
 				//do we already have an open connection?
-				if (_NetworkStream != null)
+				if (_TcpClient != null)
 					throw new InvalidOperationException("Already connected to remote host.");
 
 				_Log.DebugFormat("Connecting instance ({0}) to {1}:{2}.", this.GetHashCode(), address, port);
@@ -234,7 +233,6 @@ namespace AberrantSMPP
 
 				//attempt to establish the connection
 				_TcpClient = new TcpClient(_ServerAddress, _ServerPort);
-				_NetworkStream = _TcpClient.GetStream();
 
 				//set some socket options
 				_TcpClient.ReceiveBufferSize = BUFFER_SIZE;
@@ -259,10 +257,6 @@ namespace AberrantSMPP
 				_Log.DebugFormat("Disconnecting instance ({0}).", this.GetHashCode());
 
 				//close down the connection, making sure it exists first
-				if (_NetworkStream != null)
-				{
-					Helper.ShallowExceptions(() => _NetworkStream.Close());
-				}
 				if (_TcpClient != null)
 				{
 					Helper.ShallowExceptions(() => _TcpClient.Close());
@@ -271,7 +265,6 @@ namespace AberrantSMPP
 				Helper.ShallowExceptions(() => _SendQueue.Clear());
 
 				//prep for garbage collection-we may want to use this instance again
-				_NetworkStream = null;
 				_TcpClient = null;
 			}
 		}
@@ -286,7 +279,7 @@ namespace AberrantSMPP
 		{
 			using (new ReadOnlyLock(_socketLock))
 			{
-				if (_TcpClient == null || !_TcpClient.Connected)
+				if (!this.Connected)
 					throw new IOException("Socket is closed, cannot Send().");
 
 				lock (_SendQueue)
@@ -299,7 +292,8 @@ namespace AberrantSMPP
 					else
 					{
 						//send the data; don't worry about receiving any state information back;
-						_NetworkStream.BeginWrite(buffer, 0, buffer.Length, _CallbackWriteMethod, null);
+						_TcpClient.GetStream()
+							.BeginWrite(buffer, 0, buffer.Length, _CallbackWriteMethod, null);
 						_SendPending = true;
 					}
 				}
@@ -314,12 +308,13 @@ namespace AberrantSMPP
 		{
 			using (new ReadOnlyLock(_socketLock))
 			{
-				if (_TcpClient == null || !_TcpClient.Connected)
+				if (!this.Connected)
 					throw new IOException("Socket is closed, cannot Receive().");
 
 				Array.Clear(_Buffer, 0, _Buffer.Length); // Clear contents..
 
-				_NetworkStream.BeginRead(_Buffer, 0, _Buffer.Length, _CallbackReadMethod, null);
+				_TcpClient.GetStream()
+					.BeginRead(_Buffer, 0, _Buffer.Length, _CallbackReadMethod, null);
 			}
 		}
 		#endregion public methods
@@ -338,8 +333,8 @@ namespace AberrantSMPP
 			{
 				using (new ReadOnlyLock(_socketLock))
 				{
-					if (_NetworkStream != null)
-						_NetworkStream.EndWrite(state);
+					if (_TcpClient != null)
+						_TcpClient.GetStream().EndWrite(state);
 				}
 			}
 			catch (Exception ex)
@@ -348,6 +343,8 @@ namespace AberrantSMPP
 			}
 
 			// If there are more packets to send..
+
+			// XXX: If sent bytes == 0 --> socket closed??
 
 			lock (_SendQueue)
 			{
@@ -379,8 +376,8 @@ namespace AberrantSMPP
 
 				using (new ReadOnlyLock(_socketLock))
 				{
-					if (_NetworkStream != null)
-						bytesReceived = _NetworkStream.EndRead(state);
+					if (_TcpClient != null)
+						bytesReceived = _TcpClient.GetStream().EndRead(state);
 				}
 
 				//if there are bytes to process, do so.  Otherwise, the
@@ -397,6 +394,10 @@ namespace AberrantSMPP
 						_Log.Error(string.Format("Instance {0} => Receive message handler failed.", this.GetHashCode()), ex);
 					}
 				}
+
+				// XXX: If readBytesCount == 0 --> Connection has been closed.
+
+				// XXX: Access _TcpClient.Client.Available to ensure socket is still working..
 
 				//start listening again
 				Receive();
