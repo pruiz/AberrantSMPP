@@ -23,6 +23,8 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
 
+//#define HARDCORE_LOGGING
+
 namespace AberrantSMPP
 {
 	/// <summary>
@@ -82,10 +84,37 @@ namespace AberrantSMPP
 		private string _ServerAddress;
 		private Int16 _ServerPort;
 		private object _StateObject;
+#if HARDCORE_LOGGING
+		private bool __SendPending;
+		private bool _SendPending
+		{
+			get
+			{
+				_Log.DebugFormat("SendPending ==(GET - {1})==>> {0}", __SendPending, _ThreadId);
+				return __SendPending;
+			}
+			set
+			{
+				_Log.DebugFormat("SendPending ==(SET - {1})==>> {0}", __SendPending, _ThreadId);
+				__SendPending = value;
+			}
+		}
+#else
 		private bool _SendPending;
+#endif
 		#endregion private fields
 
 		#region properties
+		private string _ThreadId
+		{
+			get
+			{
+				return string.Format("{0} ({1})",
+					System.Threading.Thread.CurrentThread.Name,
+					System.Threading.Thread.CurrentThread.ManagedThreadId
+				);
+			}
+		}
 		/// <summary>
 		/// The server address to connect to.
 		/// </summary>
@@ -139,7 +168,7 @@ namespace AberrantSMPP
 			get {
 				using (new ReadOnlyLock(_socketLock))
 				{
-					return _TcpClient != null && _TcpClient.Connected;
+					return _TcpClient != null && _TcpClient.Connected && _TcpClient.Client.Connected;
 				}
 			}
 		}
@@ -279,6 +308,10 @@ namespace AberrantSMPP
 		{
 			using (new ReadOnlyLock(_socketLock))
 			{
+#if HARDCORE_LOGGING
+				_Log.DebugFormat("Instance {0} - {1} => Sending..", this.GetHashCode(), _ThreadId);
+#endif
+
 				if (!this.Connected)
 					throw new IOException("Socket is closed, cannot Send().");
 
@@ -286,15 +319,22 @@ namespace AberrantSMPP
 				{
 					if (_SendPending)
 					{
-						_Log.DebugFormat("Instance {0} => Queuing data for transmission..", this.GetHashCode());
+						_Log.DebugFormat("Instance {0} - {1} => Queuing data for transmission..", this.GetHashCode(), _ThreadId);
 						_SendQueue.Enqueue(buffer);
 					}
 					else
 					{
+#if HARDCORE_LOGGING
+						_Log.DebugFormat("Instance {0} - {1} => Sending actual data..", this.GetHashCode(), _ThreadId);
+#endif
+
 						//send the data; don't worry about receiving any state information back;
+						_SendPending = true; 
 						_TcpClient.GetStream()
 							.BeginWrite(buffer, 0, buffer.Length, _CallbackWriteMethod, null);
-						_SendPending = true;
+#if HARDCORE_LOGGING
+						_Log.DebugFormat("Instance {0} - {1} => Data sent..", this.GetHashCode(), _ThreadId);
+#endif
 					}
 				}
 			}
@@ -320,7 +360,6 @@ namespace AberrantSMPP
 		#endregion public methods
 
 		#region private methods
-
 		/// <summary>
 		/// Callback method called by the NetworkStream's thread when a message
 		/// is sent.
@@ -329,36 +368,61 @@ namespace AberrantSMPP
 		/// the connection.</param>
 		private void SendComplete(IAsyncResult state)
 		{
+#if HARDCORE_LOGGING
+			_Log.DebugFormat("Instance {0} - {1} => Send completed.", this.GetHashCode(), _ThreadId);
+#endif
+
 			try
 			{
 				using (new ReadOnlyLock(_socketLock))
 				{
+#if HARDCORE_LOGGING
+					_Log.DebugFormat("Instance {0} - {1} => Finishing sent operation..", this.GetHashCode(), _ThreadId);
+#endif
+
+					if (!_SendPending) 
+						_Log.ErrorFormat("Instance {0} - {1} => SendComplete called while SendPending=False?!?!?", this.GetHashCode(), _ThreadId);
+
+					_SendPending = false;
+
 					if (_TcpClient != null)
 						_TcpClient.GetStream().EndWrite(state);
 				}
 			}
 			catch (Exception ex)
 			{
-				_Log.Warn(string.Format("Instance {0} => Async send failed.", this.GetHashCode()), ex);
+				_Log.Warn(string.Format("Instance {0} - {1} => Async send failed.", this.GetHashCode(), _ThreadId), ex);
 			}
 
 			// If there are more packets to send..
 
-			// XXX: If sent bytes == 0 --> socket closed??
-
 			lock (_SendQueue)
 			{
-				_SendPending = false;
+#if HARDCORE_LOGGING
+				_Log.DebugFormat("Instance {0} - {1} => Processing send queue.", this.GetHashCode(), _ThreadId);
+#endif
 
 				if (_SendQueue.Count == 0)
+				{
+#if HARDCORE_LOGGING
+					_Log.DebugFormat("Instance {0} - {1} => No packets on queue..", this.GetHashCode(), _ThreadId);
+#endif
+					// Reduce queue internal space..
+					_SendQueue.TrimExcess();
 					return;
+				}
 
-				_Log.DebugFormat("Instance {0} => Sending queued packet.", this.GetHashCode());
+#if HARDCORE_LOGGING
+				_Log.DebugFormat("Instance {0} - {1} => Sending queued packet.", this.GetHashCode(), _ThreadId);
+#endif
 
 				// Send another packet..
-				Send(_SendQueue.Dequeue());
-				// Reduce queue internal space..
-				_SendQueue.TrimExcess();
+				using (new ReadOnlyLock(_socketLock))
+				{
+					_SendPending = true;
+					var packet = _SendQueue.Dequeue();
+					_TcpClient.GetStream().BeginWrite(packet, 0, packet.Length, _CallbackWriteMethod, null);
+				}
 			}
 		}
 
@@ -391,7 +455,7 @@ namespace AberrantSMPP
 					}
 					catch (Exception ex)
 					{
-						_Log.Error(string.Format("Instance {0} => Receive message handler failed.", this.GetHashCode()), ex);
+						_Log.Error(string.Format("Instance {0} - {1} => Receive message handler failed.", this.GetHashCode(), _ThreadId), ex);
 					}
 				}
 
@@ -413,7 +477,7 @@ namespace AberrantSMPP
 				}
 				finally
 				{
-					_Log.WarnFormat("Instance {0} => Connection terminated, disposing..", this.GetHashCode());
+					_Log.WarnFormat("Instance {0} - {1} => Connection terminated, disposing..", this.GetHashCode(), _ThreadId);
 					Dispose();
 				}
 			}

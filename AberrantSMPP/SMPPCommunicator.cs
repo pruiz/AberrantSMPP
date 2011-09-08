@@ -586,14 +586,14 @@ namespace AberrantSMPP
 
 			var bytes = packet.GetEncodedPdu();
 
-			if (asClient == null || !asClient.Connected)
-				throw new InvalidOperationException("Session not connected to remote party.");
-			
-			if (!(packet is SmppBind) && !_Bound)
-				throw new InvalidOperationException("Session not bound to remote party.");
-
 			try
 			{
+				if (asClient == null || !asClient.Connected)
+					throw new InvalidOperationException("Session not connected to remote party.");
+
+				if (!(packet is SmppBind) && !_Bound)
+					throw new InvalidOperationException("Session not bound to remote party.");
+
 				asClient.Send(bytes);
 				return packet.SequenceNumber;
 			}
