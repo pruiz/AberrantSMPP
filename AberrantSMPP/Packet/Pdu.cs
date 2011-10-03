@@ -330,7 +330,8 @@ namespace AberrantSMPP.Packet
 				return null;
 
 			var data = _tlvTable.GetByte(UnsignedNumConverter.SwapByteOrdering((ushort)tag));
-			return (T)Convert.ChangeType(data, typeof(T));
+			
+			return typeof(T).IsEnum ? (T)Enum.ToObject(typeof(T), data) : (T)Convert.ChangeType(data, typeof(T));
 		}
 		/// <summary>
 		/// Retrieves the given bytes from the TLV table and converts them into a

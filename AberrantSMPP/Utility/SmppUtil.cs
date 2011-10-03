@@ -11,6 +11,11 @@ namespace AberrantSMPP.Utility
 {
 	public static class SmppUtil
 	{
+		// FIXME: This cannot be computed on a fixed way, as it depends on the encodings
+		//	  supported as default/unspec-A/unspec-B of the remote server.
+		//	  as such, we should me all this logic to SmppCommunicator and add it it
+		//	  properties defining the actual value for each 'dinamic' encoding.
+
 		/// <summary>
 		/// Gets the maximum length of each segment of a concatenated 
 		/// message of totalBytes size using the specified data_coding.

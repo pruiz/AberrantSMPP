@@ -433,7 +433,8 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.message_payload);
+				var data = GetOptionalParamBytes(OptionalParamCodes.message_payload);
+				return data == null ? null : PduUtil.GetDecodedText(DataCoding, data);
 			}
 			
 			set
