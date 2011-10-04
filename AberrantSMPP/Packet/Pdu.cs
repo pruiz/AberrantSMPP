@@ -299,7 +299,7 @@ namespace AberrantSMPP.Packet
 			var bytes = _tlvTable.GetBytes(UnsignedNumConverter.SwapByteOrdering((ushort)tag));
 
 			// Remove null termination (if found)
-			if (bytes.Length > 0 && bytes[bytes.Length] == 0x0)
+			if (bytes.Length > 0 && bytes[bytes.Length - 1] == 0x0)
 				Array.Resize(ref bytes, bytes.Length - 1);
 
 			return Encoding.ASCII.GetString(bytes);
