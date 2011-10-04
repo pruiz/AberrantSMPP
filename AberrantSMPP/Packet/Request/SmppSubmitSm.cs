@@ -194,11 +194,11 @@ namespace AberrantSMPP.Packet.Request
 		///
 		/// See section 5.3.2.43 of the SMPP spec for how to set this.
 		/// </summary>
-		public string ItsSessionInfo
+		public byte[] ItsSessionInfo
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.its_session_info);
+				return GetOptionalParamBytes(OptionalParamCodes.its_session_info);
 			}
 			
 			set
@@ -214,16 +214,16 @@ namespace AberrantSMPP.Packet.Request
 		///
 		/// See 5.3.2.44 of the SMPP spec for how to set this.
 		/// </summary>
-		public string UssdServiceOp
+		public byte? UssdServiceOp
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.ussd_service_op);
+				return GetOptionalParamByte(OptionalParamCodes.ussd_service_op);
 			}
 			
 			set
 			{
-				SetOptionalParamString(OptionalParamCodes.ussd_service_op, value);
+				SetOptionalParamByte(OptionalParamCodes.ussd_service_op, value);
 			}
 		}
 		

@@ -446,11 +446,11 @@ namespace AberrantSMPP.Packet.Request
 		/// Associates a call back number with the message.  See section 5.3.2.36 of the
 		/// SMPP spec for details.  This must be between 4 and 19 characters in length.
 		/// </summary>
-		public string CallbackNum
+		public byte[] CallbackNum
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.callback_num);
+				return GetOptionalParamBytes(OptionalParamCodes.callback_num);
 			}
 			
 			set
@@ -479,23 +479,26 @@ namespace AberrantSMPP.Packet.Request
 		
 		/// <summary>
 		/// Alphanumeric display tag for call back number.  This must be less than or
-		/// equal to 65 characters in length.
+		/// equal to 65 bytes in length, and should be encoded according to spec.
 		/// </summary>
-		public string CallbackNumAtag
+		public byte[] CallbackNumAtag
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.callback_num_atag);
+				return GetOptionalParamBytes(OptionalParamCodes.callback_num_atag);
 			}
 			
 			set
 			{
 				const int CALLBACK_ATAG_MAX = 65;
-				
-				if(value == null || value.Length <= CALLBACK_ATAG_MAX)
+
+				if (value == null)
 				{
-					SetOptionalParamString(
-						OptionalParamCodes.callback_num_atag, value);
+					SetOptionalParamBytes(OptionalParamCodes.callback_num_atag, null);
+				}
+				else if (value.Length <= CALLBACK_ATAG_MAX)
+				{
+					SetOptionalParamBytes(OptionalParamCodes.callback_num_atag, value);
 				}
 				else
 				{
@@ -509,11 +512,11 @@ namespace AberrantSMPP.Packet.Request
 		/// See section 5.3.2.15 of the SMPP spec for details on
 		/// setting this parameter.
 		/// </summary>
-		public string SourceSubaddress
+		public byte[] SourceSubaddress
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.source_subaddress);
+				return GetOptionalParamBytes(OptionalParamCodes.source_subaddress);
 			}
 			
 			set
@@ -527,11 +530,11 @@ namespace AberrantSMPP.Packet.Request
 		/// See section 5.3.2.15 of the SMPP spec for details on
 		/// setting this parameter.
 		/// </summary>
-		public string DestinationSubaddress
+		public byte[] DestinationSubaddress
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.dest_subaddress);
+				return GetOptionalParamBytes(OptionalParamCodes.dest_subaddress);
 			}
 			
 			set

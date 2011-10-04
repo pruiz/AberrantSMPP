@@ -447,11 +447,11 @@ namespace AberrantSMPP.Packet.Request
 		/// Associates a callback number with a message.  See section 5.3.2.36 of the
 		/// SMPP spec for details.  This must be between 4 and 19 characters in length.
 		/// </summary>
-		public string CallbackNum
+		public byte[] CallbackNum
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.callback_num);
+				return GetOptionalParamBytes(OptionalParamCodes.callback_num);
 			}
 			
 			set
@@ -464,11 +464,11 @@ namespace AberrantSMPP.Packet.Request
 		/// Specifies a source subaddress associated with the originating entity.
 		/// See section 5.3.2.15 of the SMPP spec for details on setting this parameter.
 		/// </summary>
-		public string SourceSubaddress
+		public byte[] SourceSubaddress
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.source_subaddress);
+				return GetOptionalParamBytes(OptionalParamCodes.source_subaddress);
 			}
 			
 			set
@@ -481,11 +481,11 @@ namespace AberrantSMPP.Packet.Request
 		/// Specifies a source subaddress associated with the receiving entity.
 		/// See section 5.3.2.15 of the SMPP spec for details on setting this parameter.
 		/// </summary>
-		public string DestinationSubaddress
+		public byte[] DestinationSubaddress
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.dest_subaddress);
+				return GetOptionalParamBytes(OptionalParamCodes.dest_subaddress);
 			}
 			
 			set
@@ -518,11 +518,11 @@ namespace AberrantSMPP.Packet.Request
 		///
 		/// See section 5.3.2.43 of the SMPP spec for how to set this.
 		/// </summary>
-		public string ItsSessionInfo
+		public byte[] ItsSessionInfo
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.its_session_info);
+				return GetOptionalParamBytes(OptionalParamCodes.its_session_info);
 			}
 			
 			set
@@ -535,11 +535,11 @@ namespace AberrantSMPP.Packet.Request
 		/// Network Error Code.  May be present for Intermediate Notifications
 		/// and SMSC Delivery Receipts.  See SMPP spec 5.3.2.31 for details.
 		/// </summary>
-		public string NetworkErrorCode
+		public byte[] NetworkErrorCode
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.network_error_code);
+				return GetOptionalParamBytes(OptionalParamCodes.network_error_code);
 			}
 			
 			set
@@ -596,7 +596,7 @@ namespace AberrantSMPP.Packet.Request
 
 				if (value == null || value.Length <= MAX_STATUS_LEN)
 				{
-					SetOptionalParamString(OptionalParamCodes.additional_status_info_text, value);
+					SetOptionalParamString(OptionalParamCodes.additional_status_info_text, value, true);
 				}
 				else
 				{

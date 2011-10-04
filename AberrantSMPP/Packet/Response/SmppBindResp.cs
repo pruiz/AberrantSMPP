@@ -52,21 +52,16 @@ namespace AberrantSMPP.Packet.Response
 		/// <summary>
 		/// The SMPP version supported by SMSC.
 		/// </summary>
-		public string ScInterfaceVersion
+		public byte? ScInterfaceVersion
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.SC_interface_version);
+				return GetOptionalParamByte(OptionalParamCodes.SC_interface_version);
 			}
 			
 			set
 			{
-				string version = value;
-				if(value == null)
-				{
-					version = string.Empty;
-				}
-				SetOptionalParamString(OptionalParamCodes.SC_interface_version, version);
+				SetOptionalParamByte(OptionalParamCodes.SC_interface_version, value);
 			}
 		}
 		

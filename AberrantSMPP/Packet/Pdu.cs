@@ -292,8 +292,17 @@ namespace AberrantSMPP.Packet
 		public string GetOptionalParamString(OptionalParamCodes tag)
 		{
 			//return _tlvTable.GetOptionalParamString(UnsignedNumConverter.SwapByteOrdering(tag));
-			return this.ContainsOptionalParameter(tag) ? 
-				_tlvTable.GetString(UnsignedNumConverter.SwapByteOrdering((ushort)tag)) : null;
+
+			if (!this.ContainsOptionalParameter(tag))
+				return null;
+
+			var bytes = _tlvTable.GetBytes(UnsignedNumConverter.SwapByteOrdering((ushort)tag));
+
+			// Remove null termination (if found)
+			if (bytes.Length > 0 && bytes[bytes.Length] == 0x0)
+				Array.Resize(ref bytes, bytes.Length - 1);
+
+			return Encoding.ASCII.GetString(bytes);
 		}
 		/// <summary>
 		/// Gets the optional parameter bytes associated with
@@ -367,7 +376,7 @@ namespace AberrantSMPP.Packet
 		/// </summary>
 		/// <param name="tag">The tag for this TLV.</param>
 		/// <param name="val">The value of this TLV.</param>
-		public void SetOptionalParamString(OptionalParamCodes tag, string val)
+		public void SetOptionalParamString(OptionalParamCodes tag, string val, bool nullTerminated)
 		{
 			if (val == null)
 			{
@@ -376,7 +385,12 @@ namespace AberrantSMPP.Packet
 			}
 			else
 			{
-				_tlvTable.Set(UnsignedNumConverter.SwapByteOrdering((ushort)tag), val);
+				var bytes = Encoding.ASCII.GetBytes(val);
+
+				// Add a null byte to the end if needed.
+				if (nullTerminated) Array.Resize(ref bytes, bytes.Length + 1);
+				
+				_tlvTable.Set(UnsignedNumConverter.SwapByteOrdering((ushort)tag), bytes);
 			}
 		}
 		/// <summary>

@@ -62,11 +62,11 @@ namespace AberrantSMPP.Packet.Response
 		/// Error code specific to a wireless network.  See SMPP spec section
 		/// 5.3.2.31 for details.
 		/// </summary>
-		public string NetworkErrorCode
+		public byte[] NetworkErrorCode
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.network_error_code);
+				return GetOptionalParamBytes(OptionalParamCodes.network_error_code);
 			}
 			
 			set
@@ -91,7 +91,7 @@ namespace AberrantSMPP.Packet.Response
 
 				if (value == null || value.Length <= MAX_STATUS_LEN)
 				{
-					SetOptionalParamString(OptionalParamCodes.additional_status_info_text, value);
+					SetOptionalParamString(OptionalParamCodes.additional_status_info_text, value, true);
 				}
 				else
 				{

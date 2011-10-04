@@ -294,11 +294,11 @@ namespace AberrantSMPP.Packet.Request
 		/// Network error code.  May be present for SMSC Delivery Receipts and
 		/// Intermediate Notifications.  See section 5.3.2.31 for more information.
 		/// </summary>
-		public string NetworkErrorCode
+		public byte[] NetworkErrorCode
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.network_error_code);
+				return GetOptionalParamBytes(OptionalParamCodes.network_error_code);
 			}
 			
 			set
@@ -368,11 +368,11 @@ namespace AberrantSMPP.Packet.Request
 		///
 		/// See section 5.3.2.43 of the SMPP spec for how to set this.
 		/// </summary>
-		public string ItsSessionInfo
+		public byte[] ItsSessionInfo
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.its_session_info);
+				return GetOptionalParamBytes(OptionalParamCodes.its_session_info);
 			}
 			
 			set

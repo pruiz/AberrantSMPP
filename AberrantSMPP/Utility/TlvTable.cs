@@ -273,15 +273,6 @@ namespace AberrantSMPP.Utility
 			return GetBytes(tag)[0];
 		}
 		/// <summary>
-		/// Gets the string.
-		/// </summary>
-		/// <param name="tag">The tag.</param>
-		/// <returns></returns>
-		public string GetString(UInt16 tag)
-		{
-			return Encoding.ASCII.GetString(GetBytes(tag));
-		}
-		/// <summary>
 		/// Sets the specified tag.
 		/// </summary>
 		/// <param name="tag">The tag.</param>
@@ -304,15 +295,6 @@ namespace AberrantSMPP.Utility
 				throw new ArgumentException("Parameter value for tag '" + tag + "' is too large.");
 			
 			tlvTable[tag] = value;
-		}
-		/// <summary>
-		/// Sets the specified tag.
-		/// </summary>
-		/// <param name="tag">The tag.</param>
-		/// <param name="value">The value.</param>
-		public void Set(UInt16 tag, string value)
-		{
-			Set(tag, Encoding.ASCII.GetBytes(value));
 		}
 		/// <summary>
 		/// Determines whether this TlvTable contains the specified key.

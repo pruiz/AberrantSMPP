@@ -167,15 +167,10 @@ namespace AberrantSMPP.Utility
 		public static void SetReceiptedMessageId(Pdu pdu, string val)
 		{
 			const int MAX_RECEIPTED_ID_LEN = 65;
-			if(val == null)
+
+			if (val == null || val.Length <= MAX_RECEIPTED_ID_LEN)
 			{
-				pdu.SetOptionalParamString(
-					OptionalParamCodes.receipted_message_id, string.Empty);
-			}
-			else if(val.Length <= MAX_RECEIPTED_ID_LEN)
-			{
-				pdu.SetOptionalParamString(
-					OptionalParamCodes.receipted_message_id, val);
+				pdu.SetOptionalParamString(OptionalParamCodes.receipted_message_id, val, true);
 			}
 			else
 			{
@@ -183,23 +178,26 @@ namespace AberrantSMPP.Utility
 					"receipted_message_id must have length 1-" + MAX_RECEIPTED_ID_LEN);
 			}
 		}
-		
+
 		/// <summary>
 		/// Takes the given PDU and inserts a network error code into the TLV table.
 		/// </summary>
 		/// <param name="pdu">The PDU to operate on.</param>
-		/// <param name="val">The value to insert.</param>
-		public static void SetNetworkErrorCode(Pdu pdu, string val)
+		/// <param name="data">The binary encoded error (see spec).</param>
+		public static void SetNetworkErrorCode(Pdu pdu, byte[] data)
 		{
 			const int ERR_CODE_LEN = 3;
-			if(val == null || val.Length != ERR_CODE_LEN)
+			if (data == null)
+			{
+				pdu.SetOptionalParamBytes(OptionalParamCodes.network_error_code, null);
+			}
+			else if(data.Length != ERR_CODE_LEN)
 			{
 				throw new ArgumentException("network_error_code must have length " + ERR_CODE_LEN);
 			}
 			else
 			{
-				pdu.SetOptionalParamString(
-					OptionalParamCodes.network_error_code,val);
+				pdu.SetOptionalParamBytes(OptionalParamCodes.network_error_code, data);
 			}
 		}
 		
@@ -208,43 +206,44 @@ namespace AberrantSMPP.Utility
 		/// </summary>
 		/// <param name="pdu">The PDU to operate on.</param>
 		/// <param name="val">The value to insert.</param>
-		public static void SetItsSessionInfo(Pdu pdu, string val)
+		public static void SetItsSessionInfo(Pdu pdu, byte[] val)
 		{
 			const int MAX_ITS = 16;
 			
 			if(val == null)
 			{
-				pdu.SetOptionalParamString(
-					OptionalParamCodes.its_session_info, string.Empty);
+				pdu.SetOptionalParamBytes(OptionalParamCodes.its_session_info, null);
 			}
 			else if(val.Length == MAX_ITS)
 			{
-				pdu.SetOptionalParamString(
-					OptionalParamCodes.its_session_info, val);
+				pdu.SetOptionalParamBytes(OptionalParamCodes.its_session_info, val);
 			}
 			else
 			{
 				throw new ArgumentException("its_session_info must have length " + MAX_ITS);
 			}
 		}
-		
+
 		/// <summary>
 		/// Takes the given PDU and inserts a destination subaddress into the TLV table.
 		/// </summary>
 		/// <param name="pdu">The PDU to operate on.</param>
-		/// <param name="val">The value to insert.</param>
-		public static void SetDestSubaddress(Pdu pdu, string val)
+		/// <param name="data">The data (see spec.)</param>
+		public static void SetDestSubaddress(Pdu pdu, byte[] data)
 		{
-			if(val.Length >= SUBADDRESS_MIN && val.Length <= SUBADDRESS_MAX)
+			if (data == null)
 			{
-				pdu.SetOptionalParamString(
-					OptionalParamCodes.dest_subaddress, val);
+				pdu.SetOptionalParamBytes(OptionalParamCodes.dest_subaddress, null);
+			}
+			else if(data.Length >= SUBADDRESS_MIN && data.Length <= SUBADDRESS_MAX)
+			{
+				pdu.SetOptionalParamBytes(OptionalParamCodes.dest_subaddress, data);
 			}
 			else
 			{
 				throw new ArgumentException(
 					"Destination subaddress must be between " + SUBADDRESS_MIN + 
-					" and " + SUBADDRESS_MAX + " characters.");
+					" and " + SUBADDRESS_MAX + " bytes.");
 			}
 		}
 		
@@ -253,18 +252,21 @@ namespace AberrantSMPP.Utility
 		/// </summary>
 		/// <param name="pdu">The PDU to operate on.</param>
 		/// <param name="val">The value to insert.</param>
-		public static void SetSourceSubaddress(Pdu pdu, string val)
+		public static void SetSourceSubaddress(Pdu pdu, byte[] data)
 		{
-			if(val.Length >= SUBADDRESS_MIN && val.Length <= SUBADDRESS_MAX)
+			if (data == null)
 			{
-				pdu.SetOptionalParamString(
-					OptionalParamCodes.source_subaddress, val);
+				pdu.SetOptionalParamBytes(OptionalParamCodes.source_subaddress, null);
+			}
+			else if (data.Length >= SUBADDRESS_MIN && data.Length <= SUBADDRESS_MAX)
+			{
+				pdu.SetOptionalParamBytes(OptionalParamCodes.source_subaddress, data);
 			}
 			else
 			{
 				throw new ArgumentException(
 					"Source subaddress must be between " + SUBADDRESS_MIN + 
-					" and " + SUBADDRESS_MAX + " characters.");
+					" and " + SUBADDRESS_MAX + " bytes.");
 			}
 		}
 		
@@ -273,14 +275,18 @@ namespace AberrantSMPP.Utility
 		/// </summary>
 		/// <param name="pdu">The PDU to operate on.</param>
 		/// <param name="val">The value to insert.</param>
-		public static void SetCallbackNum(Pdu pdu, string val)
+		public static void SetCallbackNum(Pdu pdu, byte[] val)
 		{
 			const int CALLBACK_NUM_MIN = 4;
 			const int CALLBACK_NUM_MAX = 19;
-			if(val.Length >= CALLBACK_NUM_MIN && val.Length <= CALLBACK_NUM_MAX)
+
+			if (val == null)
 			{
-				pdu.SetOptionalParamString(
-					OptionalParamCodes.callback_num, val);
+				pdu.SetOptionalParamBytes(OptionalParamCodes.callback_num, null);
+			}
+			else if(val.Length >= CALLBACK_NUM_MIN && val.Length <= CALLBACK_NUM_MAX)
+			{
+				pdu.SetOptionalParamBytes(OptionalParamCodes.callback_num, val);
 			}
 			else
 			{
