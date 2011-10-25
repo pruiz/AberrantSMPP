@@ -123,6 +123,7 @@ namespace AberrantSMPP.Utility
 		#endregion
 
 		#region Instance fields..
+		private bool useBestFitFallback = false;
 		private bool throwOnInvalidCharacter = false;
 		private EncoderFallbackBuffer _encoderFb = null;
 		private DecoderFallbackBuffer _decoderFb = null;
@@ -147,12 +148,21 @@ namespace AberrantSMPP.Utility
 		{
 			this.throwOnInvalidCharacter = throwOnInvalidCharacter;
 		}
+
+		public GSMEncoding(bool useBestFitFallback, bool throwOnInvalidCharacter)
+			: this(throwOnInvalidCharacter)
+		{
+			this.useBestFitFallback = useBestFitFallback;
+		}
 		#endregion
 
 		#region UCS -> GSM conversion methods..
 		public new EncoderFallback EncoderFallback
 		{
-			get { return throwOnInvalidCharacter ? EncoderFallback.ExceptionFallback : base.EncoderFallback; }
+			get { 
+				var obj = throwOnInvalidCharacter ? EncoderFallback.ExceptionFallback : base.EncoderFallback;
+				return useBestFitFallback ? new GSMBestFitEncoderFallback(obj) : obj;
+			}
 		}
 
 		private EncoderFallbackBuffer EncoderFallbackBuffer
@@ -273,6 +283,8 @@ namespace AberrantSMPP.Utility
 						else
 							outpos++;
 					}
+
+					EncoderFallbackBuffer.Reset();
 				}
 				else
 				{
@@ -500,6 +512,116 @@ namespace AberrantSMPP.Utility
 		public static byte[] GetBytes(string text)
 		{
 			throw new NotImplementedException();
+		}
+	}
+
+	internal class GSMBestFitEncoderFallback : EncoderFallback
+	{
+		#region Fallback Buffer implementation
+		public class GSMBestFitEncoderFallbackBuffer : EncoderFallbackBuffer
+		{
+			private EncoderFallbackBuffer LastResortEncoderFallbackBuffer;
+			private char? Data = null;
+			private int Pos = 0;
+			#region Character Table Mappings..
+			// ÁÉÍÓÚ ÀÈÌÒÙ áéíóú 
+			private static char[][] MapTable = new char[][] {
+				new char[] { 'Á', 'à' },
+				new char[] { 'Í', 'ì' },
+				new char[] { 'Ó', 'ò' },
+				new char[] { 'Ú', 'ù' },
+
+				new char[] { 'À', 'à' },
+				new char[] { 'È', 'É' },
+				new char[] { 'Ì', 'ì' },
+				new char[] { 'Ò', 'ò' },
+				new char[] { 'Ù', 'ù' },
+
+				new char[] { 'á', 'à' },
+				new char[] { 'í', 'ì' },
+				new char[] { 'ó', 'ò' },
+				new char[] { 'ú', 'ù' },
+
+			};
+			#endregion
+
+			public override int Remaining { get { return Pos == 0 ? 1 : 0; } }
+
+			public GSMBestFitEncoderFallbackBuffer(EncoderFallback caller, EncoderFallback lastResortFallback)
+			{
+				LastResortEncoderFallbackBuffer = lastResortFallback.CreateFallbackBuffer();
+			}
+
+			private void InitData(char ch)
+			{
+				Data = ch;
+				Pos = 0;
+			}
+
+			public override bool Fallback(char charUnknownHigh, char charUnknownLow, int index)
+			{
+				if (Data.HasValue)
+					throw new InvalidOperationException("Recursive fallback buffer call.");
+
+				return LastResortEncoderFallbackBuffer.Fallback(charUnknownHigh, charUnknownLow, index);
+			}
+
+			public override bool Fallback(char charUnknown, int index)
+			{
+				if (Data.HasValue)
+					throw new InvalidOperationException("Recursive fallback buffer call.");
+
+				foreach (var entry in MapTable)
+				{
+					if (entry[0] == charUnknown)
+					{
+						InitData(entry[1]);
+						return true;
+					}
+				}
+
+				return LastResortEncoderFallbackBuffer.Fallback(charUnknown, index);
+			}
+
+			public override char GetNextChar()
+			{
+				if (!Data.HasValue)
+					return LastResortEncoderFallbackBuffer.GetNextChar();
+
+				return Pos++ == 0 ? Data.Value : '\0';
+			}
+
+			public override bool MovePrevious()
+			{
+				if (Data.HasValue)
+					return LastResortEncoderFallbackBuffer.MovePrevious();
+
+				Pos = 0;
+
+				return true;
+			}
+
+			public override void Reset()
+			{
+				Data = null;
+				Pos = 0;
+				base.Reset();
+			}
+		}
+		#endregion
+
+		private EncoderFallback lastResortEncoderFallback;
+
+		public override int MaxCharCount { get { return 1; } }
+
+		public GSMBestFitEncoderFallback(EncoderFallback lastResortEncoderFallback)
+		{
+			this.lastResortEncoderFallback = lastResortEncoderFallback;
+		}
+
+		public override EncoderFallbackBuffer CreateFallbackBuffer()
+		{
+			return new GSMBestFitEncoderFallbackBuffer(this, lastResortEncoderFallback);
 		}
 	}
 }

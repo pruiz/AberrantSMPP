@@ -90,5 +90,40 @@ namespace AberrantSMPP.Tests
 		{
 			new GSMEncoding(true).GetString(new byte[] { 0x80 });
 		}
+
+		[Test]
+		public void Encoding_Using_BestFit()
+		{
+			var bytes = new GSMEncoding(true, true).GetBytes("ÁÉÍÓÚ ÀÈÌÒÙ áéíóú €");
+			var valid = new byte[] { 
+				0x7f, 0x1f, 0x07, 0x08, 0x06, 0x20, 
+				0x7f, 0x1f, 0x07, 0x08, 0x06, 0x20, 
+				0x7f, 0x05, 0x07, 0x08, 0x06, 0x20, 
+				0x1b, 0x65
+			};
+			Assert.AreElementsEqual(valid, bytes);
+		}
+
+		[Test]
+		[ExpectedException(typeof(EncoderFallbackException))]
+		public void Encoding_Invalid_Char_Using_BestFit_Throws_1()
+		{
+			new GSMEncoding(true, true).GetBytes(new char[] { 'º' });
+		}
+
+		[Test]
+		[ExpectedException(typeof(EncoderFallbackException))]
+		public void Encoding_Invalid_Char_Using_BestFit_Throws_2()
+		{
+			new GSMEncoding(true, true).GetBytes(new char[] { '\x03a2' });
+		}
+
+		[Test]
+		public void Encoding_Invalid_Char_Using_BestFit_Replaces_Character()
+		{
+			var bytes = new GSMEncoding(true, false).GetBytes(new char[] { 'º' });
+			Assert.AreElementsEqual(new byte[] { 0x3f }, bytes);
+		}
+
 	}
 }
