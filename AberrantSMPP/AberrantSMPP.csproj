@@ -10,15 +10,18 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>AberrantSMPP</RootNamespace>
     <AssemblyName>AberrantSMPP</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion Condition=" '$(TargetFrameworkVersion)' == '' ">v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile>Client</TargetFrameworkProfile>
+    <TargetFrameworkProfile Condition=" '$(TargetFrameworkProfile)' == '' ">Client</TargetFrameworkProfile>
+    <!-- We need a framework full name to use as base artifacts directory name -->
+    <TargetFrameworkFullName Condition=" '$(TargetFrameworkProfile)' == '' ">$(TargetFrameworkVersion)</TargetFrameworkFullName>
+    <TargetFrameworkFullName Condition=" '$(TargetFrameworkProfile)' != '' ">$(TargetFrameworkVersion)-$(TargetFrameworkProfile)</TargetFrameworkFullName>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>bin\$(TargetFrameworkFullName)\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -26,7 +29,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>bin\$(TargetFrameworkFullName)\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -40,7 +43,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Common.Logging">
-      <HintPath>..\packages\Common.Logging.2.0.0\lib\2.0\Common.Logging.dll</HintPath>
+      <HintPath>..\Packages\Common.Logging.2.0.0\lib\2.0\Common.Logging.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -134,6 +137,7 @@
     <Compile Include="Utility\UnsuccessAddress.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="AberrantSMPP.nuspec" />
     <None Include="AberrantSMPP.snk" />
     <None Include="packages.config" />
   </ItemGroup>
