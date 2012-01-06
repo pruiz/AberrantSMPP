@@ -2,6 +2,10 @@
 This is my own fork of RoaminSMPP code which wasnt maintained anymore.
 By now this is nothing more than an upgraded layout with VS2k10 solution files. 
 
+You can find a NuGet package with binaries for fx v3.5 & v.40 at:
+
+  https://www.nuget.org/packages/AberrantSMPP/
+
 
 =========================== OLD README ==============================
 
