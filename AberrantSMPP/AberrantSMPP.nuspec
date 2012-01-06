@@ -19,5 +19,6 @@
 	<files>
 		<file src="bin\v3.5-Client\Release\AberrantSMPP.*" target="lib\NET35" />
 		<file src="bin\v4.0-Client\Release\AberrantSMPP.*" target="lib\NET40" />
+		<file src="**\*.cs" target="src" />
 	</files>
 </package>
