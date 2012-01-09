@@ -42,6 +42,8 @@ namespace AberrantSMPP.Packet.Request
 		private byte _EsmClass = 0;
 		private SmppVersionType _ProtocolId = SmppVersionType.Version3_4;
 		private PriorityType _PriorityFlag = PriorityType.Lowest;
+		private string _ScheduleDeliveryTime = string.Empty;
+		private string _ValidityPeriod = string.Empty;
 		private RegisteredDeliveryType _RegisteredDelivery = RegisteredDeliveryType.None;
 		private DataCoding _DataCoding = DataCoding.SMSCDefault;
 		private byte _SmLength = 0;
@@ -212,7 +214,69 @@ namespace AberrantSMPP.Packet.Request
 				_PriorityFlag = value;
 			}
 		}
-		
+
+		/// <summary>
+		/// Scheduled delivery time for the message delivery.  Set to null for immediate 
+		/// delivery.  Otherwise, use YYMMDDhhmmsstnn as the format.  See section 7.1.1 of 
+		/// the SMPP spec for more details.
+		/// </summary>
+		public string ScheduleDeliveryTime
+		{
+			get
+			{
+				return _ScheduleDeliveryTime;
+			}
+			set
+			{
+				if (value != null && value != string.Empty)
+				{
+					if (value.Length == DATE_TIME_LENGTH)
+					{
+						_ScheduleDeliveryTime = value;
+					}
+					else
+					{
+						throw new ArgumentException("Scheduled delivery time not in correct format.");
+					}
+				}
+				else
+				{
+					_ScheduleDeliveryTime = string.Empty;
+				}
+			}
+		}
+
+		/// <summary>
+		/// The validity period of this message.  Set to null to request the SMSC default 
+		/// validity period.  Otherwise, use YYMMDDhhmmsstnn as the format.  See section 7.1.1 of 
+		/// the SMPP spec for more details.
+		/// </summary>
+		public string ValidityPeriod
+		{
+			get
+			{
+				return _ValidityPeriod;
+			}
+			set
+			{
+				if (value != null && value != string.Empty)
+				{
+					if (value.Length == DATE_TIME_LENGTH)
+					{
+						_ValidityPeriod = value;
+					}
+					else
+					{
+						throw new ArgumentException("Validity period not in correct format.");
+					}
+				}
+				else
+				{
+					_ValidityPeriod = string.Empty;
+				}
+			}
+		}
+
 		/// <summary>
 		/// Use this to indicate if you want delivery confirmation.
 		/// </summary>
@@ -665,8 +729,8 @@ namespace AberrantSMPP.Packet.Request
 			EsmClass = remainder[0];
 			ProtocolId = (SmppVersionType)remainder[1];
 			PriorityFlag = (PriorityType)remainder[2];
-			//schedule_delivery_time and validity_period are null, so don't bother
-			//reading them
+			ScheduleDeliveryTime = SmppStringUtil.GetCStringFromBody(ref remainder, 3);
+			ValidityPeriod = SmppStringUtil.GetCStringFromBody(ref remainder);
 			RegisteredDelivery = (RegisteredDeliveryType)remainder[5];
 			//replace_if_present is always null, so don't bother reading it
 			DataCoding = (DataCoding)remainder[7];
@@ -688,9 +752,8 @@ namespace AberrantSMPP.Packet.Request
 			pdu.Add(EsmClass);
 			pdu.Add((byte)ProtocolId);
 			pdu.Add((byte)PriorityFlag);
-			//schedule_delivery_time and validity_period are null, so set them to zero
-			pdu.Add((byte)0);
-			pdu.Add((byte)0);
+			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(ScheduleDeliveryTime)));
+			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(ValidityPeriod)));
 			pdu.Add((byte)RegisteredDelivery);
 			//replace_if_present is always null, so set it to zero
 			pdu.Add((byte)0);
