@@ -12,7 +12,7 @@
 		<releaseNotes>See changes for this revision at: http://github.com/pruiz/AberrantSMPP/commit/GIT_COMMIT </releaseNotes>
 		<!-- summary>An Short Message Service Protocol (SMS/SMPP) library.</summary -->
 		<description>An Short Message Service Protocol (SMS/SMPP) library.</description>
-    <copyright>Copyright CRT0 Solutions, LLC  2011-2012</copyright>
+    <copyright>Copyright Pablo Ruiz García  2011-2012</copyright>
 		<tags>SMS SMPP Telephony GSM</tags>
 		
     <dependencies>
