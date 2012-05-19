@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("AberrantSMPP.Tests")]
 [assembly: AssemblyDescription("AberrantSMPP Library Tests rev. $GIT_COMMIT$")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("CRT0 Solutions, LLC")]
+[assembly: AssemblyCompany("CRT0")]
 [assembly: AssemblyProduct("AberrantSMPP.Tests")]
-[assembly: AssemblyCopyright("Copyright © CRT0 Solutions, LLC 2011")]
+[assembly: AssemblyCopyright("Copyright © CRT0 (2011-2012)")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
