@@ -40,7 +40,7 @@ namespace AberrantSMPP.Packet.Request
 		private NpiType _DestinationAddressNpi = NpiType.ISDN;
 		private string _DestinationAddress = string.Empty;
 		private byte _EsmClass = 0;
-		private SmppVersionType _ProtocolId = SmppVersionType.Version3_4;
+		private byte _ProtocolId = 0;
 		private PriorityType _PriorityFlag = PriorityType.Lowest;
 		private string _ScheduleDeliveryTime = string.Empty;
 		private string _ValidityPeriod = string.Empty;
@@ -186,7 +186,7 @@ namespace AberrantSMPP.Packet.Request
 		/// <summary>
 		/// Protocol Identifier; network specific.
 		/// </summary>
-		public SmppVersionType ProtocolId
+		public byte ProtocolId
 		{
 			get
 			{
@@ -727,7 +727,7 @@ namespace AberrantSMPP.Packet.Request
 			DestinationAddressNpi = (NpiType)remainder[1];
 			DestinationAddress = SmppStringUtil.GetCStringFromBody(ref remainder, 2);
 			EsmClass = remainder[0];
-			ProtocolId = (SmppVersionType)remainder[1];
+			ProtocolId = remainder[1];
 			PriorityFlag = (PriorityType)remainder[2];
 			ScheduleDeliveryTime = SmppStringUtil.GetCStringFromBody(ref remainder, 3);
 			ValidityPeriod = SmppStringUtil.GetCStringFromBody(ref remainder);

@@ -234,7 +234,7 @@ namespace AberrantSMPP.Packet.Request
 		/// <summary>
 		/// Creates a submit Pdu.  Sets source address TON to international, 
 		/// source address NPI to ISDN, source address to "", registered delivery type to none, 
-		/// ESM class to 0, data coding to SMSC default, protocol ID to v3.4, priority to level 1,
+		/// ESM class to 0, data coding to SMSC default, default protocol-id, priority to level 1,
 		/// validity period to default, replace if present to false, default message ID to 0, 
 		/// the short message to an empty string, the destination address TON to international, 
 		/// destination address NPI to ISDN, the destination address to "", the command status 
@@ -284,7 +284,7 @@ namespace AberrantSMPP.Packet.Request
 			DestinationAddressNpi =(NpiType)remainder[1];
 			DestinationAddress = SmppStringUtil.GetCStringFromBody(ref remainder, 2);
 			EsmClass = remainder[0];
-			ProtocolId =(SmppVersionType)remainder[1];
+			ProtocolId = remainder[1];
 			PriorityFlag =(PriorityType)remainder[2];
 			ScheduleDeliveryTime = SmppStringUtil.GetCStringFromBody(ref remainder, 3);
 			ValidityPeriod = SmppStringUtil.GetCStringFromBody(ref remainder);

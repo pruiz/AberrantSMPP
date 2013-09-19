@@ -36,7 +36,7 @@ namespace AberrantSMPP.Packet.Request
 		
 		#region private fields
 		
-		private SmppVersionType _ProtocolId = Pdu.SmppVersionType.Version3_4;
+		private byte _ProtocolId = 0;
 		private PriorityType _PriorityFlag = Pdu.PriorityType.Level1;
 		private string _ScheduleDeliveryTime = string.Empty;
 		private string _ValidityPeriod = string.Empty;
@@ -60,7 +60,7 @@ namespace AberrantSMPP.Packet.Request
 		/// <summary>
 		/// Protocol Identifier; network specific field.
 		/// </summary>
-		public SmppVersionType ProtocolId
+		public byte ProtocolId
 		{
 			get
 			{

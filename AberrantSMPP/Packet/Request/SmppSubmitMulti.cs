@@ -163,7 +163,7 @@ namespace AberrantSMPP.Packet.Request
 			}
 			
 			EsmClass = remainder[0];
-			ProtocolId =(SmppVersionType)remainder[1];
+			ProtocolId = remainder[1];
 			PriorityFlag =(PriorityType)remainder[2];
 			ScheduleDeliveryTime = SmppStringUtil.GetCStringFromBody(ref remainder, 3);
 			ValidityPeriod = SmppStringUtil.GetCStringFromBody(ref remainder);
