@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Gallio.Framework;
-using MbUnit.Framework;
-using MbUnit.Framework.ContractVerifiers;
+
+using NUnit;
+using NUnit.Framework;
+using NUnit.Framework.Constraints;
 
 using AberrantSMPP.Utility;
 
@@ -46,7 +47,7 @@ namespace AberrantSMPP.Tests
 		public void Encode_Simple_String()
 		{
 			var bytes = _encoding.GetBytes(_simpleString);
-			Assert.AreElementsEqual(_simpleBytes, bytes);
+			CollectionAssert.AreEqual(_simpleBytes, bytes);
 		}
 
 		[Test]
@@ -60,7 +61,7 @@ namespace AberrantSMPP.Tests
 		public void Encode_Extended_String()
 		{
 			var bytes = _encoding.GetBytes(_extendedString);
-			Assert.AreElementsEqual(_extendedBytes, bytes);
+			CollectionAssert.AreEqual(_extendedBytes, bytes);
 		}
 
 		[Test]
@@ -74,7 +75,7 @@ namespace AberrantSMPP.Tests
 		public void Encode_Invalid_String()
 		{
 			var bytes = _encoding.GetBytes(_invalidGsmString);
-			Assert.AreElementsEqual(_invalidGsmBytes, bytes);
+			CollectionAssert.AreEqual(_invalidGsmBytes, bytes);
 		}
 
 		[Test]
@@ -101,7 +102,7 @@ namespace AberrantSMPP.Tests
 				0x7f, 0x05, 0x07, 0x08, 0x06, 0x20, 
 				0x1b, 0x65
 			};
-			Assert.AreElementsEqual(valid, bytes);
+			CollectionAssert.AreEqual(valid, bytes);
 		}
 
 		[Test]
@@ -122,7 +123,7 @@ namespace AberrantSMPP.Tests
 		public void Encoding_Invalid_Char_Using_BestFit_Replaces_Character()
 		{
 			var bytes = new GSMEncoding(true, false).GetBytes(new char[] { 'º' });
-			Assert.AreElementsEqual(new byte[] { 0x3f }, bytes);
+			CollectionAssert.AreEqual(new byte[] { 0x3f }, bytes);
 		}
 
 	}
