@@ -731,12 +731,12 @@ namespace AberrantSMPP.Packet.Request
 			PriorityFlag = (PriorityType)remainder[2];
 			ScheduleDeliveryTime = SmppStringUtil.GetCStringFromBody(ref remainder, 3);
 			ValidityPeriod = SmppStringUtil.GetCStringFromBody(ref remainder);
-			RegisteredDelivery = (RegisteredDeliveryType)remainder[5];
+			RegisteredDelivery = (RegisteredDeliveryType)remainder[0];
 			//replace_if_present is always null, so don't bother reading it
-			DataCoding = (DataCoding)remainder[7];
+			DataCoding = (DataCoding)remainder[2];
 			//sm_default_msg_id is always null, so don't bother reading it
-			_SmLength = remainder[9];
-			ShortMessage = SmppStringUtil.GetStringFromBody(ref remainder, 10, 10 + _SmLength);
+			_SmLength = remainder[4];
+			ShortMessage = SmppStringUtil.GetStringFromBody(ref remainder, 5, 5 + _SmLength);
 			TranslateTlvDataIntoTable(remainder);
 		}
 		
