@@ -122,6 +122,9 @@ namespace AberrantSMPP.Utility
 				case CommandId.deliver_sm:
 					packet = new SmppDeliverSm(response);
 					break;
+				case CommandId.enquire_link:
+					packet = new SmppEnquireLink(response);
+					break;
 				case CommandId.enquire_link_resp:
 					packet = new SmppEnquireLinkResp(response);
 					break;
