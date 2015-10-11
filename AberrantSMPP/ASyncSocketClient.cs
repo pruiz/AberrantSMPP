@@ -82,7 +82,7 @@ namespace AberrantSMPP
 		private ErrorHandler _ErrorHandler;
 		private bool _IsDisposed;
 		private string _ServerAddress;
-		private Int16 _ServerPort;
+		private UInt16 _ServerPort;
 		private object _StateObject;
 #if HARDCORE_LOGGING
 		private bool __SendPending;
@@ -128,7 +128,7 @@ namespace AberrantSMPP
 		/// <summary>
 		/// The server port to connect to.
 		/// </summary>
-		public Int16 ServerPort
+		public UInt16 ServerPort
 		{
 			get
 			{
@@ -247,7 +247,7 @@ namespace AberrantSMPP
 		/// </summary>
 		/// <param name="address">The IP address of the server.</param>
 		/// <param name="port">The port to connect to.</param>
-		public void Connect(String address, Int16 port)
+		public void Connect(String address, UInt16 port)
 		{
 			using (new WriteLock(_socketLock))
 			{

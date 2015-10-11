@@ -67,7 +67,7 @@ namespace AberrantSMPP
 
 		private AsyncSocketClient asClient;
 		private string _Host;
-		private Int16 _Port;
+		private UInt16 _Port;
 		private string _SystemId;
 		private string _Password;
 		private string _SystemType;
@@ -111,7 +111,7 @@ namespace AberrantSMPP
 		/// <summary>
 		/// The port on the SMSC to connect to.
 		/// </summary>
-		public Int16 Port
+		public UInt16 Port
 		{
 			get
 			{
