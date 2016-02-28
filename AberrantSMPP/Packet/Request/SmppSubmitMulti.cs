@@ -29,12 +29,12 @@ namespace AberrantSMPP.Packet.Request
 	public class SmppSubmitMulti : SmppSubmit
 	{
 		//note that all of the optional parameters are in the base class.
-		private byte _NumberOfDests = 0;
-		private DestinationAddress[] _DestinationAddresses = new DestinationAddress[0];
-		private const int MAX_DESTS = 254;
+		private byte _numberOfDests = 0;
+		private DestinationAddress[] _destinationAddresses = new DestinationAddress[0];
+		private const int MaxDests = 254;
 		
 		#region properties
-		protected override CommandId DefaultCommandId { get { return CommandId.submit_multi; } }		
+		protected override CommandId DefaultCommandId { get { return CommandId.SubmitMulti; } }		
 
 		/// <summary>
 		/// The number of destinations to send to.
@@ -43,7 +43,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _NumberOfDests;
+				return _numberOfDests;
 			}
 		}
 		
@@ -56,12 +56,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return(DestinationAddress[])_DestinationAddresses.Clone();
+				return(DestinationAddress[])_destinationAddresses.Clone();
 			}
 			set
 			{
-				_DestinationAddresses = (value == null) ? new DestinationAddress[0] : value;
-				_NumberOfDests = (byte)_DestinationAddresses.Length;
+				_destinationAddresses = (value == null) ? new DestinationAddress[0] : value;
+				_numberOfDests = (byte)_destinationAddresses.Length;
 			}
 		}
 		
@@ -106,7 +106,7 @@ namespace AberrantSMPP.Packet.Request
 			pdu.Add(NumberOfDestinations);
 			
 			//and their addresses
-			foreach(DestinationAddress address in _DestinationAddresses)
+			foreach(DestinationAddress address in _destinationAddresses)
 			{
 				if(!address.IsDistributionList)
 				{
@@ -146,7 +146,7 @@ namespace AberrantSMPP.Packet.Request
 			//so check if it did
 			if(remainder.Length > 0)
 			{
-				_NumberOfDests = remainder[0];
+				_numberOfDests = remainder[0];
 				DestinationAddresses = new DestinationAddress[NumberOfDestinations];
 				
 				//trim off the number of destinations
@@ -156,9 +156,9 @@ namespace AberrantSMPP.Packet.Request
 				remainder = newRemainder;
 				newRemainder = null;
 				
-				for(int i = 0; i < _DestinationAddresses.Length; i++)
+				for(int i = 0; i < _destinationAddresses.Length; i++)
 				{
-					_DestinationAddresses[i] = new DestinationAddress(ref remainder);
+					_destinationAddresses[i] = new DestinationAddress(ref remainder);
 				}
 			}
 			

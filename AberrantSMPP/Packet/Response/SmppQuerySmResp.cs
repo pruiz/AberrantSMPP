@@ -19,7 +19,6 @@
 using System;
 using System.Collections;
 using System.Text;
-using AberrantSMPP.Packet;
 using AberrantSMPP.Utility;
 
 namespace AberrantSMPP.Packet.Response
@@ -29,13 +28,13 @@ namespace AberrantSMPP.Packet.Response
 	/// </summary>
 	public class SmppQuerySmResp : SmppResponse
 	{
-		private string _MessageId = string.Empty;
-		private string _FinalDate = string.Empty;
-		private MessageStateType _MessageStatus = MessageStateType.Enroute;
-		private byte _ErrorCode = 0;
+		private string _messageId = string.Empty;
+		private string _finalDate = string.Empty;
+		private MessageStateType _messageStatus = MessageStateType.Enroute;
+		private byte _errorCode = 0;
 		
 		#region mandatory parameters
-		protected override CommandId DefaultCommandId { get { return CommandId.query_sm_resp; } }
+		protected override CommandId DefaultCommandId { get { return CommandId.QuerySmResp; } }
 
 		/// <summary>
 		/// SMSC Message ID of the message whose state is being queried.
@@ -44,12 +43,12 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return _MessageId;
+				return _messageId;
 			}
 			
 			set
 			{
-				_MessageId = (value == null) ? string.Empty : value;
+				_messageId = (value == null) ? string.Empty : value;
 			}
 		}
 		
@@ -61,16 +60,16 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return _FinalDate;
+				return _finalDate;
 			}
 			
 			set
 			{
 				if(value != null && value != string.Empty)
 				{
-					if(value.Length == DATE_TIME_LENGTH)
+					if(value.Length == DateTimeLength)
 					{
-						_FinalDate = value;
+						_finalDate = value;
 					}
 					else
 					{
@@ -79,7 +78,7 @@ namespace AberrantSMPP.Packet.Response
 				}
 				else
 				{
-					_FinalDate = string.Empty;
+					_finalDate = string.Empty;
 				}
 			}
 		}
@@ -91,12 +90,12 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return _MessageStatus;
+				return _messageStatus;
 			}
 			
 			set
 			{
-				_MessageStatus = value;
+				_messageStatus = value;
 			}
 		}
 		
@@ -107,12 +106,12 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return _ErrorCode;
+				return _errorCode;
 			}
 			
 			set
 			{
-				_ErrorCode = value;
+				_errorCode = value;
 			}
 		}
 		

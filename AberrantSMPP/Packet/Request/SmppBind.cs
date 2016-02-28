@@ -30,28 +30,28 @@ namespace AberrantSMPP.Packet.Request
 	{
 		#region private fields
 		
-		private string _SystemId = string.Empty;
-		private string _Password = string.Empty;
-		private string _SystemType = string.Empty;
-		private string _AddressRange = string.Empty;
-		private SmppVersionType _InterfaceVersion = Pdu.SmppVersionType.Version3_4;
-		private TonType _AddressTon = Pdu.TonType.International;
-		private NpiType _AddressNpi = Pdu.NpiType.ISDN;
-		private BindingType _BindType = BindingType.BindAsTransceiver;
+		private string _systemId = string.Empty;
+		private string _password = string.Empty;
+		private string _systemType = string.Empty;
+		private string _addressRange = string.Empty;
+		private SmppVersionType _interfaceVersion = Pdu.SmppVersionType.Version34;
+		private TonType _addressTon = Pdu.TonType.International;
+		private NpiType _addressNpi = Pdu.NpiType.Isdn;
+		private BindingType _bindType = BindingType.BindAsTransceiver;
 		
 		#endregion private fields
 		
 		#region constants
 		
-		private const int ID_LENGTH = 15;
-		private const int PASS_LENGTH = 8;
-		private const int TYPE_LENGTH = 12;
-		private const int RANGE_LENGTH = 40;
+		private const int IdLength = 15;
+		private const int PassLength = 16;
+		private const int TypeLength = 12;
+		private const int RangeLength = 40;
 		
 		#endregion constants
 		
 		#region mandatory parameters
-		protected override CommandId DefaultCommandId { get { return CommandId.bind_transmitter; } }
+		protected override CommandId DefaultCommandId { get { return CommandId.BindTransmitter; } }
 
 		/// <summary>
 		/// The binding type: transmitter, receiver, or transceiver.
@@ -60,7 +60,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _BindType;
+				return _bindType;
 			}
 			set
 			{
@@ -68,27 +68,27 @@ namespace AberrantSMPP.Packet.Request
 				{
 					case BindingType.BindAsReceiver:
 					{
-						CommandID = CommandId.bind_receiver;
+						CommandId = CommandId.BindReceiver;
 						break;
 					}
 					case BindingType.BindAsTransceiver:
 					{
-						CommandID = CommandId.bind_transceiver;
+						CommandId = CommandId.BindTransceiver;
 						break;
 					}
 					case BindingType.BindAsTransmitter:
 					{
-						CommandID = CommandId.bind_transmitter;
+						CommandId = CommandId.BindTransmitter;
 						break;
 					}
 					default:
 					{
-						CommandID = CommandId.bind_transmitter;
+						CommandId = CommandId.BindTransmitter;
 						break;
 					}	
 				}
 				
-				_BindType = value;
+				_bindType = value;
 			}
 		}
 		
@@ -99,20 +99,20 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _SystemId;
+				return _systemId;
 			}
 			set
 			{
 				if(value != null)
 				{
-					if(value.Length <= ID_LENGTH)
-						_SystemId = value;
+					if(value.Length <= IdLength)
+						_systemId = value;
 					else
 						throw new ArgumentOutOfRangeException("System ID must be <= "+ 
-							ID_LENGTH + " characters).");
+							IdLength + " characters).");
 				}
 				else
-					_SystemId = "";
+					_systemId = "";
 			}
 		}
 		
@@ -124,24 +124,24 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _Password;
+				return _password;
 			}
 			set
 			{
 				if(value != null)
 				{
-					if(value.Length <= PASS_LENGTH)
+					if(value.Length <= PassLength)
 					{
-						_Password = value;
+						_password = value;
 					}
 					else
 					{
-						throw new ArgumentOutOfRangeException("Password must be <= "+ PASS_LENGTH + " characters).");
+						throw new ArgumentOutOfRangeException("Password must be <= "+ PassLength + " characters).");
 					}
 				}
 				else
 				{
-					_Password = string.Empty;
+					_password = string.Empty;
 				}
 			}
 		}
@@ -154,24 +154,24 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _SystemType;
+				return _systemType;
 			}
 			set
 			{
 				if(value != null)
 				{
-					if(value.Length <= TYPE_LENGTH)
+					if(value.Length <= TypeLength)
 					{
-						_SystemType = value;
+						_systemType = value;
 					}
 					else
 					{
-						throw new ArgumentOutOfRangeException("System type must be <= "+ TYPE_LENGTH + " characters).");
+						throw new ArgumentOutOfRangeException("System type must be <= "+ TypeLength + " characters).");
 					}
 				}
 				else
 				{
-					_SystemType = string.Empty;
+					_systemType = string.Empty;
 				}
 			}
 		}
@@ -183,24 +183,24 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _AddressRange;
+				return _addressRange;
 			}
 			set
 			{
 				if(value != null)
 				{
-					if(value.Length <= RANGE_LENGTH)
+					if(value.Length <= RangeLength)
 					{
-						_AddressRange = value;
+						_addressRange = value;
 					}
 					else
 					{
-						throw new ArgumentOutOfRangeException("Address range must be <= "+ RANGE_LENGTH + " characters).");
+						throw new ArgumentOutOfRangeException("Address range must be <= "+ RangeLength + " characters).");
 					}
 				}
 				else
 				{
-					_AddressRange = string.Empty;
+					_addressRange = string.Empty;
 				}
 			}
 		}
@@ -212,11 +212,11 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _InterfaceVersion;
+				return _interfaceVersion;
 			}
 			set
 			{
-				_InterfaceVersion = value;
+				_interfaceVersion = value;
 			}
 		}
 		
@@ -227,11 +227,11 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _AddressTon;
+				return _addressTon;
 			}
 			set
 			{
-				_AddressTon = value;
+				_addressTon = value;
 			}
 		}
 		
@@ -242,11 +242,11 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _AddressNpi;
+				return _addressNpi;
 			}
 			set
 			{
-				_AddressNpi = value;
+				_addressNpi = value;
 			}
 		}
 		
@@ -317,7 +317,7 @@ namespace AberrantSMPP.Packet.Request
 		protected override void DecodeSmscResponse()
 		{
 			byte[] remainder = BytesAfterHeader;
-			BindType = (SmppBind.BindingType)CommandID;
+			BindType = (SmppBind.BindingType)CommandId;
 			SystemId = SmppStringUtil.GetCStringFromBody(ref remainder);
 			Password = SmppStringUtil.GetCStringFromBody(ref remainder);
 			SystemType = SmppStringUtil.GetCStringFromBody(ref remainder);

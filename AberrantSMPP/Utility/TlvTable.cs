@@ -18,9 +18,6 @@
  */
 using System;
 using System.Collections;
-using System.Net;
-using System.Text;
-using System.Diagnostics;
 
 namespace AberrantSMPP.Utility
 {
@@ -30,15 +27,15 @@ namespace AberrantSMPP.Utility
 	/// </summary>
 	public class TlvTable
 	{
-		private Hashtable tlvTable;
+		private Hashtable _tlvTable;
 		
 		/// <summary>
 		/// Creates a TLV table.
 		/// </summary>
 		public TlvTable()
 		{
-			tlvTable = new Hashtable();
-			tlvTable = Hashtable.Synchronized(tlvTable);
+			_tlvTable = new Hashtable();
+			_tlvTable = Hashtable.Synchronized(_tlvTable);
 		}
 		
 		/// <summary>
@@ -120,7 +117,7 @@ namespace AberrantSMPP.Utility
 			
 			data.TrimToSize();
 			//add the values to the hashtable
-			tlvTable.Add(tag, data.ToArray(typeof(byte)));
+			_tlvTable.Add(tag, data.ToArray(typeof(byte)));
 			//set it up for the next run
 			index += length;
 		}
@@ -258,10 +255,10 @@ namespace AberrantSMPP.Utility
 		/// <returns></returns>
 		public byte[] GetBytes(UInt16 tag)
 		{
-			if (!tlvTable.ContainsKey(tag) || tlvTable[tag] == null)
+			if (!_tlvTable.ContainsKey(tag) || _tlvTable[tag] == null)
 				throw new ApplicationException("TLV tag " + tag + " not found.");
 
-			return (byte[])tlvTable[tag];
+			return (byte[])_tlvTable[tag];
 		}
 		/// <summary>
 		/// Gets the byte.
@@ -294,7 +291,7 @@ namespace AberrantSMPP.Utility
 			if (value.Length > UInt16.MaxValue)
 				throw new ArgumentException("Parameter value for tag '" + tag + "' is too large.");
 			
-			tlvTable[tag] = value;
+			_tlvTable[tag] = value;
 		}
 		/// <summary>
 		/// Determines whether this TlvTable contains the specified key.
@@ -305,7 +302,7 @@ namespace AberrantSMPP.Utility
 		/// </returns>
 		public bool ContainsKey(UInt16 tag)
 		{
-			return tlvTable.ContainsKey(tag);
+			return _tlvTable.ContainsKey(tag);
 		}
 		/// <summary>
 		/// Removes the specified tag.
@@ -313,7 +310,7 @@ namespace AberrantSMPP.Utility
 		/// <param name="tag">The tag.</param>
 		public void Remove(UInt16 tag)
 		{
-			tlvTable.Remove(tag);
+			_tlvTable.Remove(tag);
 		}
 		#endregion
 
@@ -327,13 +324,13 @@ namespace AberrantSMPP.Utility
 		/// is a TLV.  Returns an empty ArrayList if the TLV table is empty.</returns>
 		public ArrayList GenerateByteEncodedTlv()
 		{
-			if(tlvTable == null || tlvTable.Count <= 0)
+			if(_tlvTable == null || _tlvTable.Count <= 0)
 			{
 				return new ArrayList(0);
 			}
 			
 			ArrayList tlvs = new ArrayList();
-			IDictionaryEnumerator iterator = tlvTable.GetEnumerator();
+			IDictionaryEnumerator iterator = _tlvTable.GetEnumerator();
 			ArrayList elem = new ArrayList();
 			while(iterator.MoveNext())
 			{

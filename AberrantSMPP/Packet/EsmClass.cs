@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace AberrantSMPP.Packet
+﻿namespace AberrantSMPP.Packet
 {
 	/// <summary>
 	/// EsmClass' messaging mode flags.
@@ -13,7 +9,7 @@ namespace AberrantSMPP.Packet
 		/// <summary>
 		/// Default SMSC Mode (e.g. Store and Forward)
 		/// </summary>
-		SMSCDefault	= 0x00,
+		SmscDefault	= 0x00,
 		/// <summary>
 		/// Datagram mode
 		/// </summary>
@@ -74,7 +70,7 @@ namespace AberrantSMPP.Packet
 		/// <summary>
 		/// UDHI Indicator (only relevant for MT short messages)
 		/// </summary>
-		UDHI = (1 << 6),
+		Udhi = (1 << 6),
 		/// <summary>
 		/// Set Reply Path (only relevant for GSM network)
 		/// </summary>

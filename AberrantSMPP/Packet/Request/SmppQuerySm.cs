@@ -18,7 +18,6 @@
  */
 using System;
 using System.Text;
-using AberrantSMPP.Packet;
 using System.Collections;
 using AberrantSMPP.Utility;
 
@@ -29,9 +28,9 @@ namespace AberrantSMPP.Packet.Request
 	/// </summary>
 	public class SmppQuerySm : SmppRequest1
 	{
-		private string _MessageId = string.Empty;
+		private string _messageId = string.Empty;
 
-		protected override CommandId DefaultCommandId { get { return CommandId.query_sm; } }
+		protected override CommandId DefaultCommandId { get { return CommandId.QuerySm; } }
 
 		/// <summary>
 		/// The ID of the message.
@@ -40,25 +39,25 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _MessageId;
+				return _messageId;
 			}
 			set
 			{
 				if(value != null)
 				{
-					if(value.Length <= MSG_LENGTH)
+					if(value.Length <= MsgLength)
 					{
-						_MessageId = value;
+						_messageId = value;
 					}
 					else
 					{
 						throw new ArgumentOutOfRangeException(
-							"Message ID must be <= " + MSG_LENGTH + " characters.");
+							"Message ID must be <= " + MsgLength + " characters.");
 					}
 				}
 				else
 				{
-					_MessageId = string.Empty;
+					_messageId = string.Empty;
 				}
 			}
 		}

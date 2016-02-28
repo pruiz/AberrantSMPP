@@ -16,9 +16,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
-using System;
+
 using System.Collections;
-using AberrantSMPP.Packet;
 
 namespace AberrantSMPP.Packet.Response
 {
@@ -27,7 +26,7 @@ namespace AberrantSMPP.Packet.Response
 	/// </summary>
 	public class SmppDeliverSmResp : SmppResponse
 	{
-		protected override CommandId DefaultCommandId { get { return CommandId.deliver_sm_resp; } }
+		protected override CommandId DefaultCommandId { get { return CommandId.DeliverSmResp; } }
 
 		#region constructors
 		

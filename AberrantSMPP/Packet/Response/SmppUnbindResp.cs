@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
-using System;
+
 using System.Collections;
 
 namespace AberrantSMPP.Packet.Response
@@ -26,7 +26,7 @@ namespace AberrantSMPP.Packet.Response
 	/// </summary>
 	public class SmppUnbindResp : Pdu
 	{
-		protected override CommandId DefaultCommandId { get { return CommandId.unbind_resp; } }
+		protected override CommandId DefaultCommandId { get { return CommandId.UnbindResp; } }
 
 		#region constructors
 		

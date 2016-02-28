@@ -19,7 +19,6 @@
 using System;
 using System.Text;
 using System.Collections;
-using AberrantSMPP.Packet;
 using AberrantSMPP.Utility;
 
 namespace AberrantSMPP.Packet.Request
@@ -32,17 +31,17 @@ namespace AberrantSMPP.Packet.Request
 	{
 		#region private fields
 		
-		private string _MessageId = string.Empty;
-		private string _ScheduleDeliveryTime = string.Empty;
-		private string _ValidityPeriod = string.Empty;
-		private byte _SmDefaultMessageId = 0;
-		private object _ShortMessage = null;
-		private byte _SmLength = 0;
+		private string _messageId = string.Empty;
+		private string _scheduleDeliveryTime = string.Empty;
+		private string _validityPeriod = string.Empty;
+		private byte _smDefaultMessageId = 0;
+		private object _shortMessage = null;
+		private byte _smLength = 0;
 		
 		#endregion private fields
 		
 		#region mandatory parameters
-		protected override CommandId DefaultCommandId { get { return CommandId.replace_sm; } }
+		protected override CommandId DefaultCommandId { get { return CommandId.ReplaceSm; } }
 
 		/// <summary>
 		/// SMSC message ID of the message to be replaced. This must be the message ID of the 
@@ -52,25 +51,25 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get 
 			{
-				return _MessageId; 
+				return _messageId; 
 			} 
 			set 
 			{
 				if(value != null)
 				{
-					if(value.Length <= MSG_LENGTH)
+					if(value.Length <= MsgLength)
 					{
-						_MessageId = value;
+						_messageId = value;
 					}
 					else
 					{
 						throw new ArgumentOutOfRangeException(
-							"Message ID must be <= " + MSG_LENGTH + " characters.");
+							"Message ID must be <= " + MsgLength + " characters.");
 					}
 				}
 				else
 				{
-					_MessageId = string.Empty;
+					_messageId = string.Empty;
 				}
 			} 
 		}
@@ -83,15 +82,15 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _ScheduleDeliveryTime;
+				return _scheduleDeliveryTime;
 			}
 			set
 			{
 				if(value != null && value != string.Empty)
 				{
-					if(value.Length == DATE_TIME_LENGTH)
+					if(value.Length == DateTimeLength)
 					{
-						_ScheduleDeliveryTime = value;
+						_scheduleDeliveryTime = value;
 					}
 					else
 					{
@@ -100,7 +99,7 @@ namespace AberrantSMPP.Packet.Request
 				}
 				else
 				{
-					_ScheduleDeliveryTime = string.Empty;
+					_scheduleDeliveryTime = string.Empty;
 				}
 			}
 		}
@@ -113,15 +112,15 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _ValidityPeriod;
+				return _validityPeriod;
 			}
 			set
 			{
 				if(value != null && value != string.Empty)
 				{
-					if(value.Length == DATE_TIME_LENGTH)
+					if(value.Length == DateTimeLength)
 					{
-						_ValidityPeriod = value;
+						_validityPeriod = value;
 					}
 					else
 					{
@@ -130,7 +129,7 @@ namespace AberrantSMPP.Packet.Request
 				}
 				else
 				{
-					_ValidityPeriod = string.Empty;
+					_validityPeriod = string.Empty;
 				}
 			}
 		}
@@ -142,11 +141,11 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _SmDefaultMessageId;
+				return _smDefaultMessageId;
 			}
 			set
 			{
-				_SmDefaultMessageId = value;
+				_smDefaultMessageId = value;
 			}
 		}
 		
@@ -157,11 +156,11 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _ShortMessage;
+				return _shortMessage;
 			}
 			set
 			{
-				_ShortMessage = value;
+				_shortMessage = value;
 			}
 		}
 		
@@ -172,7 +171,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _SmLength;
+				return _smLength;
 			}
 		}
 		
@@ -210,9 +209,9 @@ namespace AberrantSMPP.Packet.Request
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(ScheduleDeliveryTime)));	
 			pdu.AddRange(SmppStringUtil.ArrayCopyWithNull(Encoding.ASCII.GetBytes(ValidityPeriod)));
 			pdu.Add((byte)RegisteredDelivery);
-			pdu.Add(_SmDefaultMessageId);
+			pdu.Add(_smDefaultMessageId);
 
-			_SmLength = PduUtil.InsertShortMessage(pdu, DataCoding.SMSCDefault, ShortMessage);
+			_smLength = PduUtil.InsertShortMessage(pdu, DataCoding.SmscDefault, ShortMessage);
 		}
 		
 		/// <summary>
@@ -230,8 +229,8 @@ namespace AberrantSMPP.Packet.Request
 			ValidityPeriod = SmppStringUtil.GetCStringFromBody(ref remainder);
 			RegisteredDelivery =(RegisteredDeliveryType)remainder[0];
 			SmDefaultMessageId = remainder[1];
-			_SmLength = remainder[2];
-			ShortMessage = SmppStringUtil.GetStringFromBody(ref remainder, 3, 3 + _SmLength);
+			_smLength = remainder[2];
+			ShortMessage = SmppStringUtil.GetStringFromBody(ref remainder, 3, 3 + _smLength);
 			
 			TranslateTlvDataIntoTable(remainder);
 		}

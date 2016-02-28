@@ -19,7 +19,6 @@
 using System;
 using System.Text;
 using System.Collections;
-using AberrantSMPP.Packet;
 using AberrantSMPP.Utility;
 
 namespace AberrantSMPP.Packet.Request
@@ -32,17 +31,17 @@ namespace AberrantSMPP.Packet.Request
 		/// <summary>
 		/// Limit of short message.
 		/// </summary>
-		public const int SHORT_MESSAGE_LIMIT = 160;
+		public const int ShortMessageLimit = 160;
 		
 		#region private fields
 		
-		private byte _ProtocolId = 0;
-		private PriorityType _PriorityFlag = Pdu.PriorityType.Level1;
-		private string _ScheduleDeliveryTime = string.Empty;
-		private string _ValidityPeriod = string.Empty;
-		private bool _ReplaceIfPresentFlag = false;
-		private byte _SmDefaultMessageId = 0;
-		private object _ShortMessage = null;
+		private byte _protocolId = 0;
+		private PriorityType _priorityFlag = Pdu.PriorityType.Level1;
+		private string _scheduleDeliveryTime = string.Empty;
+		private string _validityPeriod = string.Empty;
+		private bool _replaceIfPresentFlag = false;
+		private byte _smDefaultMessageId = 0;
+		private object _shortMessage = null;
 		
 		#endregion private fields
 		
@@ -64,11 +63,11 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _ProtocolId;
+				return _protocolId;
 			}
 			set
 			{
-				_ProtocolId = value;
+				_protocolId = value;
 			}
 		}
 		
@@ -79,11 +78,11 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _PriorityFlag;
+				return _priorityFlag;
 			}
 			set
 			{
-				_PriorityFlag = value;
+				_priorityFlag = value;
 			}
 		}
 		
@@ -96,15 +95,15 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _ScheduleDeliveryTime;
+				return _scheduleDeliveryTime;
 			}
 			set
 			{
 				if(value != null && value != string.Empty)
 				{
-					if(value.Length == DATE_TIME_LENGTH)
+					if(value.Length == DateTimeLength)
 					{
-						_ScheduleDeliveryTime = value;
+						_scheduleDeliveryTime = value;
 					}
 					else
 					{
@@ -113,7 +112,7 @@ namespace AberrantSMPP.Packet.Request
 				}
 				else
 				{
-					_ScheduleDeliveryTime = string.Empty;
+					_scheduleDeliveryTime = string.Empty;
 				}
 			}
 		}
@@ -127,15 +126,15 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _ValidityPeriod;
+				return _validityPeriod;
 			}
 			set
 			{
 				if(value != null && value != string.Empty)
 				{
-					if(value.Length == DATE_TIME_LENGTH)
+					if(value.Length == DateTimeLength)
 					{
-						_ValidityPeriod = value;
+						_validityPeriod = value;
 					}
 					else
 					{
@@ -144,7 +143,7 @@ namespace AberrantSMPP.Packet.Request
 				}
 				else
 				{
-					_ValidityPeriod = string.Empty;
+					_validityPeriod = string.Empty;
 				}
 			}
 		}
@@ -156,11 +155,11 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _ReplaceIfPresentFlag;
+				return _replaceIfPresentFlag;
 			}
 			set
 			{
-				_ReplaceIfPresentFlag = value;
+				_replaceIfPresentFlag = value;
 			}
 		}
 		
@@ -172,11 +171,11 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _SmDefaultMessageId;
+				return _smDefaultMessageId;
 			}
 			set
 			{
-				_SmDefaultMessageId = value;
+				_smDefaultMessageId = value;
 			}
 		}
 		
@@ -190,11 +189,11 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _ShortMessage;
+				return _shortMessage;
 			}
 			set
 			{
-				_ShortMessage = value;
+				_shortMessage = value;
 			}
 		}
 		
@@ -216,12 +215,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte<DpfResultType>(OptionalParamCodes.set_dpf);
+				return GetOptionalParamByte<DpfResultType>(OptionalParamCodes.SetDpf);
 			}
 
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.set_dpf, value);
+				SetOptionalParamByte(OptionalParamCodes.SetDpf, value);
 			}
 		}
 		#endregion properties

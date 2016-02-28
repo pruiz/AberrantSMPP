@@ -17,10 +17,6 @@
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-using System;
-
-using AberrantSMPP.Packet;
-using AberrantSMPP.Packet.Request;
 using AberrantSMPP.Packet.Response;
 
 

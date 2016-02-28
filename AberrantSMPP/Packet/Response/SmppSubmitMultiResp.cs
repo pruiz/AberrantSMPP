@@ -28,10 +28,10 @@ namespace AberrantSMPP.Packet.Response
 	/// </summary>
 	public class SmppSubmitMultiResp : SmppSubmitSmResp
 	{
-		private byte _NumberUnsuccessful = 0;
-		private UnsuccessAddress[] _UnsuccessfulAddresses = new UnsuccessAddress[0];
+		private byte _numberUnsuccessful = 0;
+		private UnsuccessAddress[] _unsuccessfulAddresses = new UnsuccessAddress[0];
 
-		protected override CommandId DefaultCommandId { get { return CommandId.submit_multi_resp; } }
+		protected override CommandId DefaultCommandId { get { return CommandId.SubmitMultiResp; } }
 
 		/// <summary>
 		/// The number of messages that could not be delivered.  The mutator is not 
@@ -41,7 +41,7 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return _NumberUnsuccessful;
+				return _numberUnsuccessful;
 			}
 		}
 		
@@ -54,13 +54,13 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return(UnsuccessAddress[])_UnsuccessfulAddresses.Clone();
+				return(UnsuccessAddress[])_unsuccessfulAddresses.Clone();
 			}
 			
 			set
 			{
-				_UnsuccessfulAddresses = (value == null) ? new UnsuccessAddress[0] : value;
-				_NumberUnsuccessful = (byte)_UnsuccessfulAddresses.Length;
+				_unsuccessfulAddresses = (value == null) ? new UnsuccessAddress[0] : value;
+				_numberUnsuccessful = (byte)_unsuccessfulAddresses.Length;
 			}
 		}
 		
@@ -93,7 +93,7 @@ namespace AberrantSMPP.Packet.Response
 			//so check if it did
 			if(remainder.Length > 0)
 			{
-				_NumberUnsuccessful = remainder[0];
+				_numberUnsuccessful = remainder[0];
 				UnsuccessfulAddresses = new UnsuccessAddress[NumberUnsuccessful];
 				long length = remainder.Length - 1;
 				byte[] newRemainder = new byte[length];
@@ -103,7 +103,7 @@ namespace AberrantSMPP.Packet.Response
 				//unsuccessful
 				for(int i = 0; i < UnsuccessfulAddresses.Length; i++)
 				{
-					_UnsuccessfulAddresses[i] = new UnsuccessAddress(ref remainder);
+					_unsuccessfulAddresses[i] = new UnsuccessAddress(ref remainder);
 				}
 			}
 			

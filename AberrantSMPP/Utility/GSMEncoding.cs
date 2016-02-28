@@ -1,7 +1,5 @@
 ﻿using System;
-using System.IO;
 using System.Collections;
-using System.Collections.Generic;
 using System.Text;
 
 namespace AberrantSMPP.Utility
@@ -13,56 +11,56 @@ namespace AberrantSMPP.Utility
 	/// <summary>
 	/// GSM (03.38) Encoding class.
 	/// </summary>
-	public class GSMEncoding : Encoding
+	public class GsmEncoding : Encoding
 	{
 		#region Ucs2Gsm Tables.
-		private const byte NOCHAR = 0xFF;
-		private const byte ESCAPE = 0x1B;
+		private const byte Nochar = 0xFF;
+		private const byte Escape = 0x1B;
 
-		private static byte[] Ucs2ToGsm =
+		private static byte[] _ucs2ToGsm =
 		{           
 			/*			+0xX0	+0xX1	+0xX2	+0xX3	+0xX4	+0xX5	+0xX6	+0xX7	+0xX8	+0xX9	+0xXa	+0xXb	+0xXc	+0xXd	+0xXe	+0xXf */
-			/*0x00*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	0x0a,	NOCHAR,	NOCHAR,	0x0D,	NOCHAR,	NOCHAR,	
-			/*0x10*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	
+			/*0x00*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	0x0a,	Nochar,	Nochar,	0x0D,	Nochar,	Nochar,	
+			/*0x10*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	
 			/*0x20*/		0x20,	0x21,	0x22,	0x23,	0x02,	0x25,	0x26,	0x27,	0x28,	0x29,	0x2a,	0x2b,	0x2c,	0x2D,	0x2e,	0x2f,	
 			/*0x30*/		0x30,	0x31,	0x32,	0x33,	0x34,	0x35,	0x36,	0x37,	0x38,	0x39,	0x3a,	0x3b,	0x3c,	0x3D,	0x3e,	0x3f,	
 			/*0x40*/		0x00,	0x41,	0x42,	0x43,	0x44,	0x45,	0x46,	0x47,	0x48,	0x49,	0x4a,	0x4b,	0x4c,	0x4D,	0x4e,	0x4f,	
-			/*0x50*/		0x50,	0x51,	0x52,	0x53,	0x54,	0x55,	0x56,	0x57,	0x58,	0x59,	0x5a,	ESCAPE,	ESCAPE,	ESCAPE,	ESCAPE,	0x11,	
+			/*0x50*/		0x50,	0x51,	0x52,	0x53,	0x54,	0x55,	0x56,	0x57,	0x58,	0x59,	0x5a,	Escape,	Escape,	Escape,	Escape,	0x11,	
 			/*0x60*/		0x27,	0x61,	0x62,	0x63,	0x64,	0x65,	0x66,	0x67,	0x68,	0x69,	0x6a,	0x6b,	0x6c,	0x6D,	0x6e,	0x6f,	
-			/*0x70*/		0x70,	0x71,	0x72,	0x73,	0x74,	0x75,	0x76,	0x77,	0x78,	0x79,	0x7a,	ESCAPE,	ESCAPE,	ESCAPE,	ESCAPE,	NOCHAR,
-			/*0x80*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	
-			/*0x90*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	
-			/*0xa0*/		NOCHAR,	0x40,	NOCHAR,	0x01,	0x24,	0x03,	NOCHAR,	0x5f,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	
-			/*0xb0*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	0x60,	
-			/*0xc0*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	0x5b,	0x0e,	0x1c,	0x09,	NOCHAR,	0x1f,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	0x60,	
-			/*0xd0*/		NOCHAR,	0x5D,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	0x5c,	NOCHAR,	0x0b,	NOCHAR,	NOCHAR,	NOCHAR,	0x5e,	NOCHAR,	NOCHAR,	0x1e,	
-			/*0xe0*/		0x7f,	NOCHAR,	NOCHAR,	NOCHAR,	0x7b,	0x0f,	0x1D,	NOCHAR,	0x04,	0x05,	NOCHAR,	NOCHAR,	0x07,	NOCHAR,	NOCHAR,	NOCHAR,	
-			/*0xf0*/		NOCHAR,	0x7D,	0x08,	NOCHAR,	NOCHAR,	NOCHAR,	0x7c,	NOCHAR,	0x0c,	0x06,	NOCHAR,	NOCHAR,	0x7e,	NOCHAR,	NOCHAR,	NOCHAR
+			/*0x70*/		0x70,	0x71,	0x72,	0x73,	0x74,	0x75,	0x76,	0x77,	0x78,	0x79,	0x7a,	Escape,	Escape,	Escape,	Escape,	Nochar,
+			/*0x80*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	
+			/*0x90*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	
+			/*0xa0*/		Nochar,	0x40,	Nochar,	0x01,	0x24,	0x03,	Nochar,	0x5f,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	
+			/*0xb0*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	0x60,	
+			/*0xc0*/		Nochar,	Nochar,	Nochar,	Nochar,	0x5b,	0x0e,	0x1c,	0x09,	Nochar,	0x1f,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	0x60,	
+			/*0xd0*/		Nochar,	0x5D,	Nochar,	Nochar,	Nochar,	Nochar,	0x5c,	Nochar,	0x0b,	Nochar,	Nochar,	Nochar,	0x5e,	Nochar,	Nochar,	0x1e,	
+			/*0xe0*/		0x7f,	Nochar,	Nochar,	Nochar,	0x7b,	0x0f,	0x1D,	Nochar,	0x04,	0x05,	Nochar,	Nochar,	0x07,	Nochar,	Nochar,	Nochar,	
+			/*0xf0*/		Nochar,	0x7D,	0x08,	Nochar,	Nochar,	Nochar,	0x7c,	Nochar,	0x0c,	0x06,	Nochar,	Nochar,	0x7e,	Nochar,	Nochar,	Nochar
 		};
 
-		private static byte[] Ucs2ToGsmExtended =
+		private static byte[] _ucs2ToGsmExtended =
 		{
 			/*			+0xX0	+0xX1	+0xX2	+0xX3	+0xX4	+0xX5	+0xX6	+0xX7	+0xX8	+0xX9	+0xXa	+0xXb	+0xXc	+0xXd	+0xXe	+0xXf */
-			/*0x0x*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	 0x0A,	NOCHAR,	NOCHAR,	NOCHAR,	
-			/*0x1x*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	
-			/*0x2x*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	
-			/*0x3x*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	
-			/*0x4x*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	
-			/*0x5x*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	 0x3c,	 0x2f,	 0x3e,	 0x14,	NOCHAR,	
-			/*0x6x*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	
-			/*0x7x*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	 0x28,	 0x40,	 0x29,	 0x3d,	NOCHAR,	
-			/*0x8x*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	
-			/*0x9x*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	
-			/*0xAx*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	
-			/*0xBx*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	
-			/*0xCx*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	
-			/*0xDx*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	
-			/*0xEx*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	
-			/*0xFx*/		NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR,	NOCHAR
+			/*0x0x*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	 0x0A,	Nochar,	Nochar,	Nochar,	
+			/*0x1x*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	
+			/*0x2x*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	
+			/*0x3x*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	
+			/*0x4x*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	
+			/*0x5x*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	 0x3c,	 0x2f,	 0x3e,	 0x14,	Nochar,	
+			/*0x6x*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	
+			/*0x7x*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	 0x28,	 0x40,	 0x29,	 0x3d,	Nochar,	
+			/*0x8x*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	
+			/*0x9x*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	
+			/*0xAx*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	
+			/*0xBx*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	
+			/*0xCx*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	
+			/*0xDx*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	
+			/*0xEx*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	
+			/*0xFx*/		Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar,	Nochar
 		};
 
 		private const int Ucs2GclToGsmBase = 0x0391;
-		private static byte[] Ucs2GclToGsm =
+		private static byte[] _ucs2GclToGsm =
 		{
 			/*0x0391*/  0x41, // Alpha A
 			/*0x0392*/  0x42, // Beta B
@@ -81,7 +79,7 @@ namespace AberrantSMPP.Utility
 			/*0x039f*/  0x4F, // Omicron O
 			/*0x03a0*/  0x16, // Pi
 			/*0x03a1*/  0x50, // Rho P
-			/*0x03a2*/  NOCHAR,
+			/*0x03a2*/  Nochar,
 			/*0x03a3*/  0x18, // Sigma
 			/*0x03a4*/  0x54, // Tau T
 			/*0x03a5*/  0x59, // Upsilon Y
@@ -90,14 +88,14 @@ namespace AberrantSMPP.Utility
 			/*0x03a8*/  0x17, // Psi
 			/*0x03a9*/  0x15  // Omega
 		};
-		private static int Ucs2GclToGsmMax = Ucs2GclToGsmBase + Ucs2GclToGsm.Length;
+		private static int _ucs2GclToGsmMax = Ucs2GclToGsmBase + _ucs2GclToGsm.Length;
 		#endregion
 
 		#region Gsm2Ucs Tables
-		private static char NOCODE = '\xFFFF';
-		private static char UESCAPE = '\xA0';
+		private static char _nocode = '\xFFFF';
+		private static char _uescape = '\xA0';
 
-		private static char[] GsmToUcs2 = new char[] {
+		private static char[] _gsmToUcs2 = new char[] {
 			/*			+0xX0	+0xX1	+0xX2	+0xX3	+0xX4	+0xX5	+0xX6	+0xX7	+0xX8	+0xX9	+0xXa	+0xXb	+0xXc	+0xXd	+0xXe	+0xXf */
 			/*0x0x*/		'\x40',	'\xA3',	'\x24',	'\xA5',	'\xE8',	'\xE9',	'\xF9',	'\xEC',	'\xF2',	'\xE7',	'\x0A',	'\xD8',	'\xF8',	'\x0D',	'\xC5',	'\xE5',	 
 			/*0x1x*/		'\x394',	'\x5F',	'\x3A6',	'\x393',	'\x39B',	'\x3A9',	'\x3A0',	'\x3A8',	'\x3A3',	'\x398',	'\x39E',	'\xA0',	'\xC6',	'\xE6',	'\xDF',	'\xC9',	
@@ -109,22 +107,22 @@ namespace AberrantSMPP.Utility
 			/*0x7x*/		'\x70',	'\x71',	'\x72',	'\x73',	'\x74',	'\x75',	'\x76',	'\x77',	'\x78',	'\x79',	'\x7A',	'\xE4',	'\xF6',	'\xF1',	'\xFC',	'\xE0'
 		};
 
-		private static char[] GsmToUcs2Extended = new char[] {
+		private static char[] _gsmToUcs2Extended = new char[] {
 			/*			+0xX0	+0xX1	+0xX2	+0xX3	+0xX4	+0xX5	+0xX6	+0xX7	+0xX8	+0xX9	+0xXa	+0xXb	+0xXc	+0xXd	+0xXe	+0xXf */
-			/*0x0x*/		NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	'\x0C',	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	 
-			/*0x1x*/		NOCODE,	NOCODE,	NOCODE,	NOCODE,	'\x5E',	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	
-			/*0x2x*/		NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	'\x7B',	'\x7D',	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	'\x5C',	
-			/*0x3x*/		NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	'\x5B',	'\x7E',	'\x5D',	NOCODE,	
-			/*0x4x*/		'\x7C',	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	
-			/*0x5x*/		NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	
-			/*0x6x*/		NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	
-			/*0x7x*/		NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE,	NOCODE
+			/*0x0x*/		_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	'\x0C',	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	 
+			/*0x1x*/		_nocode,	_nocode,	_nocode,	_nocode,	'\x5E',	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	
+			/*0x2x*/		_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	'\x7B',	'\x7D',	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	'\x5C',	
+			/*0x3x*/		_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	'\x5B',	'\x7E',	'\x5D',	_nocode,	
+			/*0x4x*/		'\x7C',	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	
+			/*0x5x*/		_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	
+			/*0x6x*/		_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	
+			/*0x7x*/		_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode,	_nocode
 		};
 		#endregion
 
 		#region Instance fields..
-		private bool useBestFitFallback = false;
-		private bool throwOnInvalidCharacter = false;
+		private bool _useBestFitFallback = false;
+		private bool _throwOnInvalidCharacter = false;
 		private EncoderFallbackBuffer _encoderFb = null;
 		private DecoderFallbackBuffer _decoderFb = null;
 		#endregion
@@ -140,19 +138,19 @@ namespace AberrantSMPP.Utility
 		#endregion
 
 		#region .ctors
-		public GSMEncoding() : this (false)
+		public GsmEncoding() : this (false)
 		{
 		}
 
-		public GSMEncoding(bool throwOnInvalidCharacter)
+		public GsmEncoding(bool throwOnInvalidCharacter)
 		{
-			this.throwOnInvalidCharacter = throwOnInvalidCharacter;
+			this._throwOnInvalidCharacter = throwOnInvalidCharacter;
 		}
 
-		public GSMEncoding(bool useBestFitFallback, bool throwOnInvalidCharacter)
+		public GsmEncoding(bool useBestFitFallback, bool throwOnInvalidCharacter)
 			: this(throwOnInvalidCharacter)
 		{
-			this.useBestFitFallback = useBestFitFallback;
+			this._useBestFitFallback = useBestFitFallback;
 		}
 		#endregion
 
@@ -160,8 +158,8 @@ namespace AberrantSMPP.Utility
 		public new EncoderFallback EncoderFallback
 		{
 			get { 
-				var obj = throwOnInvalidCharacter ? EncoderFallback.ExceptionFallback : base.EncoderFallback;
-				return useBestFitFallback ? new GSMBestFitEncoderFallback(obj) : obj;
+				var obj = _throwOnInvalidCharacter ? EncoderFallback.ExceptionFallback : base.EncoderFallback;
+				return _useBestFitFallback ? new GsmBestFitEncoderFallback(obj) : obj;
 			}
 		}
 
@@ -178,23 +176,23 @@ namespace AberrantSMPP.Utility
 
 		public static bool IsValidChar(char character)
 		{
-			var @byte = NOCHAR;
+			var @byte = Nochar;
 			var escape = false;
 
-			if (character < Ucs2ToGsm.Length)
+			if (character < _ucs2ToGsm.Length)
 			{
-				@byte = Ucs2ToGsm[character];
+				@byte = _ucs2ToGsm[character];
 
-				if (@byte == ESCAPE)
+				if (@byte == Escape)
 				{
 					escape = true;
-					@byte = Ucs2ToGsmExtended[character];
+					@byte = _ucs2ToGsmExtended[character];
 				}
 			}
-			else if (character >= Ucs2GclToGsmBase && character <= Ucs2GclToGsmMax)
+			else if (character >= Ucs2GclToGsmBase && character <= _ucs2GclToGsmMax)
 			{
 				escape = true;
-				@byte = Ucs2GclToGsm[character - Ucs2GclToGsmBase];
+				@byte = _ucs2GclToGsm[character - Ucs2GclToGsmBase];
 			}
 			else if (character == '\x20AC') // Euro sign.
 			{
@@ -202,30 +200,30 @@ namespace AberrantSMPP.Utility
 				@byte = 0x65;
 			}
 
-			return @byte != NOCHAR;
+			return @byte != Nochar;
 		}
 
 		public static bool IsValidString(string text)
 		{
 			foreach (var character in text.ToCharArray())
 			{
-				var @byte = NOCHAR;
+				var @byte = Nochar;
 				var escape = false;
 
-				if (character < Ucs2ToGsm.Length)
+				if (character < _ucs2ToGsm.Length)
 				{
-					@byte = Ucs2ToGsm[character];
+					@byte = _ucs2ToGsm[character];
 
-					if (@byte == ESCAPE)
+					if (@byte == Escape)
 					{
 						escape = true;
-						@byte = Ucs2ToGsmExtended[character];
+						@byte = _ucs2ToGsmExtended[character];
 					}
 				}
-				else if (character >= Ucs2GclToGsmBase && character <= Ucs2GclToGsmMax)
+				else if (character >= Ucs2GclToGsmBase && character <= _ucs2GclToGsmMax)
 				{
 					escape = true;
-					@byte = Ucs2GclToGsm[character - Ucs2GclToGsmBase];
+					@byte = _ucs2GclToGsm[character - Ucs2GclToGsmBase];
 				}
 				else if (character == '\x20AC') // Euro sign.
 				{
@@ -233,7 +231,7 @@ namespace AberrantSMPP.Utility
 					@byte = 0x65;
 				}
 
-				if (@byte == NOCHAR)
+				if (@byte == Nochar)
 					return false;
 			}
 
@@ -247,23 +245,23 @@ namespace AberrantSMPP.Utility
 			for (var inpos = charIndex; inpos < (charIndex + charCount); inpos++)
 			{
 				var character = chars[inpos];
-				var @byte = NOCHAR;
+				var @byte = Nochar;
 				var escape = false;
 
-				if (character < Ucs2ToGsm.Length)
+				if (character < _ucs2ToGsm.Length)
 				{
-					@byte = Ucs2ToGsm[character];
+					@byte = _ucs2ToGsm[character];
 
-					if (@byte == ESCAPE)
+					if (@byte == Escape)
 					{
 						escape = true;
-						@byte = Ucs2ToGsmExtended[character];
+						@byte = _ucs2ToGsmExtended[character];
 					}
 				}
-				else if (character >= Ucs2GclToGsmBase && character <= Ucs2GclToGsmMax)
+				else if (character >= Ucs2GclToGsmBase && character <= _ucs2GclToGsmMax)
 				{
 					escape = true;
-					@byte = Ucs2GclToGsm[character - Ucs2GclToGsmBase];
+					@byte = _ucs2GclToGsm[character - Ucs2GclToGsmBase];
 				}
 				else if (character == '\x20AC') // Euro sign.
 				{
@@ -271,7 +269,7 @@ namespace AberrantSMPP.Utility
 					@byte = 0x65;
 				}
 
-				if (@byte == NOCHAR)
+				if (@byte == Nochar)
 				{
 					char tmp;
 					EncoderFallbackBuffer.Fallback(character, inpos);
@@ -279,7 +277,7 @@ namespace AberrantSMPP.Utility
 					while ((tmp = EncoderFallbackBuffer.GetNextChar()) != 0)
 					{
 						if (bytes != null)
-							bytes[outpos++] = Ucs2ToGsm[tmp]; // FIXME: Character might not be a 7-bit one..
+							bytes[outpos++] = _ucs2ToGsm[tmp]; // FIXME: Character might not be a 7-bit one..
 						else
 							outpos++;
 					}
@@ -291,7 +289,7 @@ namespace AberrantSMPP.Utility
 					if (bytes != null)
 					{
 						if (escape)
-							bytes[outpos++] = ESCAPE;
+							bytes[outpos++] = Escape;
 						bytes[outpos++] = @byte;
 					}
 					else
@@ -392,7 +390,7 @@ namespace AberrantSMPP.Utility
 
 		public new DecoderFallback DecoderFallback
 		{
-			get { return throwOnInvalidCharacter ? DecoderFallback.ExceptionFallback : base.DecoderFallback; }
+			get { return _throwOnInvalidCharacter ? DecoderFallback.ExceptionFallback : base.DecoderFallback; }
 		}
 
 		private int GetCharsInternal(byte[] bytes, int byteIndex, int byteCount, char[] chars, int charIndex)
@@ -403,32 +401,32 @@ namespace AberrantSMPP.Utility
 			for (var inpos = byteIndex; inpos < (byteIndex + byteCount); inpos++)
 			{
 				var @byte = bytes[inpos];
-				var codepoint = NOCODE;
+				var codepoint = _nocode;
 				var extended = false;
 
 				if (escape)
 				{
 					if (@byte == 0x65) codepoint = '\x20AC';
-					else codepoint = GsmToUcs2Extended[@byte];
+					else codepoint = _gsmToUcs2Extended[@byte];
 
 					// If char is not a valid codepoint, use NBSP.
-					if (codepoint == NOCODE) codepoint = '\xA0';
+					if (codepoint == _nocode) codepoint = '\xA0';
 
 					extended = true;
 					escape = false;
 				}
-				else if (@byte < GsmToUcs2.Length)
+				else if (@byte < _gsmToUcs2.Length)
 				{
-					codepoint = GsmToUcs2[@byte];
+					codepoint = _gsmToUcs2[@byte];
 
-					if (codepoint == UESCAPE)
+					if (codepoint == _uescape)
 					{
 						escape = true;
 						continue;
 					}
 				}
 
-				if (codepoint == NOCODE)
+				if (codepoint == _nocode)
 				{
 					char tmp;
 					DecoderFallbackBuffer.Fallback(extended ? new byte[] { 0x1b, @byte } : new[] { @byte }, inpos);
@@ -436,7 +434,7 @@ namespace AberrantSMPP.Utility
 					while ((tmp = DecoderFallbackBuffer.GetNextChar()) != 0)
 					{
 						if (chars != null)
-							chars[outpos++] = GsmToUcs2[tmp]; // FIXME: Character might not be a 7-bit one..
+							chars[outpos++] = _gsmToUcs2[tmp]; // FIXME: Character might not be a 7-bit one..
 						else
 							outpos++;
 					}
@@ -474,7 +472,7 @@ namespace AberrantSMPP.Utility
 		#endregion
 	}
 
-	public class PackedGSMEnconding
+	public class PackedGsmEnconding
 	{
 		/// <summary>
 		/// Compacts a string of septets into octets.
@@ -515,17 +513,17 @@ namespace AberrantSMPP.Utility
 		}
 	}
 
-	internal class GSMBestFitEncoderFallback : EncoderFallback
+	internal class GsmBestFitEncoderFallback : EncoderFallback
 	{
 		#region Fallback Buffer implementation
-		public class GSMBestFitEncoderFallbackBuffer : EncoderFallbackBuffer
+		public class GsmBestFitEncoderFallbackBuffer : EncoderFallbackBuffer
 		{
-			private EncoderFallbackBuffer LastResortEncoderFallbackBuffer;
-			private char? Data = null;
-			private int Pos = 0;
+			private EncoderFallbackBuffer _lastResortEncoderFallbackBuffer;
+			private char? _data = null;
+			private int _pos = 0;
 			#region Character Table Mappings..
 			// ÁÉÍÓÚ ÀÈÌÒÙ áéíóú 
-			private static char[][] MapTable = new char[][] {
+			private static char[][] _mapTable = new char[][] {
 				new char[] { 'Á', 'à' },
 				new char[] { 'Í', 'ì' },
 				new char[] { 'Ó', 'ò' },
@@ -545,33 +543,33 @@ namespace AberrantSMPP.Utility
 			};
 			#endregion
 
-			public override int Remaining { get { return Pos == 0 ? 1 : 0; } }
+			public override int Remaining { get { return _pos == 0 ? 1 : 0; } }
 
-			public GSMBestFitEncoderFallbackBuffer(EncoderFallback caller, EncoderFallback lastResortFallback)
+			public GsmBestFitEncoderFallbackBuffer(EncoderFallback caller, EncoderFallback lastResortFallback)
 			{
-				LastResortEncoderFallbackBuffer = lastResortFallback.CreateFallbackBuffer();
+				_lastResortEncoderFallbackBuffer = lastResortFallback.CreateFallbackBuffer();
 			}
 
 			private void InitData(char ch)
 			{
-				Data = ch;
-				Pos = 0;
+				_data = ch;
+				_pos = 0;
 			}
 
 			public override bool Fallback(char charUnknownHigh, char charUnknownLow, int index)
 			{
-				if (Data.HasValue)
+				if (_data.HasValue)
 					throw new InvalidOperationException("Recursive fallback buffer call.");
 
-				return LastResortEncoderFallbackBuffer.Fallback(charUnknownHigh, charUnknownLow, index);
+				return _lastResortEncoderFallbackBuffer.Fallback(charUnknownHigh, charUnknownLow, index);
 			}
 
 			public override bool Fallback(char charUnknown, int index)
 			{
-				if (Data.HasValue)
+				if (_data.HasValue)
 					throw new InvalidOperationException("Recursive fallback buffer call.");
 
-				foreach (var entry in MapTable)
+				foreach (var entry in _mapTable)
 				{
 					if (entry[0] == charUnknown)
 					{
@@ -580,48 +578,48 @@ namespace AberrantSMPP.Utility
 					}
 				}
 
-				return LastResortEncoderFallbackBuffer.Fallback(charUnknown, index);
+				return _lastResortEncoderFallbackBuffer.Fallback(charUnknown, index);
 			}
 
 			public override char GetNextChar()
 			{
-				if (!Data.HasValue)
-					return LastResortEncoderFallbackBuffer.GetNextChar();
+				if (!_data.HasValue)
+					return _lastResortEncoderFallbackBuffer.GetNextChar();
 
-				return Pos++ == 0 ? Data.Value : '\0';
+				return _pos++ == 0 ? _data.Value : '\0';
 			}
 
 			public override bool MovePrevious()
 			{
-				if (Data.HasValue)
-					return LastResortEncoderFallbackBuffer.MovePrevious();
+				if (_data.HasValue)
+					return _lastResortEncoderFallbackBuffer.MovePrevious();
 
-				Pos = 0;
+				_pos = 0;
 
 				return true;
 			}
 
 			public override void Reset()
 			{
-				Data = null;
-				Pos = 0;
+				_data = null;
+				_pos = 0;
 				base.Reset();
 			}
 		}
 		#endregion
 
-		private EncoderFallback lastResortEncoderFallback;
+		private EncoderFallback _lastResortEncoderFallback;
 
 		public override int MaxCharCount { get { return 1; } }
 
-		public GSMBestFitEncoderFallback(EncoderFallback lastResortEncoderFallback)
+		public GsmBestFitEncoderFallback(EncoderFallback lastResortEncoderFallback)
 		{
-			this.lastResortEncoderFallback = lastResortEncoderFallback;
+			this._lastResortEncoderFallback = lastResortEncoderFallback;
 		}
 
 		public override EncoderFallbackBuffer CreateFallbackBuffer()
 		{
-			return new GSMBestFitEncoderFallbackBuffer(this, lastResortEncoderFallback);
+			return new GsmBestFitEncoderFallbackBuffer(this, _lastResortEncoderFallback);
 		}
 	}
 }

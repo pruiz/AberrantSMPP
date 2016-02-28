@@ -19,7 +19,6 @@
 
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Text;
 
 using AberrantSMPP.Packet;
@@ -33,8 +32,8 @@ namespace AberrantSMPP.Utility
 	{			
 		#region constants
 		
-		private const int SUBADDRESS_MIN = 2;
-		private const int SUBADDRESS_MAX = 23;
+		private const int SubaddressMin = 2;
+		private const int SubaddressMax = 23;
 		
 		#endregion constants
 
@@ -55,28 +54,28 @@ namespace AberrantSMPP.Utility
 		{
 			switch (coding)
 			{
-				case DataCoding.SMSCDefault:
+				case DataCoding.SmscDefault:
 					//return GSM7BitEncoding.GetBytes(text);
 				case DataCoding.OctetUnspecifiedA:
 				case DataCoding.OctetUnspecifiedB:
-					return new GSMEncoding(true, false).GetBytes(text);
-				case DataCoding.IA5_ASCII:
+					return new GsmEncoding(true, false).GetBytes(text);
+				case DataCoding.Ia5Ascii:
 					return Encoding.ASCII.GetBytes(text);
 				case DataCoding.Latin1:
 					return Encoding.GetEncoding("iso-8859-1").GetBytes(text);
-				case DataCoding.JIS:
-				case DataCoding.ExtendedKanjiJIS:
+				case DataCoding.Jis:
+				case DataCoding.ExtendedKanjiJis:
 					return Encoding.GetEncoding("EUC-JP").GetBytes(text);
 				case DataCoding.Cyrillic:
 					return Encoding.GetEncoding("iso-8859-5").GetBytes(text);
-				case DataCoding.Latin_Hebrew:
+				case DataCoding.LatinHebrew:
 					return Encoding.GetEncoding("iso-8859-8").GetBytes(text);
-				case DataCoding.UCS2:
+				case DataCoding.Ucs2:
 					// 1201 == Unicode Big Endian (FFFE)!
 					return Encoding.GetEncoding(1201).GetBytes(text);
 				case DataCoding.MusicCodes:
 					return Encoding.GetEncoding("iso-2022-jp").GetBytes(text);
-				case DataCoding.KS_C:
+				case DataCoding.KsC:
 					return Encoding.GetEncoding("ks_c_5601-1987").GetBytes(text);
 				default:
 					throw new ArgumentException("Invalid (or unsupported) DataCoding value.");
@@ -93,28 +92,28 @@ namespace AberrantSMPP.Utility
 		{
 			switch (coding)
 			{
-				case DataCoding.SMSCDefault:
+				case DataCoding.SmscDefault:
 				//return GSM7BitEncoding.GetBytes(text);
 				case DataCoding.OctetUnspecifiedA:
 				case DataCoding.OctetUnspecifiedB:
-					return new GSMEncoding().GetString(data);
-				case DataCoding.IA5_ASCII:
+					return new GsmEncoding().GetString(data);
+				case DataCoding.Ia5Ascii:
 					return Encoding.ASCII.GetString(data);
 				case DataCoding.Latin1:
 					return Encoding.GetEncoding("iso-8859-1").GetString(data);
-				case DataCoding.JIS:
-				case DataCoding.ExtendedKanjiJIS:
+				case DataCoding.Jis:
+				case DataCoding.ExtendedKanjiJis:
 					return Encoding.GetEncoding("EUC-JP").GetString(data);
 				case DataCoding.Cyrillic:
 					return Encoding.GetEncoding("iso-8859-5").GetString(data);
-				case DataCoding.Latin_Hebrew:
+				case DataCoding.LatinHebrew:
 					return Encoding.GetEncoding("iso-8859-8").GetString(data);
-				case DataCoding.UCS2:
+				case DataCoding.Ucs2:
 					// 1201 == Unicode Big Endian (FFFE)!
 					return Encoding.GetEncoding(1201).GetString(data);
 				case DataCoding.MusicCodes:
 					return Encoding.GetEncoding("iso-2022-jp").GetString(data);
-				case DataCoding.KS_C:
+				case DataCoding.KsC:
 					return Encoding.GetEncoding("ks_c_5601-1987").GetString(data);
 				default:
 					throw new ArgumentException("Invalid (or unsupported) DataCoding value.");
@@ -125,23 +124,23 @@ namespace AberrantSMPP.Utility
 		/// Inserts the short message into the PDU ArrayList.
 		/// </summary>
 		/// <param name="pdu">The PDU to put the short message into.</param>
-		/// <param name="ShortMessage">The short message to insert.</param>
+		/// <param name="shortMessage">The short message to insert.</param>
 		/// <returns>The length of the short message.</returns>
-		public static byte InsertShortMessage(ArrayList pdu, DataCoding coding, object ShortMessage)
+		public static byte InsertShortMessage(ArrayList pdu, DataCoding coding, object shortMessage)
 		{
 			byte[] msg;
 			
-			if(ShortMessage == null)
+			if(shortMessage == null)
 			{
 				msg = null;
 			}
-			else if(ShortMessage is byte[])
+			else if(shortMessage is byte[])
 			{
-				msg =(byte[])ShortMessage;
+				msg =(byte[])shortMessage;
 			}
-			else if (ShortMessage is string)
+			else if (shortMessage is string)
 			{
-				msg = GetEncodedText(coding, ShortMessage as string);
+				msg = GetEncodedText(coding, shortMessage as string);
 			}
 			else
 			{
@@ -152,11 +151,11 @@ namespace AberrantSMPP.Utility
 			//					"Short message cannot be longer than " +
 			//					MessageLcd2.SHORT_MESSAGE_LIMIT + " octets.");
 			
-			byte SmLength = msg == null ? (byte)0 : (byte)msg.Length;
-			pdu.Add(SmLength);
+			byte smLength = msg == null ? (byte)0 : (byte)msg.Length;
+			pdu.Add(smLength);
 			if (msg != null) pdu.AddRange(msg);
 			
-			return SmLength;
+			return smLength;
 		}
 		
 		/// <summary>
@@ -166,16 +165,16 @@ namespace AberrantSMPP.Utility
 		/// <param name="val">The value to insert.</param>
 		public static void SetReceiptedMessageId(Pdu pdu, string val)
 		{
-			const int MAX_RECEIPTED_ID_LEN = 65;
+			const int maxReceiptedIdLen = 65;
 
-			if (val == null || val.Length <= MAX_RECEIPTED_ID_LEN)
+			if (val == null || val.Length <= maxReceiptedIdLen)
 			{
-				pdu.SetOptionalParamString(OptionalParamCodes.receipted_message_id, val, true);
+				pdu.SetOptionalParamString(OptionalParamCodes.ReceiptedMessageId, val, true);
 			}
 			else
 			{
 				throw new ArgumentException(
-					"receipted_message_id must have length 1-" + MAX_RECEIPTED_ID_LEN);
+					"receipted_message_id must have length 1-" + maxReceiptedIdLen);
 			}
 		}
 
@@ -186,18 +185,18 @@ namespace AberrantSMPP.Utility
 		/// <param name="data">The binary encoded error (see spec).</param>
 		public static void SetNetworkErrorCode(Pdu pdu, byte[] data)
 		{
-			const int ERR_CODE_LEN = 3;
+			const int errCodeLen = 3;
 			if (data == null)
 			{
-				pdu.SetOptionalParamBytes(OptionalParamCodes.network_error_code, null);
+				pdu.SetOptionalParamBytes(OptionalParamCodes.NetworkErrorCode, null);
 			}
-			else if(data.Length != ERR_CODE_LEN)
+			else if(data.Length != errCodeLen)
 			{
-				throw new ArgumentException("network_error_code must have length " + ERR_CODE_LEN);
+				throw new ArgumentException("network_error_code must have length " + errCodeLen);
 			}
 			else
 			{
-				pdu.SetOptionalParamBytes(OptionalParamCodes.network_error_code, data);
+				pdu.SetOptionalParamBytes(OptionalParamCodes.NetworkErrorCode, data);
 			}
 		}
 		
@@ -208,19 +207,19 @@ namespace AberrantSMPP.Utility
 		/// <param name="val">The value to insert.</param>
 		public static void SetItsSessionInfo(Pdu pdu, byte[] val)
 		{
-			const int MAX_ITS = 16;
+			const int maxIts = 16;
 			
 			if(val == null)
 			{
-				pdu.SetOptionalParamBytes(OptionalParamCodes.its_session_info, null);
+				pdu.SetOptionalParamBytes(OptionalParamCodes.ItsSessionInfo, null);
 			}
-			else if(val.Length == MAX_ITS)
+			else if(val.Length == maxIts)
 			{
-				pdu.SetOptionalParamBytes(OptionalParamCodes.its_session_info, val);
+				pdu.SetOptionalParamBytes(OptionalParamCodes.ItsSessionInfo, val);
 			}
 			else
 			{
-				throw new ArgumentException("its_session_info must have length " + MAX_ITS);
+				throw new ArgumentException("its_session_info must have length " + maxIts);
 			}
 		}
 
@@ -233,17 +232,17 @@ namespace AberrantSMPP.Utility
 		{
 			if (data == null)
 			{
-				pdu.SetOptionalParamBytes(OptionalParamCodes.dest_subaddress, null);
+				pdu.SetOptionalParamBytes(OptionalParamCodes.DestSubaddress, null);
 			}
-			else if(data.Length >= SUBADDRESS_MIN && data.Length <= SUBADDRESS_MAX)
+			else if(data.Length >= SubaddressMin && data.Length <= SubaddressMax)
 			{
-				pdu.SetOptionalParamBytes(OptionalParamCodes.dest_subaddress, data);
+				pdu.SetOptionalParamBytes(OptionalParamCodes.DestSubaddress, data);
 			}
 			else
 			{
 				throw new ArgumentException(
-					"Destination subaddress must be between " + SUBADDRESS_MIN + 
-					" and " + SUBADDRESS_MAX + " bytes.");
+					"Destination subaddress must be between " + SubaddressMin + 
+					" and " + SubaddressMax + " bytes.");
 			}
 		}
 		
@@ -256,17 +255,17 @@ namespace AberrantSMPP.Utility
 		{
 			if (data == null)
 			{
-				pdu.SetOptionalParamBytes(OptionalParamCodes.source_subaddress, null);
+				pdu.SetOptionalParamBytes(OptionalParamCodes.SourceSubaddress, null);
 			}
-			else if (data.Length >= SUBADDRESS_MIN && data.Length <= SUBADDRESS_MAX)
+			else if (data.Length >= SubaddressMin && data.Length <= SubaddressMax)
 			{
-				pdu.SetOptionalParamBytes(OptionalParamCodes.source_subaddress, data);
+				pdu.SetOptionalParamBytes(OptionalParamCodes.SourceSubaddress, data);
 			}
 			else
 			{
 				throw new ArgumentException(
-					"Source subaddress must be between " + SUBADDRESS_MIN + 
-					" and " + SUBADDRESS_MAX + " bytes.");
+					"Source subaddress must be between " + SubaddressMin + 
+					" and " + SubaddressMax + " bytes.");
 			}
 		}
 		
@@ -277,22 +276,22 @@ namespace AberrantSMPP.Utility
 		/// <param name="val">The value to insert.</param>
 		public static void SetCallbackNum(Pdu pdu, byte[] val)
 		{
-			const int CALLBACK_NUM_MIN = 4;
-			const int CALLBACK_NUM_MAX = 19;
+			const int callbackNumMin = 4;
+			const int callbackNumMax = 19;
 
 			if (val == null)
 			{
-				pdu.SetOptionalParamBytes(OptionalParamCodes.callback_num, null);
+				pdu.SetOptionalParamBytes(OptionalParamCodes.CallbackNum, null);
 			}
-			else if(val.Length >= CALLBACK_NUM_MIN && val.Length <= CALLBACK_NUM_MAX)
+			else if(val.Length >= callbackNumMin && val.Length <= callbackNumMax)
 			{
-				pdu.SetOptionalParamBytes(OptionalParamCodes.callback_num, val);
+				pdu.SetOptionalParamBytes(OptionalParamCodes.CallbackNum, val);
 			}
 			else
 			{
 				throw new ArgumentException(
-					"callback_num size must be between " + CALLBACK_NUM_MIN + 
-					" and " + CALLBACK_NUM_MAX + " characters.");
+					"callback_num size must be between " + callbackNumMin + 
+					" and " + callbackNumMax + " characters.");
 			}
 		}
 		
@@ -307,7 +306,7 @@ namespace AberrantSMPP.Utility
 
 			if (val == null)
 			{
-				pdu.SetOptionalParamBytes(OptionalParamCodes.message_payload, null);
+				pdu.SetOptionalParamBytes(OptionalParamCodes.MessagePayload, null);
 			}
 			else if(val is string)
 			{
@@ -324,16 +323,16 @@ namespace AberrantSMPP.Utility
 			
 			if (encodedValue != null) 
 			{
-				const int MAX_PAYLOAD_LENGTH = 64000;
-				if(encodedValue.Length < MAX_PAYLOAD_LENGTH)
+				const int maxPayloadLength = 64000;
+				if(encodedValue.Length < maxPayloadLength)
 				{
 					pdu.SetOptionalParamBytes(
-						OptionalParamCodes.message_payload, encodedValue);
+						OptionalParamCodes.MessagePayload, encodedValue);
 				}
 				else
 				{
 					throw new ArgumentException(
-						"Message Payload must be " + MAX_PAYLOAD_LENGTH + " characters or less in size.");
+						"Message Payload must be " + maxPayloadLength + " characters or less in size.");
 				}
 			}
 		}

@@ -30,14 +30,14 @@ namespace AberrantSMPP.Packet.Request
 	{
 		#region private fields
 
-		private TonType _DestinationAddressTon;
-		private NpiType _DestinationAddressNpi;
-		private string _DestinationAddress;
+		private TonType _destinationAddressTon;
+		private NpiType _destinationAddressNpi;
+		private string _destinationAddress;
 		
 		#endregion private fields
 		
 		#region mandatory parameters
-		protected override CommandId DefaultCommandId { get { return CommandId.submit_sm; } }
+		protected override CommandId DefaultCommandId { get { return CommandId.SubmitSm; } }
 
 		/// <summary>
 		/// Type of Number for destination.
@@ -46,11 +46,11 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _DestinationAddressTon;
+				return _destinationAddressTon;
 			}
 			set
 			{
-				_DestinationAddressTon = value;
+				_destinationAddressTon = value;
 			}
 		}
 		
@@ -61,11 +61,11 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _DestinationAddressNpi;
+				return _destinationAddressNpi;
 			}
 			set
 			{
-				_DestinationAddressNpi = value;
+				_destinationAddressNpi = value;
 			}
 		}
 		
@@ -77,25 +77,25 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _DestinationAddress;
+				return _destinationAddress;
 			}
 			set
 			{
 				if(value != null)
 				{
-					if(value.ToString().Length <= ADDRESS_LENGTH)
+					if(value.ToString().Length <= AddressLength)
 					{
-						_DestinationAddress = value;
+						_destinationAddress = value;
 					}
 					else
 					{
 						throw new ArgumentOutOfRangeException(
-							"Destination Address too long(must be <= "+ ADDRESS_LENGTH + " 20 characters).");
+							"Destination Address too long(must be <= "+ AddressLength + " 20 characters).");
 					}
 				}
 				else
 				{
-					_DestinationAddress = string.Empty;
+					_destinationAddress = string.Empty;
 				}
 			}
 		}
@@ -111,13 +111,13 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte<bool>(OptionalParamCodes.more_messages_to_send);
+				return GetOptionalParamByte<bool>(OptionalParamCodes.MoreMessagesToSend);
 			}
 			
 			set
 			{
 				//byte? data = value.HasValue ? new Nullable<byte>(Convert.ToByte(value.Value)) : null;
-				SetOptionalParamByte(OptionalParamCodes.more_messages_to_send, value);
+				SetOptionalParamByte(OptionalParamCodes.MoreMessagesToSend, value);
 			}
 		}
 		
@@ -132,12 +132,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte(OptionalParamCodes.user_response_code);
+				return GetOptionalParamByte(OptionalParamCodes.UserResponseCode);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.user_response_code, value);
+				SetOptionalParamByte(OptionalParamCodes.UserResponseCode, value);
 			}
 		}
 		
@@ -148,20 +148,20 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte(OptionalParamCodes.number_of_messages);
+				return GetOptionalParamByte(OptionalParamCodes.NumberOfMessages);
 			}
 			
 			set
 			{
-				const int MAX_NUM_MSGS = 99;
+				const int maxNumMsgs = 99;
 
-				if(value == null || value <= MAX_NUM_MSGS)
+				if(value == null || value <= maxNumMsgs)
 				{
-					SetOptionalParamByte(OptionalParamCodes.number_of_messages, value);
+					SetOptionalParamByte(OptionalParamCodes.NumberOfMessages, value);
 				}
 				else
 				{
-					throw new ArgumentException(	"number_of_messages must be between 0 and " + MAX_NUM_MSGS + ".");
+					throw new ArgumentException(	"number_of_messages must be between 0 and " + maxNumMsgs + ".");
 				}
 			}
 		}
@@ -177,12 +177,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte<ItsReplyTypeType>(OptionalParamCodes.its_reply_type);
+				return GetOptionalParamByte<ItsReplyTypeType>(OptionalParamCodes.ItsReplyType);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.its_reply_type, value);
+				SetOptionalParamByte(OptionalParamCodes.ItsReplyType, value);
 			}
 		}
 		
@@ -198,7 +198,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamBytes(OptionalParamCodes.its_session_info);
+				return GetOptionalParamBytes(OptionalParamCodes.ItsSessionInfo);
 			}
 			
 			set
@@ -218,12 +218,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte(OptionalParamCodes.ussd_service_op);
+				return GetOptionalParamByte(OptionalParamCodes.UssdServiceOp);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.ussd_service_op, value);
+				SetOptionalParamByte(OptionalParamCodes.UssdServiceOp, value);
 			}
 		}
 		
@@ -243,7 +243,7 @@ namespace AberrantSMPP.Packet.Request
 		public SmppSubmitSm(): base()
 		{
 			DestinationAddressTon = Pdu.TonType.International;
-			DestinationAddressNpi = Pdu.NpiType.ISDN;
+			DestinationAddressNpi = Pdu.NpiType.Isdn;
 			DestinationAddress = null;
 			CommandStatus = 0;
 		}

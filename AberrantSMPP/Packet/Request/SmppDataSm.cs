@@ -20,7 +20,6 @@ using System;
 using System.Text;
 using AberrantSMPP.Utility;
 using System.Collections;
-using AberrantSMPP.Packet;
 
 namespace AberrantSMPP.Packet.Request
 {
@@ -30,12 +29,12 @@ namespace AberrantSMPP.Packet.Request
 	/// </summary>
 	public class SmppDataSm : SmppRequest3
 	{
-		private TonType _DestinationAddressTon = Pdu.TonType.International;
-		private NpiType _DestinationAddressNpi = Pdu.NpiType.ISDN;
-		private string _DestinationAddress = string.Empty;
+		private TonType _destinationAddressTon = Pdu.TonType.International;
+		private NpiType _destinationAddressNpi = Pdu.NpiType.Isdn;
+		private string _destinationAddress = string.Empty;
 		
 		#region mandatory parameters
-		protected override CommandId DefaultCommandId { get { return CommandId.data_sm; } }
+		protected override CommandId DefaultCommandId { get { return CommandId.DataSm; } }
 
 		/// <summary>
 		/// Type of number of destination SME address of the message(s)to be cancelled.  
@@ -46,11 +45,11 @@ namespace AberrantSMPP.Packet.Request
 		{ 
 			get 
 			{ 
-				return _DestinationAddressTon; 
+				return _destinationAddressTon; 
 			} 
 			set 
 			{
-				_DestinationAddressTon = value; 
+				_destinationAddressTon = value; 
 			} 
 		}
 		
@@ -63,11 +62,11 @@ namespace AberrantSMPP.Packet.Request
 		{ 
 			get 
 			{ 
-				return _DestinationAddressNpi; 
+				return _destinationAddressNpi; 
 			} 
 			set 
 			{ 
-				_DestinationAddressNpi = value; 
+				_destinationAddressNpi = value; 
 			} 
 		}
 		
@@ -80,25 +79,25 @@ namespace AberrantSMPP.Packet.Request
 		{ 
 			get 
 			{ 
-				return _DestinationAddress; 
+				return _destinationAddress; 
 			} 
 			set 
 			{
 				if(value != null)
 				{
-					if(value.Length <= ADDRESS_LENGTH)
+					if(value.Length <= AddressLength)
 					{
-						_DestinationAddress = value;
+						_destinationAddress = value;
 					}
 					else
 					{
 						throw new ArgumentOutOfRangeException(
-							"Destination Address must be <= " + ADDRESS_LENGTH + " characters.");
+							"Destination Address must be <= " + AddressLength + " characters.");
 					}
 				}
 				else
 				{
-					_DestinationAddress = string.Empty;
+					_destinationAddress = string.Empty;
 				}
 			} 
 		}
@@ -114,12 +113,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte<NetworkType>(OptionalParamCodes.source_network_type);
+				return GetOptionalParamByte<NetworkType>(OptionalParamCodes.SourceNetworkType);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.source_network_type, value);
+				SetOptionalParamByte(OptionalParamCodes.SourceNetworkType, value);
 			}
 		}
 		
@@ -130,12 +129,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte<BearerType>(OptionalParamCodes.source_bearer_type);
+				return GetOptionalParamByte<BearerType>(OptionalParamCodes.SourceBearerType);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.source_bearer_type, value);
+				SetOptionalParamByte(OptionalParamCodes.SourceBearerType, value);
 			}
 		}
 		
@@ -147,12 +146,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv(OptionalParamCodes.source_telematics_id);
+				return GetHostOrderUInt16FromTlv(OptionalParamCodes.SourceTelematicsId);
 			}
 			
 			set
 			{
-				SetHostOrderValueIntoTlv(OptionalParamCodes.source_telematics_id, value);
+				SetHostOrderValueIntoTlv(OptionalParamCodes.SourceTelematicsId, value);
 			}
 		}
 		
@@ -163,12 +162,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte<NetworkType>(OptionalParamCodes.dest_network_type);
+				return GetOptionalParamByte<NetworkType>(OptionalParamCodes.DestNetworkType);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.dest_network_type, value);
+				SetOptionalParamByte(OptionalParamCodes.DestNetworkType, value);
 			}
 		}
 		
@@ -179,12 +178,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte<BearerType>(OptionalParamCodes.dest_bearer_type);
+				return GetOptionalParamByte<BearerType>(OptionalParamCodes.DestBearerType);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.dest_bearer_type, value);
+				SetOptionalParamByte(OptionalParamCodes.DestBearerType, value);
 			}
 		}
 		
@@ -196,12 +195,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv(OptionalParamCodes.dest_telematics_id);
+				return GetHostOrderUInt16FromTlv(OptionalParamCodes.DestTelematicsId);
 			}
 			
 			set
 			{
-				SetHostOrderValueIntoTlv(OptionalParamCodes.dest_telematics_id, value);
+				SetHostOrderValueIntoTlv(OptionalParamCodes.DestTelematicsId, value);
 			}
 		}
 		
@@ -213,14 +212,14 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				var val = GetOptionalParamByte(OptionalParamCodes.more_messages_to_send);
+				var val = GetOptionalParamByte(OptionalParamCodes.MoreMessagesToSend);
 				return val.GetValueOrDefault(0x00) == 0x00 ? false : true;
 			}
 			
 			set
 			{
 				byte? sendMore = !value.HasValue ? null : new Nullable<byte>(value.Value ? (byte)0x01 : (byte)0x00);
-				SetOptionalParamByte(OptionalParamCodes.more_messages_to_send, sendMore);
+				SetOptionalParamByte(OptionalParamCodes.MoreMessagesToSend, sendMore);
 			}
 		}
 		
@@ -231,12 +230,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetHostOrderUInt32FromTlv(OptionalParamCodes.qos_time_to_live);
+				return GetHostOrderUInt32FromTlv(OptionalParamCodes.QosTimeToLive);
 			}
 			
 			set
 			{
-				SetHostOrderValueIntoTlv(OptionalParamCodes.qos_time_to_live, value);
+				SetHostOrderValueIntoTlv(OptionalParamCodes.QosTimeToLive, value);
 			}
 		}
 		
@@ -247,12 +246,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte<DpfResultType>(OptionalParamCodes.set_dpf);
+				return GetOptionalParamByte<DpfResultType>(OptionalParamCodes.SetDpf);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.set_dpf, value);
+				SetOptionalParamByte(OptionalParamCodes.SetDpf, value);
 			}
 		}
 		
@@ -264,7 +263,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.receipted_message_id);
+				return GetOptionalParamString(OptionalParamCodes.ReceiptedMessageId);
 			}
 			
 			set
@@ -281,12 +280,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte<MessageStateType>(OptionalParamCodes.message_state);
+				return GetOptionalParamByte<MessageStateType>(OptionalParamCodes.MessageState);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.message_state, value);
+				SetOptionalParamByte(OptionalParamCodes.MessageState, value);
 			}
 		}
 		
@@ -298,7 +297,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamBytes(OptionalParamCodes.network_error_code);
+				return GetOptionalParamBytes(OptionalParamCodes.NetworkErrorCode);
 			}
 			
 			set
@@ -314,12 +313,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte(OptionalParamCodes.user_response_code);
+				return GetOptionalParamByte(OptionalParamCodes.UserResponseCode);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.user_response_code, value);
+				SetOptionalParamByte(OptionalParamCodes.UserResponseCode, value);
 			}
 		}
 		
@@ -330,14 +329,14 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte(OptionalParamCodes.number_of_messages);
+				return GetOptionalParamByte(OptionalParamCodes.NumberOfMessages);
 			}
 			
 			set
 			{
 				if(value == null || value <= 99)
 				{
-					SetOptionalParamByte(OptionalParamCodes.number_of_messages, value);
+					SetOptionalParamByte(OptionalParamCodes.NumberOfMessages, value);
 				}
 				else
 				{
@@ -354,12 +353,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte<ItsReplyTypeType>(OptionalParamCodes.its_reply_type);
+				return GetOptionalParamByte<ItsReplyTypeType>(OptionalParamCodes.ItsReplyType);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.its_reply_type, value);
+				SetOptionalParamByte(OptionalParamCodes.ItsReplyType, value);
 			}
 		}
 		
@@ -372,7 +371,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamBytes(OptionalParamCodes.its_session_info);
+				return GetOptionalParamBytes(OptionalParamCodes.ItsSessionInfo);
 			}
 			
 			set

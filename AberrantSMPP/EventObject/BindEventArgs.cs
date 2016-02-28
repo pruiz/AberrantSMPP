@@ -18,7 +18,6 @@
  */
 
 
-using System;
 using AberrantSMPP.Packet.Request;
 
 namespace AberrantSMPP.EventObjects

@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-
 using AberrantSMPP.Packet;
 using AberrantSMPP.Packet.Request;
-using AberrantSMPP.Packet.Response;
 
 namespace AberrantSMPP.Utility
 {
@@ -27,19 +24,19 @@ namespace AberrantSMPP.Utility
 		{
 			switch (coding)
 			{
-				case DataCoding.IA5_ASCII:
-				case DataCoding.SMSCDefault:
+				case DataCoding.Ia5Ascii:
+				case DataCoding.SmscDefault:
 					return totalbytes <= 160 ? 160 : 153;
-				case DataCoding.UCS2:
+				case DataCoding.Ucs2:
 					//return totalbytes <= 70 ? 70 : 67;
 				case DataCoding.Latin1:
 				case DataCoding.OctetUnspecifiedA:
 				case DataCoding.OctetUnspecifiedB:
 				case DataCoding.Cyrillic:
-				case DataCoding.ExtendedKanjiJIS:
-				case DataCoding.JIS:
-				case DataCoding.KS_C:
-				case DataCoding.Latin_Hebrew:
+				case DataCoding.ExtendedKanjiJis:
+				case DataCoding.Jis:
+				case DataCoding.KsC:
+				case DataCoding.LatinHebrew:
 				case DataCoding.MusicCodes:
 				case DataCoding.Pictogram:
 					return totalbytes <= 140 ? 140 : 134;
@@ -115,7 +112,7 @@ namespace AberrantSMPP.Utility
 			// Remove sequenceNumber.
 			pdu.SequenceNumber = 0;
 			// Remove UDH header (if set).
-			pdu.EsmClass &= ((byte)~NetworkFeatures.UDHI);
+			pdu.EsmClass &= ((byte)~NetworkFeatures.Udhi);
 			// Remove SMPP segmentation properties..
 			pdu.MoreMessagesToSend = null;
 			pdu.NumberOfMessages = null;
@@ -158,10 +155,10 @@ namespace AberrantSMPP.Utility
 				switch (method)
 				{
 					case SmppSarMethod.UserDataHeader:
-						packet.EsmClass |= (byte)NetworkFeatures.UDHI; // Set UDH flag..
+						packet.EsmClass |= (byte)NetworkFeatures.Udhi; // Set UDH flag..
 						break;
 					case SmppSarMethod.UseSmppSegmentation:
-						packet.EsmClass &= ((byte)~NetworkFeatures.UDHI); // Remove UDH header (if set).
+						packet.EsmClass &= ((byte)~NetworkFeatures.Udhi); // Remove UDH header (if set).
 						// Fill-in SMPP segmentation fields..
 						packet.MoreMessagesToSend = segno != totalSegments;
 						packet.NumberOfMessages = (byte)totalSegments;

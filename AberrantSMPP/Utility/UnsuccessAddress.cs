@@ -29,10 +29,10 @@ namespace AberrantSMPP.Utility
 	/// </summary>
 	public class UnsuccessAddress
 	{
-		private Pdu.TonType _DestinationAddressTon;
-		private Pdu.NpiType _DestinationAddressNpi;
-		private string _DestinationAddress;
-		private uint _ErrorStatusCode;
+		private Pdu.TonType _destinationAddressTon;
+		private Pdu.NpiType _destinationAddressNpi;
+		private string _destinationAddress;
+		private uint _errorStatusCode;
 		
 		#region properties
 		
@@ -43,7 +43,7 @@ namespace AberrantSMPP.Utility
 		{
 			get
 			{
-				return _DestinationAddressTon;
+				return _destinationAddressTon;
 			}
 		}
 		
@@ -54,7 +54,7 @@ namespace AberrantSMPP.Utility
 		{
 			get
 			{
-				return _DestinationAddressNpi;
+				return _destinationAddressNpi;
 			}
 		}
 		
@@ -65,7 +65,7 @@ namespace AberrantSMPP.Utility
 		{
 			get
 			{
-				return _DestinationAddress;
+				return _destinationAddress;
 			}
 		}
 		
@@ -77,7 +77,7 @@ namespace AberrantSMPP.Utility
 		{
 			get
 			{
-				return _ErrorStatusCode;
+				return _errorStatusCode;
 			}
 		}
 		
@@ -90,11 +90,11 @@ namespace AberrantSMPP.Utility
 		/// <param name="address">The bytes of the response.</param>
 		public UnsuccessAddress(ref byte[] address)
 		{
-			_DestinationAddressTon = (Pdu.TonType)address[0];
-			_DestinationAddressNpi = (Pdu.NpiType)address[1];
-			_DestinationAddress = SmppStringUtil.GetCStringFromBody(ref address, 2);
+			_destinationAddressTon = (Pdu.TonType)address[0];
+			_destinationAddressNpi = (Pdu.NpiType)address[1];
+			_destinationAddress = SmppStringUtil.GetCStringFromBody(ref address, 2);
 			//convert error status to host order
-			_ErrorStatusCode = UnsignedNumConverter.SwapByteOrdering(
+			_errorStatusCode = UnsignedNumConverter.SwapByteOrdering(
 									 BitConverter.ToUInt32(address, 0));
 			//now we have to trim off four octets to account for the status code
 			long length = address.Length - 4;
@@ -111,18 +111,18 @@ namespace AberrantSMPP.Utility
 		/// <param name="destinationAddressTon">Type of number for destination SME.</param>
 		/// <param name="destinationAddressNpi">Numbering Plan Indicator for destination SME</param>
 		/// <param name="destinationAdress">Destination Address of destination SME</param>
-		/// <param name="ErrorStatusCode">Indicates the success or failure of the submit_multi request 
+		/// <param name="errorStatusCode">Indicates the success or failure of the submit_multi request 
 		/// to this SME address.</param>
 		public UnsuccessAddress(
 			Pdu.TonType destinationAddressTon, 
 			Pdu.NpiType destinationAddressNpi, 
 			string destinationAdress, 
-			UInt32 ErrorStatusCode)
+			UInt32 errorStatusCode)
 		{
-			this._DestinationAddressTon = destinationAddressTon;
-			this._DestinationAddressNpi = destinationAddressNpi;
-			this._DestinationAddress = destinationAdress;
-			this._ErrorStatusCode = ErrorStatusCode;
+			this._destinationAddressTon = destinationAddressTon;
+			this._destinationAddressNpi = destinationAddressNpi;
+			this._destinationAddress = destinationAdress;
+			this._errorStatusCode = errorStatusCode;
 		}
 		
 		/// <summary>
@@ -132,7 +132,7 @@ namespace AberrantSMPP.Utility
 		public object Clone()
 		{
 			UnsuccessAddress temp = new UnsuccessAddress(
-				_DestinationAddressTon, _DestinationAddressNpi, _DestinationAddress, _ErrorStatusCode);
+				_destinationAddressTon, _destinationAddressNpi, _destinationAddress, _errorStatusCode);
 			return temp;
 		}
 		
@@ -158,10 +158,10 @@ namespace AberrantSMPP.Utility
 	
 	    // value member check
 	    return 
-	    	_DestinationAddressTon.Equals(us._DestinationAddressTon) &&
-	      _DestinationAddressNpi.Equals(us._DestinationAddressNpi) &&
-	      _DestinationAddress.Equals(us._DestinationAddress) &&
-	     	_ErrorStatusCode.Equals(us._ErrorStatusCode);
+	    	_destinationAddressTon.Equals(us._destinationAddressTon) &&
+	      _destinationAddressNpi.Equals(us._destinationAddressNpi) &&
+	      _destinationAddress.Equals(us._destinationAddress) &&
+	     	_errorStatusCode.Equals(us._errorStatusCode);
 		}
 		
 		/// <summary>

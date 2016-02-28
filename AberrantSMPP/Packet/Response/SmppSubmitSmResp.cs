@@ -28,10 +28,10 @@ namespace AberrantSMPP.Packet.Response
 	/// </summary>
 	public class SmppSubmitSmResp : SmppResponse
 	{
-		private string _MessageId = string.Empty;
-		private byte[] _ResponseAfterMsgId;
+		private string _messageId = string.Empty;
+		private byte[] _responseAfterMsgId;
 		
-		protected override CommandId DefaultCommandId { get { return CommandId.submit_sm_resp; } }
+		protected override CommandId DefaultCommandId { get { return CommandId.SubmitSmResp; } }
 
 		/// <summary>
 		/// The message ID(SMSC-assigned)of the submitted message.
@@ -40,12 +40,12 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return _MessageId;
+				return _messageId;
 			}
 			
 			set
 			{
-				_MessageId = (value == null) ? string.Empty : value;
+				_messageId = (value == null) ? string.Empty : value;
 			}
 		}
 
@@ -56,19 +56,19 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return GetOptionalParamByte<DpfResultType>(OptionalParamCodes.dpf_result);
+				return GetOptionalParamByte<DpfResultType>(OptionalParamCodes.DpfResult);
 			}
 
 			set
 			{
 				if (value.HasValue)
 				{
-					SetOptionalParamBytes(OptionalParamCodes.dpf_result,
+					SetOptionalParamBytes(OptionalParamCodes.DpfResult,
 						BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering((byte)value)));
 				}
 				else
 				{
-					SetOptionalParamBytes(OptionalParamCodes.dpf_result, null);
+					SetOptionalParamBytes(OptionalParamCodes.DpfResult, null);
 				}
 			}
 		}
@@ -82,7 +82,7 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return _ResponseAfterMsgId;
+				return _responseAfterMsgId;
 			}
 		}
 		
@@ -111,7 +111,7 @@ namespace AberrantSMPP.Packet.Response
 		{
 			DecodeNonTlv();
 			//fill the TLV table if applicable
-			TranslateTlvDataIntoTable(_ResponseAfterMsgId);
+			TranslateTlvDataIntoTable(_responseAfterMsgId);
 		}
 		
 		/// <summary>
@@ -122,7 +122,7 @@ namespace AberrantSMPP.Packet.Response
 			//header
 			byte[] remainder = BytesAfterHeader;
 			MessageId = SmppStringUtil.GetCStringFromBody(ref remainder);
-			_ResponseAfterMsgId = remainder;
+			_responseAfterMsgId = remainder;
 		}
 		
 		protected override void AppendPduData(ArrayList pdu)

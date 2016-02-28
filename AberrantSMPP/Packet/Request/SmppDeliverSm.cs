@@ -19,7 +19,6 @@
 using System;
 using System.Text;
 using AberrantSMPP.Utility;
-using AberrantSMPP.Packet;
 using System.Collections;
 
 namespace AberrantSMPP.Packet.Request
@@ -32,26 +31,26 @@ namespace AberrantSMPP.Packet.Request
 	{
 		#region private fields
 		
-		private string _ServiceType = string.Empty;
-		private TonType _SourceAddressTon = TonType.International;
-		private NpiType _SourceAddressNpi = NpiType.ISDN;
-		private string _SourceAddress = string.Empty;
-		private TonType _DestinationAddressTon = TonType.International;
-		private NpiType _DestinationAddressNpi = NpiType.ISDN;
-		private string _DestinationAddress = string.Empty;
-		private byte _EsmClass = 0;
-		private byte _ProtocolId = 0;
-		private PriorityType _PriorityFlag = PriorityType.Lowest;
-		private string _ScheduleDeliveryTime = string.Empty;
-		private string _ValidityPeriod = string.Empty;
-		private RegisteredDeliveryType _RegisteredDelivery = RegisteredDeliveryType.None;
-		private DataCoding _DataCoding = DataCoding.SMSCDefault;
-		private byte _SmLength = 0;
-		private string _ShortMessage = null;
+		private string _serviceType = string.Empty;
+		private TonType _sourceAddressTon = TonType.International;
+		private NpiType _sourceAddressNpi = NpiType.Isdn;
+		private string _sourceAddress = string.Empty;
+		private TonType _destinationAddressTon = TonType.International;
+		private NpiType _destinationAddressNpi = NpiType.Isdn;
+		private string _destinationAddress = string.Empty;
+		private byte _esmClass = 0;
+		private byte _protocolId = 0;
+		private PriorityType _priorityFlag = PriorityType.Lowest;
+		private string _scheduleDeliveryTime = string.Empty;
+		private string _validityPeriod = string.Empty;
+		private RegisteredDeliveryType _registeredDelivery = RegisteredDeliveryType.None;
+		private DataCoding _dataCoding = DataCoding.SmscDefault;
+		private byte _smLength = 0;
+		private string _shortMessage = null;
 		
 		#endregion private fields
 
-		protected override CommandId DefaultCommandId { get { return CommandId.deliver_sm; } }
+		protected override CommandId DefaultCommandId { get { return CommandId.DeliverSm; } }
 
 		/// <summary>
 		/// Used to indicate the SMS Application service associated with the message.
@@ -61,12 +60,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _ServiceType;
+				return _serviceType;
 			}
 			
 			set
 			{
-				_ServiceType = (value == null) ? string.Empty : value;
+				_serviceType = (value == null) ? string.Empty : value;
 			}
 		}
 		
@@ -77,12 +76,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _SourceAddressTon;
+				return _sourceAddressTon;
 			}
 			
 			set
 			{
-				_SourceAddressTon = value;
+				_sourceAddressTon = value;
 			}
 		}
 		
@@ -93,12 +92,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _SourceAddressNpi;
+				return _sourceAddressNpi;
 			}
 			
 			set
 			{
-				_SourceAddressNpi = value;
+				_sourceAddressNpi = value;
 			}
 		}
 		
@@ -109,12 +108,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _SourceAddress;
+				return _sourceAddress;
 			}
 			
 			set
 			{
-				_SourceAddress = (value == null) ? string.Empty : value;
+				_sourceAddress = (value == null) ? string.Empty : value;
 			}
 		}
 		
@@ -125,12 +124,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _DestinationAddressTon;
+				return _destinationAddressTon;
 			}
 			
 			set
 			{
-				_DestinationAddressTon = value;
+				_destinationAddressTon = value;
 			}
 		}
 		
@@ -141,12 +140,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _DestinationAddressNpi;
+				return _destinationAddressNpi;
 			}
 			
 			set
 			{
-				_DestinationAddressNpi = value;
+				_destinationAddressNpi = value;
 			}
 		}
 		
@@ -157,12 +156,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _DestinationAddress;
+				return _destinationAddress;
 			}
 			
 			set
 			{
-				_DestinationAddress = (value == null) ? string.Empty : value;
+				_destinationAddress = (value == null) ? string.Empty : value;
 			}
 		}
 		
@@ -174,12 +173,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _EsmClass;
+				return _esmClass;
 			}
 			
 			set
 			{
-				_EsmClass = value;
+				_esmClass = value;
 			}
 		}
 		
@@ -190,12 +189,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _ProtocolId;
+				return _protocolId;
 			}
 			
 			set
 			{
-				_ProtocolId = value;
+				_protocolId = value;
 			}
 		}
 		
@@ -206,12 +205,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _PriorityFlag;
+				return _priorityFlag;
 			}
 			
 			set
 			{
-				_PriorityFlag = value;
+				_priorityFlag = value;
 			}
 		}
 
@@ -224,15 +223,15 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _ScheduleDeliveryTime;
+				return _scheduleDeliveryTime;
 			}
 			set
 			{
 				if (value != null && value != string.Empty)
 				{
-					if (value.Length == DATE_TIME_LENGTH)
+					if (value.Length == DateTimeLength)
 					{
-						_ScheduleDeliveryTime = value;
+						_scheduleDeliveryTime = value;
 					}
 					else
 					{
@@ -241,7 +240,7 @@ namespace AberrantSMPP.Packet.Request
 				}
 				else
 				{
-					_ScheduleDeliveryTime = string.Empty;
+					_scheduleDeliveryTime = string.Empty;
 				}
 			}
 		}
@@ -255,15 +254,15 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _ValidityPeriod;
+				return _validityPeriod;
 			}
 			set
 			{
 				if (value != null && value != string.Empty)
 				{
-					if (value.Length == DATE_TIME_LENGTH)
+					if (value.Length == DateTimeLength)
 					{
-						_ValidityPeriod = value;
+						_validityPeriod = value;
 					}
 					else
 					{
@@ -272,7 +271,7 @@ namespace AberrantSMPP.Packet.Request
 				}
 				else
 				{
-					_ValidityPeriod = string.Empty;
+					_validityPeriod = string.Empty;
 				}
 			}
 		}
@@ -284,12 +283,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _RegisteredDelivery;
+				return _registeredDelivery;
 			}
 			
 			set
 			{
-				_RegisteredDelivery = value;
+				_registeredDelivery = value;
 			}
 		}
 		
@@ -300,12 +299,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _DataCoding;
+				return _dataCoding;
 			}
 			
 			set
 			{
-				_DataCoding = value;
+				_dataCoding = value;
 			}
 		}
 		
@@ -316,7 +315,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _SmLength;
+				return _smLength;
 			}
 		}
 		
@@ -331,12 +330,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _ShortMessage;
+				return _shortMessage;
 			}
 			
 			set
 			{
-				_ShortMessage = value;
+				_shortMessage = value;
 			}
 		}
 		
@@ -349,12 +348,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv(OptionalParamCodes.user_message_reference);
+				return GetHostOrderUInt16FromTlv(OptionalParamCodes.UserMessageReference);
 			}
 			
 			set
 			{
-				SetHostOrderValueIntoTlv(OptionalParamCodes.user_message_reference, value);
+				SetHostOrderValueIntoTlv(OptionalParamCodes.UserMessageReference, value);
 			}
 		}
 		
@@ -366,12 +365,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv(OptionalParamCodes.source_port);
+				return GetHostOrderUInt16FromTlv(OptionalParamCodes.SourcePort);
 			}
 			
 			set
 			{
-				SetHostOrderValueIntoTlv(OptionalParamCodes.source_port, value);
+				SetHostOrderValueIntoTlv(OptionalParamCodes.SourcePort, value);
 			}
 		}
 		
@@ -383,12 +382,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv(OptionalParamCodes.destination_port);
+				return GetHostOrderUInt16FromTlv(OptionalParamCodes.DestinationPort);
 			}
 			
 			set
 			{
-				SetHostOrderValueIntoTlv(OptionalParamCodes.destination_port, value);
+				SetHostOrderValueIntoTlv(OptionalParamCodes.DestinationPort, value);
 			}
 		}
 		
@@ -399,12 +398,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetHostOrderUInt16FromTlv(OptionalParamCodes.sar_msg_ref_num);
+				return GetHostOrderUInt16FromTlv(OptionalParamCodes.SarMsgRefNum);
 			}
 			
 			set
 			{
-				SetHostOrderValueIntoTlv(OptionalParamCodes.sar_msg_ref_num, value);
+				SetHostOrderValueIntoTlv(OptionalParamCodes.SarMsgRefNum, value);
 			}
 		}
 		
@@ -415,12 +414,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte(OptionalParamCodes.sar_total_segments);
+				return GetOptionalParamByte(OptionalParamCodes.SarTotalSegments);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.sar_total_segments, value);
+				SetOptionalParamByte(OptionalParamCodes.SarTotalSegments, value);
 			}
 		}
 		
@@ -432,12 +431,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte(OptionalParamCodes.sar_segment_seqnum);
+				return GetOptionalParamByte(OptionalParamCodes.SarSegmentSeqnum);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.sar_segment_seqnum, value);
+				SetOptionalParamByte(OptionalParamCodes.SarSegmentSeqnum, value);
 			}
 		}
 		
@@ -448,12 +447,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte(OptionalParamCodes.user_response_code);
+				return GetOptionalParamByte(OptionalParamCodes.UserResponseCode);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.user_response_code, value);
+				SetOptionalParamByte(OptionalParamCodes.UserResponseCode, value);
 			}
 		}
 		
@@ -464,12 +463,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte<PrivacyType>(OptionalParamCodes.privacy_indicator);
+				return GetOptionalParamByte<PrivacyType>(OptionalParamCodes.PrivacyIndicator);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.privacy_indicator, value);
+				SetOptionalParamByte(OptionalParamCodes.PrivacyIndicator, value);
 			}
 		}
 		
@@ -480,12 +479,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte<PayloadTypeType>(OptionalParamCodes.payload_type);
+				return GetOptionalParamByte<PayloadTypeType>(OptionalParamCodes.PayloadType);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.payload_type, value);
+				SetOptionalParamByte(OptionalParamCodes.PayloadType, value);
 			}
 		}
 		
@@ -497,7 +496,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				var data = GetOptionalParamBytes(OptionalParamCodes.message_payload);
+				var data = GetOptionalParamBytes(OptionalParamCodes.MessagePayload);
 				return data == null ? null : PduUtil.GetDecodedText(DataCoding, data);
 			}
 			
@@ -515,7 +514,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamBytes(OptionalParamCodes.callback_num);
+				return GetOptionalParamBytes(OptionalParamCodes.CallbackNum);
 			}
 			
 			set
@@ -532,7 +531,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamBytes(OptionalParamCodes.source_subaddress);
+				return GetOptionalParamBytes(OptionalParamCodes.SourceSubaddress);
 			}
 			
 			set
@@ -549,7 +548,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamBytes(OptionalParamCodes.dest_subaddress);
+				return GetOptionalParamBytes(OptionalParamCodes.DestSubaddress);
 			}
 			
 			set
@@ -565,12 +564,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte<LanguageIndicator>(OptionalParamCodes.language_indicator);
+				return GetOptionalParamByte<LanguageIndicator>(OptionalParamCodes.LanguageIndicator);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.language_indicator, value);
+				SetOptionalParamByte(OptionalParamCodes.LanguageIndicator, value);
 			}
 		}
 		
@@ -586,7 +585,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamBytes(OptionalParamCodes.its_session_info);
+				return GetOptionalParamBytes(OptionalParamCodes.ItsSessionInfo);
 			}
 			
 			set
@@ -603,7 +602,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamBytes(OptionalParamCodes.network_error_code);
+				return GetOptionalParamBytes(OptionalParamCodes.NetworkErrorCode);
 			}
 			
 			set
@@ -619,12 +618,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte<MessageStateType>(OptionalParamCodes.message_state);
+				return GetOptionalParamByte<MessageStateType>(OptionalParamCodes.MessageState);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.message_state, value);
+				SetOptionalParamByte(OptionalParamCodes.MessageState, value);
 			}
 		}
 		
@@ -635,7 +634,7 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.receipted_message_id);
+				return GetOptionalParamString(OptionalParamCodes.ReceiptedMessageId);
 			}
 			
 			set
@@ -651,21 +650,21 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.additional_status_info_text);
+				return GetOptionalParamString(OptionalParamCodes.AdditionalStatusInfoText);
 			}
 
 			set
 			{
-				const int MAX_STATUS_LEN = 264;
+				const int maxStatusLen = 264;
 
-				if (value == null || value.Length <= MAX_STATUS_LEN)
+				if (value == null || value.Length <= maxStatusLen)
 				{
-					SetOptionalParamString(OptionalParamCodes.additional_status_info_text, value, true);
+					SetOptionalParamString(OptionalParamCodes.AdditionalStatusInfoText, value, true);
 				}
 				else
 				{
 					throw new ArgumentException(
-						"additional_status_info_text must have length <= " + MAX_STATUS_LEN);
+						"additional_status_info_text must have length <= " + maxStatusLen);
 				}
 			}
 		}
@@ -677,19 +676,19 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return GetOptionalParamByte<DeliveryFailureReason>(OptionalParamCodes.delivery_failure_reason);
+				return GetOptionalParamByte<DeliveryFailureReason>(OptionalParamCodes.DeliveryFailureReason);
 			}
 
 			set
 			{
 				if (value.HasValue)
 				{
-					SetOptionalParamBytes(OptionalParamCodes.delivery_failure_reason,
+					SetOptionalParamBytes(OptionalParamCodes.DeliveryFailureReason,
 						BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering((byte)value)));
 				}
 				else
 				{
-					SetOptionalParamBytes(OptionalParamCodes.delivery_failure_reason, null);
+					SetOptionalParamBytes(OptionalParamCodes.DeliveryFailureReason, null);
 				}
 			}
 		}
@@ -735,8 +734,8 @@ namespace AberrantSMPP.Packet.Request
 			//replace_if_present is always null, so don't bother reading it
 			DataCoding = (DataCoding)remainder[2];
 			//sm_default_msg_id is always null, so don't bother reading it
-			_SmLength = remainder[4];
-			ShortMessage = SmppStringUtil.GetStringFromBody(ref remainder, 5, 5 + _SmLength);
+			_smLength = remainder[4];
+			ShortMessage = SmppStringUtil.GetStringFromBody(ref remainder, 5, 5 + _smLength);
 			TranslateTlvDataIntoTable(remainder);
 		}
 		
@@ -760,7 +759,7 @@ namespace AberrantSMPP.Packet.Request
 			pdu.Add((byte)DataCoding);
 			//sm_default_msg_id is always null, so set it to zero
 			pdu.Add((byte)0);
-			_SmLength = PduUtil.InsertShortMessage(pdu, DataCoding, ShortMessage);			
+			_smLength = PduUtil.InsertShortMessage(pdu, DataCoding, ShortMessage);			
 		}
 	}
 }

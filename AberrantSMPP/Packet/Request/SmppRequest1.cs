@@ -17,7 +17,6 @@
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
 using System;
-using AberrantSMPP.Packet;
 
 namespace AberrantSMPP.Packet.Request
 {
@@ -29,9 +28,9 @@ namespace AberrantSMPP.Packet.Request
 	{
 		#region private fields
 		
-		private TonType _SourceAddressTon = Pdu.TonType.International;
-		private NpiType _SourceAddressNpi = Pdu.NpiType.ISDN;
-		private string _SourceAddress = string.Empty;
+		private TonType _sourceAddressTon = Pdu.TonType.International;
+		private NpiType _sourceAddressNpi = Pdu.NpiType.Isdn;
+		private string _sourceAddress = string.Empty;
 		
 		#endregion private fields
 		
@@ -39,15 +38,15 @@ namespace AberrantSMPP.Packet.Request
 		/// <summary>
 		/// Address length for source and destination addresses
 		/// </summary>
-		protected const int ADDRESS_LENGTH = 20;
+		protected const int AddressLength = 20;
 		/// <summary>
 		/// Message length
 		/// </summary>
-		protected const int MSG_LENGTH = 64;
+		protected const int MsgLength = 64;
 		/// <summary>
 		/// Length of service type string
 		/// </summary>
-		protected const int SERVICE_TYPE_LENGTH = 50;
+		protected const int ServiceTypeLength = 50;
 		
 		#endregion constants
 		
@@ -60,11 +59,11 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _SourceAddressTon;
+				return _sourceAddressTon;
 			}
 			set
 			{
-				_SourceAddressTon = value;
+				_sourceAddressTon = value;
 			}
 		}
 		
@@ -75,11 +74,11 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _SourceAddressNpi;
+				return _sourceAddressNpi;
 			}
 			set
 			{
-				_SourceAddressNpi = value;
+				_sourceAddressNpi = value;
 			}
 		}
 		
@@ -90,25 +89,25 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _SourceAddress;
+				return _sourceAddress;
 			}
 			set
 			{
 				if(value != null)
 				{
-					if(value.Length <= ADDRESS_LENGTH)
+					if(value.Length <= AddressLength)
 					{
-						_SourceAddress = value;
+						_sourceAddress = value;
 					}
 					else
 					{
 						throw new ArgumentOutOfRangeException(
-							"Source Address must be <= " + ADDRESS_LENGTH + " characters.");
+							"Source Address must be <= " + AddressLength + " characters.");
 					}
 				}
 				else
 				{
-					_SourceAddress = string.Empty;
+					_sourceAddress = string.Empty;
 				}
 			}
 		}
