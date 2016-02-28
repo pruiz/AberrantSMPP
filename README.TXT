@@ -1,4 +1,15 @@
 
+UPDATE:
+
+Updated the source to support SSL
+Added library support for sending long messages.
+Modified the client to demostrate the updated behavior.
+
+- Romesh 
+  [http://dinklabs.com]
+
+=========================== OLD README ==============================
+
 This is my own fork of RoaminSMPP code which wasnt maintained anymore.
 By now this is nothing more than an upgraded layout with VS2k10 solution files. 
 
@@ -7,7 +18,7 @@ You can find a NuGet package with binaries for fx v3.5 & v.40 at:
   https://www.nuget.org/packages/AberrantSMPP/
 
 
-=========================== OLD README ==============================
+=========================== OLD OLD README ==============================
 
 This software is meant to provide an open source edition of the basic 
 SMPP v3.4 functionality.  It includes PDU definitions for all of the
@@ -22,9 +33,3 @@ Thanks!
 
 -Chris Bouzek
 
-EDIT:
-Updated the source to support SSL
-Added library support for sending long messages.
-Modified the client to demostrate the updated behavior.
-- Romesh 
-  http://dinklabs.com
