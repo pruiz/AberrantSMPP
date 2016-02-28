@@ -23,14 +23,14 @@ namespace AberrantSMPP
     }
 
     /// <summary>
-    /// Helper class to send long texts
+    /// Helper class to send long texts. Converted to C# from https://gist.github.com/foreverdeepak/9130661
     /// </summary>
     public class SmsMessageHelper
     {
 
-        private const byte UDHIE_HEADER_LENGTH = 0x05;
-        private const byte UDHIE_IDENTIFIER_SAR = 0x00;
-        private const byte UDHIE_SAR_LENGTH = 0x03;
+        private const byte UDHIE_HEADER_LENGTH = 0x05; //Length of UDH ( 5 bytes)
+        private const byte UDHIE_IDENTIFIER_SAR = 0x00; //Indicator for concatenated message
+        private const byte UDHIE_SAR_LENGTH = 0x03; // Subheader Length ( 3 bytes)
 
         /// <summary>
         /// Refer: https://en.wikipedia.org/wiki/GSM_03.38
@@ -90,7 +90,7 @@ namespace AberrantSMPP
 
             var fixedString = message.Trim();//AppendEscToAllExtended(message.Trim());
             var textBytes = GetBytes(fixedString);
-            int maximumMultipartMessageSegmentSize = ((coding == MessageCoding.Unicode) ? 67 : 134);
+            int maximumMultipartMessageSegmentSize = ((coding == MessageCoding.Unicode) ? 67 : 134);  // number of characters
             byte[] byteSingleMessage = textBytes;
             byte[][] byteMessagesArray = null;//SplitUnicodeMessage(byteSingleMessage, maximumMultipartMessageSegmentSize);
 
@@ -143,6 +143,8 @@ namespace AberrantSMPP
             byte[][] segments = new byte[numberOfSegments][];
 
             // generate new reference number
+            // message identification - can be any hexadecimal
+            // number but needs to match the UDH Reference Number of all concatenated SMS
             byte[] referenceNumber = new byte[1];
             new Random().NextBytes(referenceNumber);
 

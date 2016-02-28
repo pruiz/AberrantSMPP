@@ -1,13 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-
 using AberrantSMPP;
+using AberrantSMPP.EventObjects;
 using AberrantSMPP.Packet;
 using AberrantSMPP.Packet.Request;
-using AberrantSMPP.Packet.Response;
 
 namespace TestClient
 {
@@ -39,10 +35,10 @@ namespace TestClient
 	        client.Password = pass;
 
 	        client.EnquireLinkInterval = 25;
-	        client.BindType = AberrantSMPP.Packet.Request.SmppBind.BindingType.BindAsTransceiver;
-	        client.NpiType = AberrantSMPP.Packet.Pdu.NpiType.Isdn;
-	        client.TonType = AberrantSMPP.Packet.Pdu.TonType.International;
-	        client.Version = AberrantSMPP.Packet.Pdu.SmppVersionType.Version34;
+	        client.BindType = SmppBind.BindingType.BindAsTransceiver;
+	        client.NpiType = Pdu.NpiType.Isdn;
+	        client.TonType = Pdu.TonType.International;
+	        client.Version = Pdu.SmppVersionType.Version34;
 	        client.UseSsl = true;
 
 	        client.OnAlert += (s, e) => Console.WriteLine("Alert: " + e.ResponsePdu);
@@ -66,61 +62,49 @@ namespace TestClient
 	        client.OnSubmitMulti += (s, e) => Console.WriteLine("OnSubmitMulti: " + e.ResponsePdu);
 	        client.OnSubmitMultiResp += (s, e) => Console.WriteLine("OnSubmitMultiResp: " + e.ResponsePdu);
 	        client.OnSubmitSm += (s, e) => Console.WriteLine("OnSubmitSm: " + e.ResponsePdu);
-	        client.OnSubmitSmResp += new SmppCommunicator.SubmitSmRespEventHandler(client_OnSubmitSmResp);
+	        client.OnSubmitSmResp += client_OnSubmitSmResp;
 	        client.OnUnbind += (s, e) => Console.WriteLine("OnUnbind: " + e.ResponsePdu);
 	        client.OnUnboundResp += (s, e) => Console.WriteLine("OnUnboundResp: " + e.ResponsePdu);
 
 	        client.Bind();
 
-	        //var txt = new String('a', 200);
-	        //var txt = "X de mas de 160 caractereñ.. @€34567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890ABCDEFGHIJKL987654321";
-	        var txt = @"This is a test messasge from: " + user;
-	        var req = new SmppSubmitSm()
-	        {
-	            //var req = new SmppDataSm() {
-	            AlertOnMsgDelivery = 0x1,
-	            DataCoding = DataCoding.Ucs2,
-	            SourceAddress = "TELNETWORKS",
-	            DestinationAddress = "61401700077",
-	            //DestinationAddress = "+34692471323",
-	            //DestinationAddress = "+34915550000",
-	            ValidityPeriod = "000000235959000R", // R == Time Relative to SMSC's time.
-	            //EsmClass = ...
-	            LanguageIndicator = LanguageIndicator.English,
-	            //PayloadType = Pdu.PayloadTypeType.WDPMessage,
-	            MessagePayload = new byte[] {0x0A, 0x0A},
-	            ShortMessage = txt,
-	            //MsValidity = Pdu.MsValidityType.StoreIndefinitely,
-	            //NumberOfMessages
-	            PriorityFlag = Pdu.PriorityType.Highest,
-	            //PrivacyIndicator = Pdu.PrivacyType.Nonrestricted
-	            RegisteredDelivery = //Pdu.RegisteredDeliveryType.OnSuccessOrFailure,
-	                (Pdu.RegisteredDeliveryType) 0x1e,
-	        };
+            var txt = @"Lorem ipsum dolor sit amet, nonumy iisque appetere usu te. His liber dolores expetenda ea, ut usu harum percipitur, invenire voluptaria sed an. Ut quis nominavi qui, vim at alienum intellegat. In mel purto suscipiantur, at odio adolescens sea. Duo ludus animal ea, eum torquatos reformidans eu, sale dolores urbanitas at est.";
 
-	        //AberrantSMPP.Utility.PduUtil.SetMessagePayload(req, req.MessagePayload);
-	        Console.WriteLine("Sending message...: " + txt);
-	        client.SendPdu(req);
+            MessageCoding coding;
+            // split the text, get the byte arrays
+            byte[][] byteMessagesArray = SmsMessageHelper.SplitMessage(txt, out coding);
 
-	        //while (true)
-	        //{
-	        foreach (var id in SentMessages)
-	        {
-	            Console.WriteLine(id);
-	            //var q = new SmppQuerySm() { MessageId = id };
-	            //client.SendPdu(q);
-	        }
+            // esm_class parameter must be set if we are sending a contactenated message
+            var esmClass = (byte)(byteMessagesArray.Length > 1 ? 0x40 : 0x0);
 
-	        //	System.Threading.Thread.Sleep(1000);
-	        //}
+            // submit all messages
+            for (int i = 0; i < byteMessagesArray.Length; i++)
+            {
+                var req = new SmppSubmitSm()
+                {
+                    DataCoding = DataCoding.OctetUnspecifiedA,// we are sending binary data. despite what the original text was
+                    SourceAddress = "34915550000",
+                    DestinationAddress = "61437600343",
+                    ShortMessage = byteMessagesArray[i],
+                    LanguageIndicator = LanguageIndicator.English,
+                    RegisteredDelivery = Pdu.RegisteredDeliveryType.OnSuccessOrFailure,
+                    EsmClass = esmClass,
+                    ValidityPeriod = "000000235959000R", // R == Time Relative to SMSC's time.
+                    PriorityFlag = Pdu.PriorityType.Highest, 
+                };
+                 
+                Console.WriteLine("Sending message...: " + txt);
+                client.SendPdu(req);
+            }
+              
 	        client.Unbind();
 	    }
 
-	    static void client_OnSubmitSmResp(object source, AberrantSMPP.EventObjects.SubmitSmRespEventArgs e)
+	    static void client_OnSubmitSmResp(object source, SubmitSmRespEventArgs e)
 		{
 			Console.WriteLine("OnSubmitSmResp: " + e.ResponsePdu);
 
-			var res = e.ResponsePdu as SmppSubmitSmResp;
+			var res = e.ResponsePdu;
 			SentMessages.Add(res.MessageId.Trim());
 		}
 	}
