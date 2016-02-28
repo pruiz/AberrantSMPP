@@ -21,3 +21,10 @@ Please read the enclosed license files, COPYING (GNU GPL) and COPYING.LESSER (GN
 Thanks!
 
 -Chris Bouzek
+
+EDIT:
+Updated the source to support SSL
+Added library support for sending long messages.
+Modified the client to demostrate the updated behavior.
+- Romesh 
+  http://dinklabs.com
