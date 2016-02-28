@@ -127,6 +127,7 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="SmppSarMethod.cs" />
+    <Compile Include="SmsMessageHelper.cs" />
     <Compile Include="Utility\DestinationAddress.cs" />
     <Compile Include="Utility\GSMEncoding.cs" />
     <Compile Include="Utility\IEnumerableExtensions.cs" />

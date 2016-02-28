@@ -13,27 +13,19 @@ namespace TestClient
 {
 	class Program
 	{
-		static IList<string> SentMessages = new List<string>();
+	    private static readonly IList<string> SentMessages = new List<string>();
 
 		static void Main(string[] args)
 		{
 		    try
 		    {
-                Gateway("telnetworklcr", "coNN3ct370603");
+                Gateway("username", "password");
             }
 		    catch (Exception ex)
 		    {
 		        Console.WriteLine(ex.Message);
 		    }
-            try
-            {
-                Gateway("dtnw", "OmeGa370603");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-
+           
             Console.WriteLine("Press any key to exit");
 		    Console.ReadKey();
 		}
@@ -41,10 +33,8 @@ namespace TestClient
 	    private static void Gateway(string user, string pass)
 	    {
 	        var client = new SmppCommunicator();
-	        client.Host = "smpp.silverstreet.com";
-	        client.Port = 8445;
-	        //client.SystemId = "dtnw";
-	        //client.Password = "OmeGa370603";
+	        client.Host = "smpp.smsgateway.com";
+	        client.Port = 8445; 
 	        client.SystemId = user;
 	        client.Password = pass;
 
