@@ -35,12 +35,12 @@ namespace AberrantSMPP.Tests
 			0x55, 0x6e, 0x73, 0x75, 0x70, 0x70, 0x6f, 0x72, 0x74, 0x65, 0x64, 0x20, 0x3f
 		};
 
-		private GSMEncoding _encoding = null;
+		private GsmEncoding _encoding = null;
 
 		[SetUp]
 		public void SetUp()
 		{
-			_encoding = new GSMEncoding();
+			_encoding = new GsmEncoding();
 		}
 
 		[Test]
@@ -82,20 +82,20 @@ namespace AberrantSMPP.Tests
 		[ExpectedException(typeof(EncoderFallbackException))]
 		public void Encoding_Invalid_Char_Throws()
 		{
-			new GSMEncoding(true).GetBytes(new char[] { '\x03a2' });
+			new GsmEncoding(true).GetBytes(new char[] { '\x03a2' });
 		}
 
 		[Test]
 		[ExpectedException(typeof(DecoderFallbackException))]
 		public void Decoding_Invalid_Char_Throws()
 		{
-			new GSMEncoding(true).GetString(new byte[] { 0x80 });
+			new GsmEncoding(true).GetString(new byte[] { 0x80 });
 		}
 
 		[Test]
 		public void Encoding_Using_BestFit()
 		{
-			var bytes = new GSMEncoding(true, true).GetBytes("ÁÉÍÓÚ ÀÈÌÒÙ áéíóú €");
+			var bytes = new GsmEncoding(true, true).GetBytes("ÁÉÍÓÚ ÀÈÌÒÙ áéíóú €");
 			var valid = new byte[] { 
 				0x7f, 0x1f, 0x07, 0x08, 0x06, 0x20, 
 				0x7f, 0x1f, 0x07, 0x08, 0x06, 0x20, 
@@ -109,20 +109,20 @@ namespace AberrantSMPP.Tests
 		[ExpectedException(typeof(EncoderFallbackException))]
 		public void Encoding_Invalid_Char_Using_BestFit_Throws_1()
 		{
-			new GSMEncoding(true, true).GetBytes(new char[] { 'º' });
+			new GsmEncoding(true, true).GetBytes(new char[] { 'º' });
 		}
 
 		[Test]
 		[ExpectedException(typeof(EncoderFallbackException))]
 		public void Encoding_Invalid_Char_Using_BestFit_Throws_2()
 		{
-			new GSMEncoding(true, true).GetBytes(new char[] { '\x03a2' });
+			new GsmEncoding(true, true).GetBytes(new char[] { '\x03a2' });
 		}
 
 		[Test]
 		public void Encoding_Invalid_Char_Using_BestFit_Replaces_Character()
 		{
-			var bytes = new GSMEncoding(true, false).GetBytes(new char[] { 'º' });
+			var bytes = new GsmEncoding(true, false).GetBytes(new char[] { 'º' });
 			CollectionAssert.AreEqual(new byte[] { 0x3f }, bytes);
 		}
 

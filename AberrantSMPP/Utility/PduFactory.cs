@@ -18,7 +18,6 @@
  */
 using System;
 using System.Collections;
-using AberrantSMPP;
 using AberrantSMPP.Packet;
 using AberrantSMPP.Packet.Request;
 using AberrantSMPP.Packet.Response;
@@ -41,9 +40,9 @@ namespace AberrantSMPP.Utility
 		/// <summary>
 		/// Factory method to generate the PDU.
 		/// </summary>
-		/// <param name="incomingPDUs">The SMSC response.</param>
+		/// <param name="incomingPdUs">The SMSC response.</param>
 		/// <returns>The PDU.</returns>
-		public Queue GetPduQueue(byte[] incomingPDUs)
+		public Queue GetPduQueue(byte[] incomingPdUs)
 		{
 			Queue packetQueue = new Queue();
 			//get the first packet
@@ -51,33 +50,33 @@ namespace AberrantSMPP.Utility
 			Pdu packet = null;
 			int newLength = 0;
 			//this needs to start at zero
-			uint CommandLength = 0;
+			uint commandLength = 0;
 			
 			//look for multiple PDUs in the response
-			while(incomingPDUs.Length > 0)
+			while(incomingPdUs.Length > 0)
 			{
 				//determine if we have another response PDU after this one
-				newLength =(int)(incomingPDUs.Length - CommandLength);
+				newLength =(int)(incomingPdUs.Length - commandLength);
 				//could be empty data or it could be a PDU
 				if(newLength > 0)
 				{
 					//get the next PDU
-					response = Pdu.TrimResponsePdu(incomingPDUs);
+					response = Pdu.TrimResponsePdu(incomingPdUs);
 					//there could be none...
 					if(response.Length > 0)
 					{
 						//get the command length and command ID
-						CommandLength = Pdu.DecodeCommandLength(response);
+						commandLength = Pdu.DecodeCommandLength(response);
 						//trim the packet down so we can look for more PDUs
-						long length = incomingPDUs.Length - CommandLength;
+						long length = incomingPdUs.Length - commandLength;
 						byte[] newRemainder = new byte[length];
-						Array.Copy(incomingPDUs, CommandLength, newRemainder, 0, length);
-						incomingPDUs = newRemainder;
+						Array.Copy(incomingPdUs, commandLength, newRemainder, 0, length);
+						incomingPdUs = newRemainder;
 						newRemainder = null;
-						if(CommandLength > 0)
+						if(commandLength > 0)
 						{
 							//process
-							packet = GetPDU(response);
+							packet = GetPdu(response);
 							if(packet != null)
 								packetQueue.Enqueue(packet);
 						}
@@ -85,7 +84,7 @@ namespace AberrantSMPP.Utility
 					else
 					{
 						//kill it off and return
-						incomingPDUs = new Byte[0];
+						incomingPdUs = new Byte[0];
 					}
 				}
 			}
@@ -98,55 +97,55 @@ namespace AberrantSMPP.Utility
 		/// </summary>
 		/// <param name="response">The SMSC response.</param>
 		/// <returns>The PDU corresponding to the bytes.</returns>
-		private Pdu GetPDU(byte[] response)
+		private Pdu GetPdu(byte[] response)
 		{
-			var commandID = Pdu.DecodeCommandId(response);
+			var commandId = Pdu.DecodeCommandId(response);
 
 			Pdu packet;
-			switch(commandID)
+			switch(commandId)
 			{
-				case CommandId.alert_notification:
+				case CommandId.AlertNotification:
 					packet = new SmppAlertNotification(response);
 					break;
-				case CommandId.bind_receiver_resp:
-				case CommandId.bind_transceiver_resp:
-				case CommandId.bind_transmitter_resp:
+				case CommandId.BindReceiverResp:
+				case CommandId.BindTransceiverResp:
+				case CommandId.BindTransmitterResp:
 					packet = new SmppBindResp(response);
 					break;
-				case CommandId.cancel_sm_resp:
+				case CommandId.CancelSmResp:
 					packet = new SmppCancelSmResp(response);
 					break;
-				case CommandId.data_sm_resp:
+				case CommandId.DataSmResp:
 					packet = new SmppDataSmResp(response);
 					break;
-				case CommandId.deliver_sm:
+				case CommandId.DeliverSm:
 					packet = new SmppDeliverSm(response);
 					break;
-				case CommandId.enquire_link:
+				case CommandId.EnquireLink:
 					packet = new SmppEnquireLink(response);
 					break;
-				case CommandId.enquire_link_resp:
+				case CommandId.EnquireLinkResp:
 					packet = new SmppEnquireLinkResp(response);
 					break;
-				case CommandId.outbind:
+				case CommandId.Outbind:
 					packet = new SmppOutbind(response);
 					break;
-				case CommandId.query_sm_resp:
+				case CommandId.QuerySmResp:
 					packet = new SmppQuerySmResp(response);
 					break;
-				case CommandId.replace_sm_resp:
+				case CommandId.ReplaceSmResp:
 					packet = new SmppReplaceSmResp(response);
 					break;
-				case CommandId.submit_multi_resp:
+				case CommandId.SubmitMultiResp:
 					packet = new SmppSubmitMultiResp(response);
 					break;
-				case CommandId.submit_sm_resp:
+				case CommandId.SubmitSmResp:
 					packet = new SmppSubmitSmResp(response);
 					break;
-				case CommandId.unbind_resp:
+				case CommandId.UnbindResp:
 					packet = new SmppUnbindResp(response);
 					break;
-				case CommandId.generic_nack:
+				case CommandId.GenericNack:
 					packet = new SmppGenericNack(response);
 					break;
 				default:

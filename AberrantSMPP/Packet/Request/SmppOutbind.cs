@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
-using System;
+
 using System.Collections;
 using System.Text;
 using AberrantSMPP.Utility;
@@ -28,10 +28,10 @@ namespace AberrantSMPP.Packet.Request
 	/// </summary>
 	public class SmppOutbind : SmppRequest
 	{
-		private string _SystemId = string.Empty;
-		private string _Password = string.Empty;
+		private string _systemId = string.Empty;
+		private string _password = string.Empty;
 		
-		protected override CommandId DefaultCommandId { get { return CommandId.outbind; } }
+		protected override CommandId DefaultCommandId { get { return CommandId.Outbind; } }
 
 		/// <summary>
 		/// The ID of the SMSC.
@@ -40,12 +40,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _SystemId;
+				return _systemId;
 			}
 			
 			set
 			{
-				_SystemId = (value == null) ? string.Empty : value;
+				_systemId = (value == null) ? string.Empty : value;
 			}
 		}
 		
@@ -56,12 +56,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _Password;
+				return _password;
 			}
 			
 			set
 			{
-				_Password = (value == null) ? string.Empty : value;
+				_password = (value == null) ? string.Empty : value;
 			}
 		}
 		

@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace AberrantSMPP.Utility
 {
-	public static class IEnumerableExtensions
+	public static class EnumerableExtensions
 	{
 		/// <summary>
 		/// Finds the index in the collection where the predicate evaluates to true.

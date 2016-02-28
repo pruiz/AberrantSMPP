@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace AberrantSMPP.Packet
+﻿namespace AberrantSMPP.Packet
 {
 	/// <summary>
 	/// Enumerates the data coding types.
@@ -15,11 +11,11 @@ namespace AberrantSMPP.Packet
 		/// <summary>
 		/// SMSCDefault (GSM 03.38 - 7bit)
 		/// </summary>
-		SMSCDefault = 0x00,
+		SmscDefault = 0x00,
 		/// <summary>
 		/// IA5_ASCII
 		/// </summary>
-		IA5_ASCII = 0x01,
+		Ia5Ascii = 0x01,
 		/// <summary>
 		/// OctetUnspecifiedB
 		/// </summary>
@@ -35,7 +31,7 @@ namespace AberrantSMPP.Packet
 		/// <summary>
 		/// JIS (X-0208-1990)
 		/// </summary>
-		JIS = 0x05,
+		Jis = 0x05,
 		/// <summary>
 		/// Cyrillic (ISO-8859-5)
 		/// </summary>
@@ -43,11 +39,11 @@ namespace AberrantSMPP.Packet
 		/// <summary>
 		/// Latin_Hebrew (ISO-8859-8)
 		/// </summary>
-		Latin_Hebrew = 0x07,
+		LatinHebrew = 0x07,
 		/// <summary>
 		/// UTF16/UCS2 (ISO/IEC-10646 - Big Endian format)
 		/// </summary>
-		UCS2 = 0x08,
+		Ucs2 = 0x08,
 		/// <summary>
 		/// Pictogram 
 		/// </summary>
@@ -59,10 +55,10 @@ namespace AberrantSMPP.Packet
 		/// <summary>
 		/// ExtendedKanjiJIS (X-0212-1990)
 		/// </summary>
-		ExtendedKanjiJIS = 0x0D,
+		ExtendedKanjiJis = 0x0D,
 		/// <summary>
 		/// KS_C (5601)
 		/// </summary>
-		KS_C = 0x0E
+		KsC = 0x0E
 	}
 }

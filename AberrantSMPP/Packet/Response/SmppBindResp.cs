@@ -16,10 +16,9 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
-using System;
+
 using System.Text;
 using System.Collections;
-using AberrantSMPP;
 using AberrantSMPP.Utility;
 
 namespace AberrantSMPP.Packet.Response
@@ -29,9 +28,9 @@ namespace AberrantSMPP.Packet.Response
 	/// </summary>
 	public class SmppBindResp : SmppResponse
 	{
-		private string _SystemId = string.Empty;
+		private string _systemId = string.Empty;
 
-		protected override CommandId DefaultCommandId { get { return CommandId.bind_transceiver_resp; } }
+		protected override CommandId DefaultCommandId { get { return CommandId.BindTransceiverResp; } }
 
 		/// <summary>
 		/// The ID of the SMSC.
@@ -40,12 +39,12 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return _SystemId;
+				return _systemId;
 			}
 			
 			set
 			{
-				_SystemId = (value == null) ? string.Empty : value;
+				_systemId = (value == null) ? string.Empty : value;
 			}
 		}
 		
@@ -56,12 +55,12 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return GetOptionalParamByte(OptionalParamCodes.SC_interface_version);
+				return GetOptionalParamByte(OptionalParamCodes.ScInterfaceVersion);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.SC_interface_version, value);
+				SetOptionalParamByte(OptionalParamCodes.ScInterfaceVersion, value);
 			}
 		}
 		

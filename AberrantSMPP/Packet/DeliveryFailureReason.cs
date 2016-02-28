@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace AberrantSMPP.Packet
+﻿namespace AberrantSMPP.Packet
 {
 	/// <summary>
 	/// Enumerates the delivery failure types.

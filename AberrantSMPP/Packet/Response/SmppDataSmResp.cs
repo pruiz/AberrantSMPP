@@ -17,10 +17,7 @@
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
 using System;
-using System.Collections;
-using System.Text;
 using AberrantSMPP.Utility;
-using AberrantSMPP.Packet;
 
 namespace AberrantSMPP.Packet.Response
 {
@@ -30,7 +27,7 @@ namespace AberrantSMPP.Packet.Response
 	public class SmppDataSmResp : SmppSubmitSmResp
 	{
 
-		protected override CommandId DefaultCommandId { get { return CommandId.data_sm_resp; } }
+		protected override CommandId DefaultCommandId { get { return CommandId.DataSmResp; } }
 
 		#region optional parameters
 		
@@ -41,19 +38,19 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return GetOptionalParamByte<DeliveryFailureReason>(OptionalParamCodes.delivery_failure_reason);
+				return GetOptionalParamByte<DeliveryFailureReason>(OptionalParamCodes.DeliveryFailureReason);
 			}
 			
 			set
 			{
 				if (value.HasValue)
 				{
-					SetOptionalParamBytes(OptionalParamCodes.delivery_failure_reason,
+					SetOptionalParamBytes(OptionalParamCodes.DeliveryFailureReason,
 						BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering((byte)value)));
 				}
 				else
 				{
-					SetOptionalParamBytes(OptionalParamCodes.delivery_failure_reason, null);
+					SetOptionalParamBytes(OptionalParamCodes.DeliveryFailureReason, null);
 				}
 			}
 		}
@@ -66,7 +63,7 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return GetOptionalParamBytes(OptionalParamCodes.network_error_code);
+				return GetOptionalParamBytes(OptionalParamCodes.NetworkErrorCode);
 			}
 			
 			set
@@ -82,21 +79,21 @@ namespace AberrantSMPP.Packet.Response
 		{
 			get
 			{
-				return GetOptionalParamString(OptionalParamCodes.additional_status_info_text);
+				return GetOptionalParamString(OptionalParamCodes.AdditionalStatusInfoText);
 			}
 			
 			set
 			{
-				const int MAX_STATUS_LEN = 264;
+				const int maxStatusLen = 264;
 
-				if (value == null || value.Length <= MAX_STATUS_LEN)
+				if (value == null || value.Length <= maxStatusLen)
 				{
-					SetOptionalParamString(OptionalParamCodes.additional_status_info_text, value, true);
+					SetOptionalParamString(OptionalParamCodes.AdditionalStatusInfoText, value, true);
 				}
 				else
 				{
 					throw new ArgumentException(
-						"additional_status_info_text must have length <= " + MAX_STATUS_LEN);
+						"additional_status_info_text must have length <= " + maxStatusLen);
 				}
 			}
 		}

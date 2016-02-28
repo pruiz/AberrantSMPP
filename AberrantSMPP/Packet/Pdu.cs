@@ -18,7 +18,6 @@
  */
 using System;
 using System.Collections;
-using System.Diagnostics;
 using AberrantSMPP.Utility;
 using System.Text;
 
@@ -35,21 +34,21 @@ namespace AberrantSMPP.Packet
 		/// <summary>
 		/// Standard length of Pdu header.
 		/// </summary>
-		protected const int HEADER_LENGTH = 16;
+		protected const int HeaderLength = 16;
 		/// <summary>
 		/// Delivery time length
 		/// </summary>
-		protected const int DATE_TIME_LENGTH = 16;
+		protected const int DateTimeLength = 16;
 		
 		#endregion constants
 		
 		#region private fields
-		private CommandStatus _CommandStatus = 0;
-		private CommandId _CommandID;
+		private CommandStatus _commandStatus = 0;
+		private CommandId _commandId;
 		private TlvTable _tlvTable = new TlvTable();
-		private uint _SequenceNumber = 0;
-		private uint _CommandLength;
-		private byte[] _PacketBytes = null;
+		private uint _sequenceNumber = 0;
+		private uint _commandLength;
+		private byte[] _packetBytes = null;
 		#endregion private fields
 		
 		#region properties
@@ -66,7 +65,7 @@ namespace AberrantSMPP.Packet
 		{
 			get
 			{
-				return _CommandLength;
+				return _commandLength;
 			}
 		}
 		
@@ -82,11 +81,11 @@ namespace AberrantSMPP.Packet
 		{
 			get
 			{
-				return _SequenceNumber;
+				return _sequenceNumber;
 			}
 			set
 			{
-				_SequenceNumber = value;
+				_sequenceNumber = value;
 			}
 		}
 		
@@ -97,26 +96,26 @@ namespace AberrantSMPP.Packet
 		{
 			get
 			{
-				return _CommandStatus;
+				return _commandStatus;
 			}
 			set
 			{
-				_CommandStatus = value;
+				_commandStatus = value;
 			}
 		}
 		
 		/// <summary>
 		/// The command ID of this Pdu.
 		/// </summary>
-		protected CommandId CommandID
+		protected CommandId CommandId
 		{
 			get
 			{
-				return _CommandID;
+				return _commandId;
 			}
 			set
 			{
-				_CommandID = value;
+				_commandId = value;
 			}
 		}
 		
@@ -128,14 +127,14 @@ namespace AberrantSMPP.Packet
 		{
 			get
 			{
-				if (_PacketBytes == null) return null;
+				if (_packetBytes == null) return null;
 
-				return (byte[])_PacketBytes.Clone();
+				return (byte[])_packetBytes.Clone();
 			}
 
 			private set
 			{
-				_PacketBytes = value;
+				_packetBytes = value;
 			}
 		}
 
@@ -149,7 +148,7 @@ namespace AberrantSMPP.Packet
 		protected Pdu()
 		{
 			CommandStatus = 0;
-			CommandID = DefaultCommandId;
+			CommandId = DefaultCommandId;
 		}
 		
 		/// <summary>
@@ -158,12 +157,12 @@ namespace AberrantSMPP.Packet
 		/// <param name="incomingBytes">The incoming bytes to translate to a Pdu.</param>
 		protected Pdu(byte[] incomingBytes)
 		{
-			_PacketBytes = incomingBytes;
-			_CommandLength = DecodeCommandLength(_PacketBytes);
-			_CommandID = DecodeCommandId(_PacketBytes);
-			_CommandStatus = (CommandStatus)UnsignedNumConverter.SwapByteOrdering(BitConverter.ToUInt32(_PacketBytes, 8));
-			_SequenceNumber = UnsignedNumConverter.SwapByteOrdering(BitConverter.ToUInt32(_PacketBytes, 12));
-			_PacketBytes = TrimResponsePdu(_PacketBytes);
+			_packetBytes = incomingBytes;
+			_commandLength = DecodeCommandLength(_packetBytes);
+			_commandId = DecodeCommandId(_packetBytes);
+			_commandStatus = (CommandStatus)UnsignedNumConverter.SwapByteOrdering(BitConverter.ToUInt32(_packetBytes, 8));
+			_sequenceNumber = UnsignedNumConverter.SwapByteOrdering(BitConverter.ToUInt32(_packetBytes, 12));
+			_packetBytes = TrimResponsePdu(_packetBytes);
 			
 			//set the other Pdu-specific fields
 			DecodeSmscResponse();
@@ -247,9 +246,9 @@ namespace AberrantSMPP.Packet
 		{
 			get
 			{
-				long length = _PacketBytes.Length - HEADER_LENGTH;
+				long length = _packetBytes.Length - HeaderLength;
 				byte[] remainder = new byte[length];
-				Array.Copy(_PacketBytes, HEADER_LENGTH, remainder, 0, length);
+				Array.Copy(_packetBytes, HeaderLength, remainder, 0, length);
 				return remainder;
 			}
 		}
@@ -262,9 +261,9 @@ namespace AberrantSMPP.Packet
 		protected ArrayList GetPduHeader()
 		{
 			ArrayList pdu = new ArrayList();
-			pdu.AddRange(BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering((uint)_CommandID)));
-			pdu.AddRange(BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering((uint)_CommandStatus)));
-			pdu.AddRange(BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering(_SequenceNumber)));
+			pdu.AddRange(BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering((uint)_commandId)));
+			pdu.AddRange(BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering((uint)_commandStatus)));
+			pdu.AddRange(BitConverter.GetBytes(UnsignedNumConverter.SwapByteOrdering(_sequenceNumber)));
 			pdu.TrimToSize();
 			return pdu;
 		}
@@ -576,7 +575,7 @@ namespace AberrantSMPP.Packet
 			/// <summary>
 			/// SMS
 			/// </summary>
-			SMS = 0x01,
+			Sms = 0x01,
 			/// <summary>
 			/// CircuitSwitchedData
 			/// </summary>
@@ -588,19 +587,19 @@ namespace AberrantSMPP.Packet
 			/// <summary>
 			/// USSD
 			/// </summary>
-			USSD = 0x04,
+			Ussd = 0x04,
 			/// <summary>
 			/// CDPD
 			/// </summary>
-			CDPD = 0x05,
+			Cdpd = 0x05,
 			/// <summary>
 			/// DataTAC
 			/// </summary>
-			DataTAC = 0x06,
+			DataTac = 0x06,
 			/// <summary>
 			/// FLEX_ReFLEX
 			/// </summary>
-			FLEX_ReFLEX = 0x07,
+			FlexReFlex = 0x07,
 			/// <summary>
 			/// CellBroadcast
 			/// </summary>
@@ -619,31 +618,31 @@ namespace AberrantSMPP.Packet
 			/// <summary>
 			/// GSM
 			/// </summary>
-			GSM = 0x01,
+			Gsm = 0x01,
 			/// <summary>
 			/// ANSI_136_TDMA
 			/// </summary>
-			ANSI_136_TDMA = 0x02,
+			Ansi136Tdma = 0x02,
 			/// <summary>
 			/// IS_95_CDMA
 			/// </summary>
-			IS_95_CDMA = 0x03,
+			Is95Cdma = 0x03,
 			/// <summary>
 			/// PDC
 			/// </summary>
-			PDC = 0x04,
+			Pdc = 0x04,
 			/// <summary>
 			/// PHS
 			/// </summary>
-			PHS = 0x05,
+			Phs = 0x05,
 			/// <summary>
 			/// iDEN
 			/// </summary>
-			iDEN = 0x06,
+			IDen = 0x06,
 			/// <summary>
 			/// AMPS
 			/// </summary>
-			AMPS = 0x07,
+			Amps = 0x07,
 			/// <summary>
 			/// PagingNetwork
 			/// </summary>
@@ -697,11 +696,11 @@ namespace AberrantSMPP.Packet
 			/// <summary>
 			/// Version 3.3 of the SMPP spec.
 			/// </summary>
-			Version3_3 = 0x33,
+			Version33 = 0x33,
 			/// <summary>
 			/// Version 3.4 of the SMPP spec.
 			/// </summary>
-			Version3_4 = 0x34
+			Version34 = 0x34
 		}
 		
 		/// <summary>
@@ -716,7 +715,7 @@ namespace AberrantSMPP.Packet
 			/// <summary>
 			/// MSDisplay
 			/// </summary>
-			MSDisplay = 0x01,
+			MsDisplay = 0x01,
 			/// <summary>
 			/// MobileEquipment
 			/// </summary>
@@ -809,7 +808,7 @@ namespace AberrantSMPP.Packet
 			/// <summary>
 			/// SIDBased
 			/// </summary>
-			SIDBased = 0x02,
+			SidBased = 0x02,
 			/// <summary>
 			/// DisplayOnly
 			/// </summary>
@@ -867,7 +866,7 @@ namespace AberrantSMPP.Packet
 			/// <summary>
 			/// ISDN
 			/// </summary>
-			ISDN = 0x01,
+			Isdn = 0x01,
 			/// <summary>
 			/// Data
 			/// </summary>
@@ -891,7 +890,7 @@ namespace AberrantSMPP.Packet
 			/// <summary>
 			/// ERMES
 			/// </summary>
-			ERMES = 0x0A,
+			Ermes = 0x0A,
 			/// <summary>
 			/// Internet
 			/// </summary>
@@ -972,11 +971,11 @@ namespace AberrantSMPP.Packet
 			/// <summary>
 			/// WDPMessage
 			/// </summary>
-			WDPMessage = 0x00,
+			WdpMessage = 0x00,
 			/// <summary>
 			/// WCMPMessage
 			/// </summary>
-			WCMPMessage = 0x01
+			WcmpMessage = 0x01
 		}
 		
 		/// <summary>
@@ -987,11 +986,11 @@ namespace AberrantSMPP.Packet
 			/// <summary>
 			/// DPFNotSet
 			/// </summary>
-			DPFNotSet = 0,
+			DpfNotSet = 0,
 			/// <summary>
 			/// DPFSet
 			/// </summary>
-			DPFSet = 1
+			DpfSet = 1
 		}		
 		
 		#endregion enumerations
@@ -1045,7 +1044,7 @@ namespace AberrantSMPP.Packet
 			}
 			catch		//possible that we are reading a bad command
 			{
-				return CommandId.generic_nack;
+				return CommandId.GenericNack;
 			}
 		}
 		

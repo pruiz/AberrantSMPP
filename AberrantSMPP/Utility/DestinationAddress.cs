@@ -26,11 +26,11 @@ namespace AberrantSMPP.Utility
 	/// </summary>
 	public sealed class DestinationAddress
 	{
-		private Pdu.TonType _DestinationAddressTon = Pdu.TonType.International;
-		private Pdu.NpiType _DestinationAddressNpi = Pdu.NpiType.ISDN;
-		private string _DestinationAddress = string.Empty;
-		private string _DistributionList = string.Empty;
-		private bool _IsDistributionList = false;
+		private Pdu.TonType _destinationAddressTon = Pdu.TonType.International;
+		private Pdu.NpiType _destinationAddressNpi = Pdu.NpiType.Isdn;
+		private string _destinationAddress = string.Empty;
+		private string _distributionList = string.Empty;
+		private bool _isDistributionList = false;
 		
 		#region properties
 		
@@ -41,7 +41,7 @@ namespace AberrantSMPP.Utility
 		{
 			get
 			{
-				return _DestinationAddressTon;
+				return _destinationAddressTon;
 			}
 		}
 		
@@ -52,7 +52,7 @@ namespace AberrantSMPP.Utility
 		{
 			get
 			{
-				return _DestinationAddressNpi;
+				return _destinationAddressNpi;
 			}
 		}
 		
@@ -63,7 +63,7 @@ namespace AberrantSMPP.Utility
 		{
 			get
 			{
-				return _DestinationAddress;
+				return _destinationAddress;
 			}
 		}
 		
@@ -74,7 +74,7 @@ namespace AberrantSMPP.Utility
 		{
 			get
 			{
-				return _DistributionList;
+				return _distributionList;
 			}
 		}
 		
@@ -85,7 +85,7 @@ namespace AberrantSMPP.Utility
 		{
 			get
 			{
-				return _IsDistributionList;
+				return _isDistributionList;
 			}
 		}
 		
@@ -100,11 +100,11 @@ namespace AberrantSMPP.Utility
 		{
 			if(address[0] == 0x01)
 			{
-				_IsDistributionList = false;
+				_isDistributionList = false;
 			}
 			else if(address[0] == 0x02)
 			{
-				_IsDistributionList = true;
+				_isDistributionList = true;
 			}
 			else
 			{
@@ -113,9 +113,9 @@ namespace AberrantSMPP.Utility
 			
 			if(!IsDistributionList)
 			{
-				_DestinationAddressTon = (Pdu.TonType)address[1];
-				_DestinationAddressNpi = (Pdu.NpiType)address[2];
-				_DestinationAddress = SmppStringUtil.GetCStringFromBody(ref address, 3);
+				_destinationAddressTon = (Pdu.TonType)address[1];
+				_destinationAddressNpi = (Pdu.NpiType)address[2];
+				_destinationAddress = SmppStringUtil.GetCStringFromBody(ref address, 3);
 //				
 //				long length = address.Length - 4;
 //				byte[] newRemainder = new byte[length];
@@ -126,7 +126,7 @@ namespace AberrantSMPP.Utility
 			}
 			else
 			{
-				_DistributionList = SmppStringUtil.GetCStringFromBody(ref address, 1);
+				_distributionList = SmppStringUtil.GetCStringFromBody(ref address, 1);
 //				
 //				long length = address.Length - 4;
 //				byte[] newRemainder = new byte[length];
@@ -154,11 +154,11 @@ namespace AberrantSMPP.Utility
 					"Destination Adress must be 20 characters or less.");
 			}
 			
-			_IsDistributionList = false;
+			_isDistributionList = false;
 			
-			this._DestinationAddressTon = destinationAddressTon;
-			this._DestinationAddressNpi = destinationAddressNpi;
-			this._DestinationAddress = destinationAdress;
+			this._destinationAddressTon = destinationAddressTon;
+			this._destinationAddressNpi = destinationAddressNpi;
+			this._destinationAddress = destinationAdress;
 		}
 		
 		/// <summary>
@@ -173,9 +173,9 @@ namespace AberrantSMPP.Utility
 					"distribution list must be 20 characters or less.");
 			}
 			
-			_IsDistributionList = true;
+			_isDistributionList = true;
 			
-			this._DistributionList = distributionList;
+			this._distributionList = distributionList;
 		}
 		
 		/// <summary>
@@ -189,14 +189,14 @@ namespace AberrantSMPP.Utility
 			if(!this.IsDistributionList)
 			{
 				temp = new DestinationAddress(
-					_DestinationAddressTon, _DestinationAddressNpi, _DestinationAddress);
+					_destinationAddressTon, _destinationAddressNpi, _destinationAddress);
 			}
 			else
 			{
-				temp = new DestinationAddress(_DistributionList);
+				temp = new DestinationAddress(_distributionList);
 			}
 			
-			temp._IsDistributionList = this.IsDistributionList;
+			temp._isDistributionList = this.IsDistributionList;
 			
 			return temp;
 		}
@@ -224,13 +224,13 @@ namespace AberrantSMPP.Utility
 	    {
 	    	// value member check
 		    return 
-		    	_DestinationAddressTon.Equals(da._DestinationAddressTon) &&
-		      _DestinationAddressNpi.Equals(da._DestinationAddressNpi) &&
-		      _DestinationAddress.Equals(da._DestinationAddress);
+		    	_destinationAddressTon.Equals(da._destinationAddressTon) &&
+		      _destinationAddressNpi.Equals(da._destinationAddressNpi) &&
+		      _destinationAddress.Equals(da._destinationAddress);
 	    }
 	    else
 	    {
-	    	return _DistributionList.Equals(da._DistributionList);
+	    	return _distributionList.Equals(da._distributionList);
 	    }
 		}
 		

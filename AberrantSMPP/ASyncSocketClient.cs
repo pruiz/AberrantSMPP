@@ -1,6 +1,7 @@
 /* AberrantSMPP: SMPP communication library
  * Copyright (C) 2004, 2005 Christopher M. Bouzek
  * Copyright (C) 2010, 2011 Pablo Ruiz García <pruiz@crt0.net>
+ * Copyright (C) 2016, Romesh Niriella
  *
  * This file is part of RoaminSMPP.
  *
@@ -18,72 +19,75 @@
  */
 
 using System;
-using System.IO;
 using System.Collections.Generic;
+using System.IO;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Threading;
+using Common.Logging;
 
 //#define HARDCORE_LOGGING
 
 namespace AberrantSMPP
 {
-	/// <summary>
-	/// Socket class for asynchronous connection.
-	/// </summary>
-	internal class AsyncSocketClient : IDisposable
-	{
-		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+    /// <summary>
+    ///     Socket class for asynchronous connection.
+    /// </summary>
+    internal sealed class AsyncSocketClient : IDisposable
+    {
+        private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-		#region delegates
+        #region delegates
 
-		/// <summary>
-		/// Called when a message is received.
-		/// </summary>
-		/// <param name="asyncSocketClient">
-		/// The AsyncSocketClient to receive messages from.
-		/// </param>
-		public delegate void MessageHandler(AsyncSocketClient asyncSocketClient);
-	
-		/// <summary>
-		/// Called when a connection is closed.
-		/// </summary>
-		/// <param name="asyncSocketClient">
-		/// The AsyncSocketClient to receive messages from.
-		/// </param>
-		public delegate void SocketClosingHandler(
-			AsyncSocketClient asyncSocketClient);
-	
-		/// <summary>
-		/// Called when a socket error occurs.
-		/// </summary>
-		/// <param name="asyncSocketClient">
-		/// The AsyncSocketClient to receive messages from.
-		/// </param>
-		/// <param name="exception">
-		/// The exception that generated the error.
-		/// </param>
-		public delegate void ErrorHandler(
-			AsyncSocketClient asyncSocketClient, Exception exception);
-	
-		#endregion delegates
-		
-		//private const int BUFFER_SIZE = 1048576; // One MB
-		private const int BUFFER_SIZE = 262144;
+        /// <summary>
+        ///     Called when a message is received.
+        /// </summary>
+        /// <param name="asyncSocketClient">
+        ///     The AsyncSocketClient to receive messages from.
+        /// </param>
+        public delegate void MessageHandler(AsyncSocketClient asyncSocketClient);
 
-		#region private fields
-		private ReaderWriterLockSlim _socketLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
-		private readonly Queue<byte[]> _SendQueue = new Queue<byte[]>();
-		private readonly byte[] _Buffer;
-		private TcpClient _TcpClient;
-		private AsyncCallback _CallbackReadMethod;
-		private AsyncCallback _CallbackWriteMethod;
-		private MessageHandler _MessageHandler;
-		private SocketClosingHandler _SocketCloseHandler;
-		private ErrorHandler _ErrorHandler;
-		private bool _IsDisposed;
-		private string _ServerAddress;
-		private UInt16 _ServerPort;
-		private object _StateObject;
+        /// <summary>
+        ///     Called when a connection is closed.
+        /// </summary>
+        /// <param name="asyncSocketClient">
+        ///     The AsyncSocketClient to receive messages from.
+        /// </param>
+        public delegate void SocketClosingHandler(
+            AsyncSocketClient asyncSocketClient);
+
+        /// <summary>
+        ///     Called when a socket error occurs.
+        /// </summary>
+        /// <param name="asyncSocketClient">
+        ///     The AsyncSocketClient to receive messages from.
+        /// </param>
+        /// <param name="exception">
+        ///     The exception that generated the error.
+        /// </param>
+        public delegate void ErrorHandler(
+            AsyncSocketClient asyncSocketClient, Exception exception);
+
+        #endregion delegates
+
+        //private const int BUFFER_SIZE = 1048576; // One MB
+        private const int BufferSize = 262144;
+
+        #region private fields
+
+        private readonly ReaderWriterLockSlim _socketLock =
+            new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+
+        private readonly Queue<byte[]> _sendQueue = new Queue<byte[]>();
+        private TcpClient _tcpClient;
+        private readonly AsyncCallback _callbackReadMethod;
+        private readonly AsyncCallback _callbackWriteMethod;
+        private readonly MessageHandler _messageHandler;
+        private readonly SocketClosingHandler _socketCloseHandler;
+        private ErrorHandler _errorHandler;
+        private Stream _stream;
+        private bool _isDisposed;
 #if HARDCORE_LOGGING
 		private bool __SendPending;
 		private bool _SendPending
@@ -100,388 +104,399 @@ namespace AberrantSMPP
 			}
 		}
 #else
-		private bool _SendPending;
+        private bool _sendPending;
+        private bool _useSsl;
 #endif
-		#endregion private fields
 
-		#region properties
-		private string _ThreadId
-		{
-			get
-			{
-				return string.Format("{0} ({1})",
-					System.Threading.Thread.CurrentThread.Name,
-					System.Threading.Thread.CurrentThread.ManagedThreadId
-				);
-			}
-		}
-		/// <summary>
-		/// The server address to connect to.
-		/// </summary>
-		public string ServerAddress
-		{
-			get
-			{
-				return _ServerAddress;
-			}
-		}
-		/// <summary>
-		/// The server port to connect to.
-		/// </summary>
-		public UInt16 ServerPort
-		{
-			get
-			{
-				return _ServerPort;
-			}
-		}
-		/// <summary>
-		/// A user set state object to associate some state with a connection.
-		/// </summary>
-		public object StateObject
-		{
-			get
-			{
-				return _StateObject;
-			}
-			set
-			{
-				_StateObject = value;
-			}
-		}
-		/// <summary>
-		/// Buffer to hold data coming in from the socket.
-		/// </summary>
-		public byte[] Buffer
-		{
-			get
-			{
-				return _Buffer;
-			}
-		}
-		/// <summary>
-		/// Gets a value indicating whether this <see cref="AsyncSocketClient"/> is connected.
-		/// </summary>
-		/// <value><c>true</c> if connected; otherwise, <c>false</c>.</value>
-		public bool Connected
-		{
-			get {
-				using (new ReadOnlyLock(_socketLock))
-				{
-					return _TcpClient != null && _TcpClient.Connected && _TcpClient.Client.Connected;
-				}
-			}
-		}
-		#endregion properties
+        #endregion private fields
 
-		/// <summary>
-		/// Constructs an AsyncSocketClient.
-		/// </summary>
-		/// <param name="bufferSize">The size of the receive buffer.</param>
-		/// <param name="stateObject">The object to use for sending state
-		/// information.</param>
-		/// <param name="msgHandler">The user-defined message handling method.
-		/// </param>
-		/// <param name="closingHandler">The user-defined socket closing
-		/// handling method.</param>
-		/// <param name="errHandler">The user defined error handling method.
-		/// </param>
-		public AsyncSocketClient(Int32 bufferSize, object stateObject,
-		                         MessageHandler msgHandler, SocketClosingHandler closingHandler,
-		                         ErrorHandler errHandler)
-		{
-			_Log.DebugFormat("Initializing new instance ({0}).", this.GetHashCode());
+        #region properties
 
-			_Buffer = new byte[BUFFER_SIZE];
-			_StateObject = stateObject;
+        private static string ThreadId => $"{Thread.CurrentThread.Name} ({Thread.CurrentThread.ManagedThreadId})";
 
-			//set handlers
-			_MessageHandler = msgHandler;
-			_SocketCloseHandler = closingHandler;
-			_ErrorHandler = errHandler;
+        /// <summary>
+        ///     The server address to connect to.
+        /// </summary>
+        public string ServerAddress { get; private set; }
 
-			//set the asynchronous method handlers
-			_CallbackReadMethod = new AsyncCallback(ReceiveComplete);
-			_CallbackWriteMethod = new AsyncCallback(SendComplete);
+        /// <summary>
+        ///     The server port to connect to.
+        /// </summary>
+        public ushort ServerPort { get; private set; }
 
-			//haven't been disposed yet
-			_IsDisposed = false;
-		}
+        /// <summary>
+        ///     A user set state object to associate some state with a connection.
+        /// </summary>
+        public object StateObject { get; set; }
 
-		/// <summary>
-		/// Finalizer method.  If Dispose() is called correctly, there is nothing
-		/// for this to do.
-		/// </summary>
-		~AsyncSocketClient()
-		{
-			if (!_IsDisposed)
-			{
-				Dispose();
-			}
-		}
+        /// <summary>
+        ///     Buffer to hold data coming in from the socket.
+        /// </summary>
+        public byte[] Buffer { get; }
 
-		#region public methods
-		/// <summary>
-		/// Sets the disposed flag to true and disconnects the socket.
-		/// </summary>
-		public void Dispose()
-		{
-			using (new WriteLock(_socketLock))
-			{
-				try
-				{
-					_Log.DebugFormat("Disposing instance ({0}).", this.GetHashCode());
-					_IsDisposed = true;
-					Disconnect();
-				}
-				catch (Exception ex)
-				{
-					_Log.Warn("Exception thrown while disposing.", ex);
-				}
-			}
-		}
+        /// <summary>
+        ///     Gets a value indicating whether this <see cref="AsyncSocketClient" /> is connected.
+        /// </summary>
+        /// <value><c>true</c> if connected; otherwise, <c>false</c>.</value>
+        public bool Connected
+        {
+            get
+            {
+                using (new ReadOnlyLock(_socketLock))
+                {
+                    return _tcpClient != null && _tcpClient.Connected && _tcpClient.Client.Connected;
+                }
+            }
+        }
 
-		/// <summary>
-		/// Connects the socket to the given IP address and port.
-		/// This also calls Receive().
-		/// </summary>
-		/// <param name="address">The IP address of the server.</param>
-		/// <param name="port">The port to connect to.</param>
-		public void Connect(String address, UInt16 port)
-		{
-			using (new WriteLock(_socketLock))
-			{
-				//do we already have an open connection?
-				if (_TcpClient != null)
-					throw new InvalidOperationException("Already connected to remote host.");
+        #endregion properties
 
-				_Log.DebugFormat("Connecting instance ({0}) to {1}:{2}.", this.GetHashCode(), address, port);
+        /// <summary>
+        ///     Constructs an AsyncSocketClient.
+        /// </summary>
+        /// <param name="bufferSize">The size of the receive buffer.</param>
+        /// <param name="stateObject">
+        ///     The object to use for sending state
+        ///     information.
+        /// </param>
+        /// <param name="msgHandler">
+        ///     The user-defined message handling method.
+        /// </param>
+        /// <param name="closingHandler">
+        ///     The user-defined socket closing
+        ///     handling method.
+        /// </param>
+        /// <param name="errHandler">
+        ///     The user defined error handling method.
+        /// </param>
+        public AsyncSocketClient(int bufferSize, object stateObject,
+            MessageHandler msgHandler, SocketClosingHandler closingHandler,
+            ErrorHandler errHandler)
+        {
+            Log.DebugFormat("Initializing new instance ({0}).", GetHashCode());
 
-				_ServerAddress = address;
-				_ServerPort = port;
+            Buffer = new byte[BufferSize];
+            StateObject = stateObject;
 
-				//attempt to establish the connection
-				_TcpClient = new TcpClient(_ServerAddress, _ServerPort);
+            //set handlers
+            _messageHandler = msgHandler;
+            _socketCloseHandler = closingHandler;
+            _errorHandler = errHandler;
 
-				//set some socket options
-				_TcpClient.ReceiveBufferSize = BUFFER_SIZE;
-				_TcpClient.SendBufferSize = BUFFER_SIZE;
-				_TcpClient.NoDelay = true;
-				//if the connection is dropped, drop all associated data
-				_TcpClient.LingerState = new LingerOption(false, 0);
-			}
+            //set the asynchronous method handlers
+            _callbackReadMethod = ReceiveComplete;
+            _callbackWriteMethod = SendComplete;
 
-			//start receiving messages
-			Receive();
-		}
+            //haven't been disposed yet
+            _isDisposed = false;
+        }
 
-		///<summary>
-		/// Disconnects from the server.
-		/// </summary>
-		public void Disconnect()
-		{
-			using (new WriteLock(_socketLock))
-			{
+        /// <summary>
+        ///     Finalizer method.  If Dispose() is called correctly, there is nothing
+        ///     for this to do.
+        /// </summary>
+        ~AsyncSocketClient()
+        {
+            if (!_isDisposed)
+            {
+                Dispose();
+            }
+        }
 
-				_Log.DebugFormat("Disconnecting instance ({0}).", this.GetHashCode());
+        #region public methods
 
-				//close down the connection, making sure it exists first
-				if (_TcpClient != null)
-				{
-					Helper.ShallowExceptions(() => _TcpClient.Close());
-				}
+        /// <summary>
+        ///     Sets the disposed flag to true and disconnects the socket.
+        /// </summary>
+        public void Dispose()
+        {
+            using (new WriteLock(_socketLock))
+            {
+                try
+                {
+                    Log.DebugFormat("Disposing instance ({0}).", GetHashCode());
+                    _isDisposed = true;
+                    Disconnect();
+                }
+                catch (Exception ex)
+                {
+                    Log.Warn("Exception thrown while disposing.", ex);
+                }
+            }
+        }
 
-				Helper.ShallowExceptions(() => _SendQueue.Clear());
+        /// <summary>
+        ///     Connects the socket to the given IP address and port.
+        ///     This also calls Receive().
+        /// </summary>
+        /// <param name="address">The IP address of the server.</param>
+        /// <param name="port">The port to connect to.</param>
+        /// <param name="useSsl"></param>
+        public void Connect(string address, ushort port, bool useSsl)
+        {
+            using (new WriteLock(_socketLock))
+            {
+                //do we already have an open connection?
+                if (_tcpClient != null)
+                    throw new InvalidOperationException("Already connected to remote host.");
 
-				//prep for garbage collection-we may want to use this instance again
-				_TcpClient = null;
-			}
-		}
+                Log.DebugFormat("Connecting instance ({0}) to {1}:{2}.", GetHashCode(), address, port);
 
-		///<summary>
-		/// Asynchronously sends data across the socket.
-		/// </summary>
-		/// <param name="buffer">
-		/// The buffer of data to send.
-		/// </param>
-		public void Send(byte[] buffer)
-		{
-			using (new ReadOnlyLock(_socketLock))
-			{
+                ServerAddress = address;
+                ServerPort = port;
+                _useSsl = useSsl;
+                //attempt to establish the connection
+                _tcpClient = new TcpClient(ServerAddress, ServerPort);
+
+                //set some socket options
+                _tcpClient.ReceiveBufferSize = BufferSize;
+                _tcpClient.SendBufferSize = BufferSize;
+                _tcpClient.NoDelay = true;
+                //if the connection is dropped, drop all associated data
+                _tcpClient.LingerState = new LingerOption(false, 0);
+            }
+
+            Stream stream = _tcpClient.GetStream();
+
+            if (_useSsl)
+            {
+                var sslStream = new SslStream(_tcpClient.GetStream(), false,
+                    (sender, certificate, chain, errors) => true);
+                sslStream.AuthenticateAsClient(ServerAddress);
+                stream = sslStream;
+            }
+
+            _stream = stream;
+            //start receiving messages
+            Receive();
+        }
+
+        /// <summary>
+        ///     Disconnects from the server.
+        /// </summary>
+        public void Disconnect()
+        {
+            using (new WriteLock(_socketLock))
+            {
+                Log.DebugFormat("Disconnecting instance ({0}).", GetHashCode());
+
+                _stream.Dispose();
+
+                //close down the connection, making sure it exists first
+                if (_tcpClient != null)
+                {
+                    Helper.ShallowExceptions(() => _tcpClient.Close());
+                }
+
+                Helper.ShallowExceptions(() => _sendQueue.Clear());
+
+                //prep for garbage collection-we may want to use this instance again
+                _tcpClient = null;
+            }
+        }
+
+        /// <summary>
+        ///     Asynchronously sends data across the socket.
+        /// </summary>
+        /// <param name="buffer">
+        ///     The buffer of data to send.
+        /// </param>
+        public void Send(byte[] buffer)
+        {
+            using (new ReadOnlyLock(_socketLock))
+            {
 #if HARDCORE_LOGGING
 				_Log.DebugFormat("Instance {0} - {1} => Sending..", this.GetHashCode(), _ThreadId);
 #endif
 
-				if (!this.Connected)
-					throw new IOException("Socket is closed, cannot Send().");
+                if (!Connected)
+                    throw new IOException("Socket is closed, cannot Send().");
 
-				lock (_SendQueue)
-				{
-					if (_SendPending)
-					{
-						_Log.DebugFormat("Instance {0} - {1} => Queuing data for transmission..", this.GetHashCode(), _ThreadId);
-						_SendQueue.Enqueue(buffer);
-					}
-					else
-					{
+                lock (_sendQueue)
+                {
+                    if (_sendPending)
+                    {
+                        Log.DebugFormat("Instance {0} - {1} => Queuing data for transmission..", GetHashCode(),
+                            ThreadId);
+                        _sendQueue.Enqueue(buffer);
+                    }
+                    else
+                    {
 #if HARDCORE_LOGGING
 						_Log.DebugFormat("Instance {0} - {1} => Sending actual data..", this.GetHashCode(), _ThreadId);
 #endif
 
-						//send the data; don't worry about receiving any state information back;
-						_SendPending = true; 
-						_TcpClient.GetStream()
-							.BeginWrite(buffer, 0, buffer.Length, _CallbackWriteMethod, null);
+                        //send the data; don't worry about receiving any state information back;
+                        _sendPending = true;
+
+
+                        var stream = _stream;
+
+                        stream.BeginWrite(buffer, 0, buffer.Length, _callbackWriteMethod, null);
 #if HARDCORE_LOGGING
 						_Log.DebugFormat("Instance {0} - {1} => Data sent..", this.GetHashCode(), _ThreadId);
 #endif
-					}
-				}
-			}
-		}
+                    }
+                }
+            }
+        }
 
-		/// <summary>
-		/// Asynchronously receives data from the socket.
-		/// </summary>
-		// XXX: Method is now private as it's called internally only. (pruiz)
-		private void Receive()
-		{
-			using (new ReadOnlyLock(_socketLock))
-			{
-				if (!this.Connected)
-					throw new IOException("Socket is closed, cannot Receive().");
+        /// <summary>
+        ///     Asynchronously receives data from the socket.
+        /// </summary>
+        // XXX: Method is now private as it's called internally only. (pruiz)
+        private void Receive()
+        {
+            using (new ReadOnlyLock(_socketLock))
+            {
+                if (!Connected)
+                    throw new IOException("Socket is closed, cannot Receive().");
 
-				Array.Clear(_Buffer, 0, _Buffer.Length); // Clear contents..
+                Array.Clear(Buffer, 0, Buffer.Length); // Clear contents..
 
-				_TcpClient.GetStream()
-					.BeginRead(_Buffer, 0, _Buffer.Length, _CallbackReadMethod, null);
-			}
-		}
-		#endregion public methods
+                var stream = _stream;
 
-		#region private methods
-		/// <summary>
-		/// Callback method called by the NetworkStream's thread when a message
-		/// is sent.
-		/// </summary>
-		/// <param name="state">The state object holding information about
-		/// the connection.</param>
-		private void SendComplete(IAsyncResult state)
-		{
+
+                stream.BeginRead(Buffer, 0, Buffer.Length, _callbackReadMethod, null);
+            }
+        }
+
+        #endregion public methods
+
+        #region private methods
+
+        /// <summary>
+        ///     Callback method called by the NetworkStream's thread when a message
+        ///     is sent.
+        /// </summary>
+        /// <param name="state">
+        ///     The state object holding information about
+        ///     the connection.
+        /// </param>
+        private void SendComplete(IAsyncResult state)
+        {
 #if HARDCORE_LOGGING
 			_Log.DebugFormat("Instance {0} - {1} => Send completed.", this.GetHashCode(), _ThreadId);
 #endif
 
-			try
-			{
-				using (new ReadOnlyLock(_socketLock))
-				{
+            try
+            {
+                using (new ReadOnlyLock(_socketLock))
+                {
 #if HARDCORE_LOGGING
 					_Log.DebugFormat("Instance {0} - {1} => Finishing sent operation..", this.GetHashCode(), _ThreadId);
 #endif
 
-					if (!_SendPending) 
-						_Log.ErrorFormat("Instance {0} - {1} => SendComplete called while SendPending=False?!?!?", this.GetHashCode(), _ThreadId);
+                    if (!_sendPending)
+                        Log.ErrorFormat("Instance {0} - {1} => SendComplete called while SendPending=False?!?!?",
+                            GetHashCode(), ThreadId);
 
-					_SendPending = false;
+                    _sendPending = false;
 
-					if (_TcpClient != null)
-						_TcpClient.GetStream().EndWrite(state);
-				}
-			}
-			catch (Exception ex)
-			{
-				_Log.Warn(string.Format("Instance {0} - {1} => Async send failed.", this.GetHashCode(), _ThreadId), ex);
-			}
+                    if (_tcpClient != null)
+                    {
+                        _stream.EndWrite(state);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warn(string.Format("Instance {0} - {1} => Async send failed.", GetHashCode(), ThreadId), ex);
+            }
 
-			// If there are more packets to send..
+            // If there are more packets to send..
 
-			lock (_SendQueue)
-			{
+            lock (_sendQueue)
+            {
 #if HARDCORE_LOGGING
 				_Log.DebugFormat("Instance {0} - {1} => Processing send queue.", this.GetHashCode(), _ThreadId);
 #endif
 
-				if (_SendQueue.Count == 0)
-				{
+                if (_sendQueue.Count == 0)
+                {
 #if HARDCORE_LOGGING
 					_Log.DebugFormat("Instance {0} - {1} => No packets on queue..", this.GetHashCode(), _ThreadId);
 #endif
-					// Reduce queue internal space..
-					_SendQueue.TrimExcess();
-					return;
-				}
+                    // Reduce queue internal space..
+                    _sendQueue.TrimExcess();
+                    return;
+                }
 
 #if HARDCORE_LOGGING
 				_Log.DebugFormat("Instance {0} - {1} => Sending queued packet.", this.GetHashCode(), _ThreadId);
 #endif
 
-				// Send another packet..
-				using (new ReadOnlyLock(_socketLock))
-				{
-					_SendPending = true;
-					var packet = _SendQueue.Dequeue();
-					_TcpClient.GetStream().BeginWrite(packet, 0, packet.Length, _CallbackWriteMethod, null);
-				}
-			}
-		}
+                // Send another packet..
+                using (new ReadOnlyLock(_socketLock))
+                {
+                    _sendPending = true;
+                    var packet = _sendQueue.Dequeue();
+                    _stream.BeginWrite(packet, 0, packet.Length, _callbackWriteMethod, null);
+                }
+            }
+        }
 
-		/// <summary>
-		/// Callback method called by the NetworkStream's thread when a message
-		/// arrives.
-		/// </summary>
-		/// <param name="state">The state object holding information about
-		/// the connection.</param>
-		private void ReceiveComplete(IAsyncResult state)
-		{
-			try
-			{
-				int bytesReceived = 0;
+        /// <summary>
+        ///     Callback method called by the NetworkStream's thread when a message
+        ///     arrives.
+        /// </summary>
+        /// <param name="state">
+        ///     The state object holding information about
+        ///     the connection.
+        /// </param>
+        private void ReceiveComplete(IAsyncResult state)
+        {
+            try
+            {
+                var bytesReceived = 0;
 
-				using (new ReadOnlyLock(_socketLock))
-				{
-					if (_TcpClient != null)
-						bytesReceived = _TcpClient.GetStream().EndRead(state);
-				}
+                using (new ReadOnlyLock(_socketLock))
+                {
+                    if (_tcpClient != null)
+                        bytesReceived = _stream.EndRead(state);
+                }
 
-				//if there are bytes to process, do so.  Otherwise, the
-				//connection has been lost, so clean it up
-				if (bytesReceived > 0)
-				{
-					try
-					{
-						//send the incoming message to the message handler
-						_MessageHandler(this);
-					}
-					catch (Exception ex)
-					{
-						_Log.Error(string.Format("Instance {0} - {1} => Receive message handler failed.", this.GetHashCode(), _ThreadId), ex);
-					}
-				}
+                //if there are bytes to process, do so.  Otherwise, the
+                //connection has been lost, so clean it up
+                if (bytesReceived > 0)
+                {
+                    try
+                    {
+                        //send the incoming message to the message handler
+                        _messageHandler(this);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(
+                            string.Format("Instance {0} - {1} => Receive message handler failed.", GetHashCode(),
+                                ThreadId), ex);
+                    }
+                }
 
-				// XXX: If readBytesCount == 0 --> Connection has been closed.
+                // XXX: If readBytesCount == 0 --> Connection has been closed.
 
-				// XXX: Access _TcpClient.Client.Available to ensure socket is still working..
+                // XXX: Access _tcpClient.Client.Available to ensure socket is still working..
 
-				//start listening again
-				Receive();
-			}
-			catch (Exception ex)
-			{
-				_Log.Warn("Receive failed.", ex);
+                //start listening again
+                Receive();
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Receive failed.", ex);
 
-				//the connection has been dropped so call the CloseHandler
-				try
-				{
-					_SocketCloseHandler(this);
-				}
-				finally
-				{
-					_Log.WarnFormat("Instance {0} - {1} => Connection terminated, disposing..", this.GetHashCode(), _ThreadId);
-					Dispose();
-				}
-			}
-		}
-		#endregion private methods
-	}
+                //the connection has been dropped so call the CloseHandler
+                try
+                {
+                    _socketCloseHandler(this);
+                }
+                finally
+                {
+                    Log.WarnFormat("Instance {0} - {1} => Connection terminated, disposing..", GetHashCode(), ThreadId);
+                    Dispose();
+                }
+            }
+        }
+
+        #endregion private methods
+    }
 }

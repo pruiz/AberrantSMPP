@@ -16,9 +16,6 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
-using System;
-using AberrantSMPP.Packet;
-using System.Collections;
 
 namespace AberrantSMPP.Packet.Request
 {
@@ -27,7 +24,7 @@ namespace AberrantSMPP.Packet.Request
 	/// </summary>
 	public class SmppEnquireLink : SmppRequest
 	{
-		protected override CommandId DefaultCommandId { get { return CommandId.enquire_link; } }
+		protected override CommandId DefaultCommandId { get { return CommandId.EnquireLink; } }
 
 		#region constructors
 		

@@ -19,7 +19,6 @@
 using System;
 using System.Text;
 using System.Collections;
-using AberrantSMPP;
 using AberrantSMPP.Utility;
 
 namespace AberrantSMPP.Packet.Request
@@ -43,16 +42,16 @@ namespace AberrantSMPP.Packet.Request
 	{
 		#region private fields
 		
-		private string _MessageId = string.Empty;
-		private string _ServiceType = string.Empty;
-		private TonType _DestinationAddressTon = Pdu.TonType.International;
-		private NpiType _DestinationAddressNpi = Pdu.NpiType.ISDN;
-		private string _DestinationAddress = string.Empty;
+		private string _messageId = string.Empty;
+		private string _serviceType = string.Empty;
+		private TonType _destinationAddressTon = Pdu.TonType.International;
+		private NpiType _destinationAddressNpi = Pdu.NpiType.Isdn;
+		private string _destinationAddress = string.Empty;
 		
 		#endregion private fields
 		
 		#region properties
-		protected override CommandId DefaultCommandId { get { return CommandId.cancel_sm; } }
+		protected override CommandId DefaultCommandId { get { return CommandId.CancelSm; } }
 
 		/// <summary>
 		/// Message ID of the message to be cancelled. This must be the SMSC assigned Message 
@@ -62,25 +61,25 @@ namespace AberrantSMPP.Packet.Request
 		{ 
 			get 
 			{ 
-				return _MessageId; 
+				return _messageId; 
 			} 
 			set 
 			{ 
 				if(value != null)
 				{
-					if(value.Length <= MSG_LENGTH)
+					if(value.Length <= MsgLength)
 					{
-						_MessageId = value;
+						_messageId = value;
 					}
 					else
 					{
 						throw new ArgumentOutOfRangeException(
-							"Message ID must be <= " + MSG_LENGTH + " characters.");
+							"Message ID must be <= " + MsgLength + " characters.");
 					}
 				}
 				else
 				{
-					_MessageId = string.Empty;
+					_messageId = string.Empty;
 				}
 			} 
 		}
@@ -93,25 +92,25 @@ namespace AberrantSMPP.Packet.Request
 		{ 
 			get 
 			{ 
-				return _ServiceType; 
+				return _serviceType; 
 			} 
 			set 
 			{
 				if(value != null)
 				{
-					if(value.Length <= SERVICE_TYPE_LENGTH)
+					if(value.Length <= ServiceTypeLength)
 					{
-						_ServiceType = value;
+						_serviceType = value;
 					}
 					else
 					{
 						throw new ArgumentOutOfRangeException(
-							"Service Type must be <= " + SERVICE_TYPE_LENGTH + " characters.");
+							"Service Type must be <= " + ServiceTypeLength + " characters.");
 					}
 				}
 				else
 				{
-					_ServiceType = string.Empty;
+					_serviceType = string.Empty;
 				}
 			} 
 		}
@@ -125,11 +124,11 @@ namespace AberrantSMPP.Packet.Request
 		{ 
 			get 
 			{ 
-				return _DestinationAddressTon; 
+				return _destinationAddressTon; 
 			} 
 			set 
 			{
-				_DestinationAddressTon = value; 
+				_destinationAddressTon = value; 
 			} 
 		}
 		
@@ -142,11 +141,11 @@ namespace AberrantSMPP.Packet.Request
 		{ 
 			get 
 			{ 
-				return _DestinationAddressNpi; 
+				return _destinationAddressNpi; 
 			} 
 			set 
 			{ 
-				_DestinationAddressNpi = value; 
+				_destinationAddressNpi = value; 
 			} 
 		}
 		
@@ -159,25 +158,25 @@ namespace AberrantSMPP.Packet.Request
 		{ 
 			get 
 			{ 
-				return _DestinationAddress; 
+				return _destinationAddress; 
 			} 
 			set 
 			{
 				if(value != null)
 				{
-					if(value.Length <= ADDRESS_LENGTH)
+					if(value.Length <= AddressLength)
 					{
-						_DestinationAddress = value;
+						_destinationAddress = value;
 					}
 					else
 					{
 						throw new ArgumentOutOfRangeException(
-							"Destination Address must be <= " + ADDRESS_LENGTH + " characters.");
+							"Destination Address must be <= " + AddressLength + " characters.");
 					}
 				}
 				else
 				{
-					_DestinationAddress = string.Empty;
+					_destinationAddress = string.Empty;
 				}
 			} 
 		}

@@ -16,10 +16,9 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
-using System;
+
 using System.Text;
 using System.Collections;
-using AberrantSMPP.Packet;
 using AberrantSMPP.Utility;
 
 namespace AberrantSMPP.Packet.Request
@@ -32,12 +31,12 @@ namespace AberrantSMPP.Packet.Request
 	{
 		#region private fields
 		
-		private TonType _SourceAddressTon = TonType.International;
-		private NpiType _SourceAddressNpi = NpiType.ISDN;
-		private string _SourceAddress = string.Empty;
-		private TonType _EsmeAddressTon = TonType.International;
-		private NpiType _EsmeAddressNpi = NpiType.ISDN;
-		private string _EsmeAddress = string.Empty;
+		private TonType _sourceAddressTon = TonType.International;
+		private NpiType _sourceAddressNpi = NpiType.Isdn;
+		private string _sourceAddress = string.Empty;
+		private TonType _esmeAddressTon = TonType.International;
+		private NpiType _esmeAddressNpi = NpiType.Isdn;
+		private string _esmeAddress = string.Empty;
 		
 		#endregion private fields
 
@@ -65,7 +64,7 @@ namespace AberrantSMPP.Packet.Request
 		#endregion enumerations
 		
 		#region mandatory parameters
-		protected override CommandId DefaultCommandId { get { return CommandId.alert_notification; } }
+		protected override CommandId DefaultCommandId { get { return CommandId.AlertNotification; } }
 
 		/// <summary>
 		/// Enumerates the type of number.
@@ -74,12 +73,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _SourceAddressTon;
+				return _sourceAddressTon;
 			}
 			
 			set
 			{
-				_SourceAddressTon = value;
+				_sourceAddressTon = value;
 			}
 		}
 		
@@ -90,12 +89,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _SourceAddressNpi;
+				return _sourceAddressNpi;
 			}
 			
 			set
 			{
-				_SourceAddressNpi = value;
+				_sourceAddressNpi = value;
 			}
 		}
 		
@@ -106,12 +105,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _SourceAddress;
+				return _sourceAddress;
 			}
 			
 			set
 			{
-				_SourceAddress = (value == null) ? string.Empty : value;
+				_sourceAddress = (value == null) ? string.Empty : value;
 			}
 		}
 		
@@ -122,12 +121,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _EsmeAddressTon;
+				return _esmeAddressTon;
 			}
 			
 			set
 			{
-				_EsmeAddressTon = value;
+				_esmeAddressTon = value;
 			}
 		}
 		
@@ -138,12 +137,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _EsmeAddressNpi;
+				return _esmeAddressNpi;
 			}
 			
 			set
 			{
-				_EsmeAddressNpi = value;
+				_esmeAddressNpi = value;
 			}
 		}
 		
@@ -154,12 +153,12 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				return _EsmeAddress;
+				return _esmeAddress;
 			}
 			
 			set
 			{				
-				_EsmeAddress = (value == null) ? string.Empty : value;
+				_esmeAddress = (value == null) ? string.Empty : value;
 			}
 		}
 		
@@ -170,16 +169,16 @@ namespace AberrantSMPP.Packet.Request
 		/// <summary>
 		/// The status of the mobile station.
 		/// </summary>
-		public AvailabilityStatusType? MSAvailabilityStatus
+		public AvailabilityStatusType? MsAvailabilityStatus
 		{
 			get
 			{
-				return GetOptionalParamByte<AvailabilityStatusType>(OptionalParamCodes.ms_availability_status);
+				return GetOptionalParamByte<AvailabilityStatusType>(OptionalParamCodes.MsAvailabilityStatus);
 			}
 			
 			set
 			{
-				SetOptionalParamByte(OptionalParamCodes.ms_availability_status, value);
+				SetOptionalParamByte(OptionalParamCodes.MsAvailabilityStatus, value);
 			}
 		}
 		
