@@ -298,7 +298,7 @@ namespace AberrantSMPP
 		/// Gets a value indicating whether this <see cref="SMPPCommunicator"/> is connected.
 		/// </summary>
 		/// <value><c>true</c> if connected; otherwise, <c>false</c>.</value>
-		public bool Connected { get { return asClient.Connected; } }
+		public bool Connected { get { return asClient != null && asClient.Connected; } }
 		/// <summary>
 		/// Gets a value indicating whether this <see cref="SMPPCommunicator"/> is bound.
 		/// </summary>
