@@ -137,6 +137,14 @@ namespace AberrantSMPP.Utility
 				return "GSMEncoding";
 			}
 		}
+
+		public override string BodyName
+		{
+			get
+			{
+				return "GSM";
+			}
+		}
 		#endregion
 
 		#region .ctors
@@ -474,8 +482,26 @@ namespace AberrantSMPP.Utility
 		#endregion
 	}
 
-	public class PackedGSMEnconding
+	public class PackedGSMEncoding : GSMEncoding
 	{
+		#region Properties
+		public override string EncodingName
+		{
+			get
+			{
+				return "Packed-GSMEncoding";
+			}
+		}
+
+		public override string BodyName
+		{
+			get
+			{
+				return "Packed-GSM";
+			}
+		}
+		#endregion
+
 		/// <summary>
 		/// Compacts a string of septets into octets.
 		/// </summary>
@@ -492,16 +518,16 @@ namespace AberrantSMPP.Utility
 			string octetSecond = string.Empty;
 			for (int i = 0; i < data.Length; i++)
 			{
-				string current = Convert.ToString((byte)data[i], 2).PadLeft(7, '0');
+				string current = System.Convert.ToString((byte)data[i], 2).PadLeft(7, '0');
 				if (i != 0 && i % 8 != 0)
 				{
 					string octetFirst = current.Substring(7 - i % 8);
 					string currentOctet = octetFirst + octetSecond;
-					output.Add(Convert.ToByte(currentOctet, 2));
+					output.Add(System.Convert.ToByte(currentOctet, 2));
 				}
 				octetSecond = current.Substring(0, 7 - i % 8);
 				if (i == data.Length - 1 && octetSecond != string.Empty)
-					output.Add(Convert.ToByte(octetSecond, 2));
+					output.Add(System.Convert.ToByte(octetSecond, 2));
 			}
 
 			byte[] array = new byte[output.Count];
@@ -509,9 +535,55 @@ namespace AberrantSMPP.Utility
 			return array;
 		}
 
-		public static byte[] GetBytes(string text)
+		/// <summary>
+		/// DeCompress an array of bytes of octects into septets.
+		/// </summary>
+		/// <remarks>
+		/// <par>When all 8 available bits of a character are used, we only need 7
+		/// to get a 7-bit character.</par>
+		/// <par>Effectively, every 7 bytes from the original 8 byte are de-packed into
+		/// 8 bytes in the resulting string.</par>
+		/// </remarks>
+		private static string ConvertFrom7Bit(byte[] data)
 		{
-			throw new NotImplementedException();
+			var result = new StringBuilder();
+			var output = new ArrayList();
+			string septetSecond = string.Empty;
+
+			for (int i = 0; i < data.Length; i++)
+			{
+				string current = System.Convert.ToString((byte)data[i], 2).PadLeft(8, '0');
+
+				if (i % 7 == 0 && i != 0)
+				{
+					output.Add(System.Convert.ToByte(septetSecond, 2));
+					septetSecond = string.Empty;
+				}
+
+				string septetFirst = current.Substring(8 - (7 - (i % 7)));
+				string currentSeptet = septetFirst + septetSecond;
+				output.Add(System.Convert.ToByte(currentSeptet, 2));
+
+				septetSecond = current.Substring(0, 8 - (7 - (i % 7)));
+
+				if (i == data.Length - 1 && septetSecond != string.Empty)
+					output.Add(System.Convert.ToByte(septetSecond, 2));
+			}
+
+			foreach (byte @byte in output)
+				result.Append(System.Convert.ToChar(@byte));
+
+			return result.ToString();
+		}
+
+		public override byte[] GetBytes(string text)
+		{
+			return ConvertTo7Bit(text);
+		}
+
+		public override string GetString(byte[] bytes)
+		{
+			return ConvertFrom7Bit(bytes);
 		}
 	}
 
