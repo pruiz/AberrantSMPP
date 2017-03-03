@@ -484,6 +484,23 @@ namespace AberrantSMPP.Utility
 
 	public class PackedGSMEncoding : GSMEncoding
 	{
+		#region .ctors
+		public PackedGSMEncoding() : this (false)
+		{
+		}
+
+		public PackedGSMEncoding(bool throwOnInvalidCharacter)
+			: base(throwOnInvalidCharacter)
+		{
+		}
+
+		public PackedGSMEncoding(bool useBestFitFallback, bool throwOnInvalidCharacter)
+			: base(useBestFitFallback, throwOnInvalidCharacter)
+		{
+		}
+		#endregion
+
+
 		#region Properties
 		public override string EncodingName
 		{
