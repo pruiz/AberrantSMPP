@@ -385,7 +385,7 @@ namespace AberrantSMPP.Packet.Request
 		/// Tells a mobile station to alert the user when the short message arrives at the MS.
 		///
 		/// Note: there is no value part associated with this parameter.
-		/// Any value you pass in will be discarded.
+		/// Any value but null you pass in will be discarded.
 		/// </summary>
 		public byte? AlertOnMsgDelivery
 		{
@@ -395,7 +395,7 @@ namespace AberrantSMPP.Packet.Request
 				{
 					byte[] bytes = GetOptionalParamBytes(
 						OptionalParamCodes.alert_on_message_delivery);
-					return 1;
+					return bytes == null ? null : (byte?) 1;
 				}
 				catch(ApplicationException)
 				{
@@ -406,7 +406,7 @@ namespace AberrantSMPP.Packet.Request
 			set
 			{
 				SetOptionalParamBytes(
-					OptionalParamCodes.alert_on_message_delivery, new Byte[0]);
+					OptionalParamCodes.alert_on_message_delivery, value.HasValue ? new Byte[0] : null);
 			}
 		}
 		
