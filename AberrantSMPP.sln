@@ -19,22 +19,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AberrantSMPP.Tests", "Aberr
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libs", "Libs", "{11BEF2CE-ED05-40B7-8241-53AD3C5CE82D}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Gallio", "Gallio", "{1AA7F588-B76F-4B59-865D-EC1B6A400522}"
-	ProjectSection(SolutionItems) = preProject
-		Libs\Gallio\Gallio.dll = Libs\Gallio\Gallio.dll
-		Libs\Gallio\Gallio.pdb = Libs\Gallio\Gallio.pdb
-		Libs\Gallio\Gallio35.dll = Libs\Gallio\Gallio35.dll
-		Libs\Gallio\Gallio35.pdb = Libs\Gallio\Gallio35.pdb
-		Libs\Gallio\Gallio35.plugin = Libs\Gallio\Gallio35.plugin
-		Libs\Gallio\Gallio35.xml = Libs\Gallio\Gallio35.xml
-		Libs\Gallio\MbUnit.dll = Libs\Gallio\MbUnit.dll
-		Libs\Gallio\MbUnit.pdb = Libs\Gallio\MbUnit.pdb
-		Libs\Gallio\MbUnit35.dll = Libs\Gallio\MbUnit35.dll
-		Libs\Gallio\MbUnit35.pdb = Libs\Gallio\MbUnit35.pdb
-		Libs\Gallio\MbUnit35.plugin = Libs\Gallio\MbUnit35.plugin
-		Libs\Gallio\MbUnit35.xml = Libs\Gallio\MbUnit35.xml
-	EndProjectSection
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Packages", "Packages", "{99427D87-ABCF-4A62-91B1-4822133B029C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{946069C5-ABA2-47AB-8BEE-7B84B130FFB9}"
@@ -90,6 +74,5 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{3B915387-7317-4F39-AE2B-05B549852BF6} = {07328239-94EF-4F55-A1F7-095CFB9E27E4}
-		{1AA7F588-B76F-4B59-865D-EC1B6A400522} = {11BEF2CE-ED05-40B7-8241-53AD3C5CE82D}
 	EndGlobalSection
 EndGlobal

@@ -62,7 +62,7 @@ namespace AberrantSMPP.Utility
 			if (bytes.Length <= maxLen)
 				return new[] { bytes };
 
-			var totalSegments = (bytes.Length / maxLen);
+			var totalSegments = bytes.Length / maxLen - 1 + (bytes.Length % maxLen != 0 ? 1 : 0);
 			var segments = new List<byte[]>();
 
 			for (var i = 0; i <= totalSegments; i++)

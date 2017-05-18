@@ -9,6 +9,7 @@ using NUnit.Framework;
 using AberrantSMPP.Packet;
 using AberrantSMPP.Packet.Request;
 using AberrantSMPP.Packet.Response;
+using AberrantSMPP.Utility;
 
 namespace AberrantSMPP.Tests
 {
@@ -33,6 +34,37 @@ namespace AberrantSMPP.Tests
 
 			Assert.AreEqual("253092914522667372", pdu.ReceiptedMessageId);
 		}
+		#endregion
+
+		#region SmppSubmitSm
+
+		[TestCase(159, DataCoding.SMSCDefault, 1)]
+		[TestCase(161, DataCoding.SMSCDefault, 2)]
+		[TestCase(160, DataCoding.SMSCDefault, 1)]
+		[TestCase(305, DataCoding.SMSCDefault, 2)]
+		[TestCase(306, DataCoding.SMSCDefault, 2)]
+		[TestCase(307, DataCoding.SMSCDefault, 3)]
+		[TestCase(459, DataCoding.SMSCDefault, 3)]
+		[TestCase(69, DataCoding.UCS2, 1)]
+		[TestCase(70, DataCoding.UCS2, 1)]
+		[TestCase(71, DataCoding.UCS2, 2)]
+		[TestCase(133, DataCoding.UCS2, 2)]
+		[TestCase(134, DataCoding.UCS2, 2)]
+		[TestCase(135, DataCoding.UCS2, 3)]
+		public void Can_Fragment_Using_Udh(int length, DataCoding coding, int segmentsNumber)
+		{
+			var message = new String(Enumerable.Repeat('A', length).ToArray());
+
+			var submitSm = new SmppSubmitSm()
+			{
+				DataCoding = coding,
+				ShortMessage = message,
+			};
+
+			var segments = SmppUtil.SplitLongMessage(submitSm, SmppSarMethod.UserDataHeader, 0x1);
+			Assert.AreEqual(segmentsNumber, segments.Count());
+		}
+
 		#endregion
 	}
 }
