@@ -391,22 +391,26 @@ namespace AberrantSMPP.Packet.Request
 		{
 			get
 			{
-				try
+				byte[] bytes = GetOptionalParamBytes(OptionalParamCodes.alert_on_message_delivery);
+
+				if (bytes?.Length > 0)
 				{
-					byte[] bytes = GetOptionalParamBytes(
-						OptionalParamCodes.alert_on_message_delivery);
-					return 1;
+					return bytes[0];
 				}
-				catch(ApplicationException)
+				else if (bytes != null)
 				{
 					return 0;
 				}
+
+				return null;
 			}
 			
 			set
 			{
 				SetOptionalParamBytes(
-					OptionalParamCodes.alert_on_message_delivery, new Byte[0]);
+					OptionalParamCodes.alert_on_message_delivery, 
+					value.HasValue ? new[] { value.Value } : null
+				);
 			}
 		}
 		

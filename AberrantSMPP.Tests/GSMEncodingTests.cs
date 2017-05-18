@@ -89,7 +89,7 @@ namespace AberrantSMPP.Tests
 		[Test]
 		public void Decoding_Invalid_Char_Throws()
 		{
-			Assert.Throws<EncoderFallbackException>(() =>
+			Assert.Throws<DecoderFallbackException>(() =>
 				new GSMEncoding(true).GetString(new byte[] { 0x80 })
 			);
 		}
