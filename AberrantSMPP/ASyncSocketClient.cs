@@ -428,6 +428,7 @@ namespace AberrantSMPP
                catch (Exception ex)
                {
                   _Log.Warn(string.Format("Instance {0} - {1} => Async send failed.", this.GetHashCode(), _ThreadId), ex);
+                  _SendPending = false;
                }
 
             }
