@@ -420,10 +420,18 @@ namespace AberrantSMPP
 				using (new ReadOnlyLock(_socketLock))
 				{
 					_SendPending = true;
-					var packet = _SendQueue.Dequeue();
-					_TcpClient.GetStream().BeginWrite(packet, 0, packet.Length, _CallbackWriteMethod, null);
-				}
-			}
+               try
+               {
+                  var packet = _SendQueue.Dequeue();
+                  _TcpClient.GetStream().BeginWrite(packet, 0, packet.Length, _CallbackWriteMethod, null);
+               }
+               catch (Exception ex)
+               {
+                  _Log.Warn(string.Format("Instance {0} - {1} => Async send failed.", this.GetHashCode(), _ThreadId), ex);
+               }
+
+            }
+         }
 		}
 
 		/// <summary>
