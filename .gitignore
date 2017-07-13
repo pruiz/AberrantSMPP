@@ -2,6 +2,5 @@
 */*.??proj.user
 */bin
 */obj
-*/.vs
 Packages/
 packages/
