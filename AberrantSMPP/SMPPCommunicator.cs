@@ -622,7 +622,10 @@ namespace AberrantSMPP
 			lock (_RequestsAwaitingResponse)
 			{
 				state = new RequestState(SendPdu(request));
-				_RequestsAwaitingResponse.Add(state.SequenceNumber, state);
+				if (!_RequestsAwaitingResponse.ContainsKey(state.SequenceNumber))
+				{
+					_RequestsAwaitingResponse.Add(state.SequenceNumber, state);
+				}
 			}
 
 			var signalled = state.EventHandler.WaitOne(_ResponseTimeout);
@@ -649,9 +652,14 @@ namespace AberrantSMPP
 			{
 				foreach (var request in requests)
 					list.Add(new RequestState(SendPdu(request)));
-			
+					
 				foreach (var state in list)
-					_RequestsAwaitingResponse.Add(state.SequenceNumber, state);
+				{
+					if (!_RequestsAwaitingResponse.ContainsKey(state.SequenceNumber))
+					{
+						_RequestsAwaitingResponse.Add(state.SequenceNumber, state);
+					}
+				}
 			}
 
 			var handlers = list.Select(x => x.EventHandler).ToArray();
