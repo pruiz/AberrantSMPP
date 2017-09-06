@@ -22,6 +22,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Timers;
 using System.ComponentModel;
@@ -86,12 +87,12 @@ namespace AberrantSMPP
 		private bool _SentUnbindPacket = true;  //default to true since we start out unbound
 		private Random _random = new Random();
 		private uint _SequenceNumber = 0;
-		private IDictionary<uint, RequestState> _RequestsAwaitingResponse = new Dictionary<uint, RequestState>();
+		private ConcurrentDictionary<uint, RequestState> _RequestsAwaitingResponse = new ConcurrentDictionary<uint, RequestState>();
 
-		/// <summary>
-		/// Required designer variable.
-		/// </summary>
-		protected Container components = null;
+      /// <summary>
+      /// Required designer variable.
+      /// </summary>
+      protected Container components = null;
 
 		#region properties
 		/// <summary>
@@ -622,14 +623,17 @@ namespace AberrantSMPP
 			lock (_RequestsAwaitingResponse)
 			{
 				state = new RequestState(SendPdu(request));
-				_RequestsAwaitingResponse.Add(state.SequenceNumber, state);
+				if(!_RequestsAwaitingResponse.TryAdd(state.SequenceNumber, state))
+            {
+					throw new Exception("Could not add AwaitingResponse it already exists.");
+				}
 			}
 
 			var signalled = state.EventHandler.WaitOne(_ResponseTimeout);
 
 			lock (_RequestsAwaitingResponse)
 			{
-				_RequestsAwaitingResponse.Remove(state.SequenceNumber);
+				_RequestsAwaitingResponse.TryRemove(state.SequenceNumber, out state);
 
 				if (signalled)
 				{
@@ -649,9 +653,14 @@ namespace AberrantSMPP
 			{
 				foreach (var request in requests)
 					list.Add(new RequestState(SendPdu(request)));
-			
+					
 				foreach (var state in list)
-					_RequestsAwaitingResponse.Add(state.SequenceNumber, state);
+				{
+					if (_RequestsAwaitingResponse.TryAdd(state.SequenceNumber, state))
+					{
+                  _Log.Debug("Could not add the AwaitingResponse.");
+               }
+				}
 			}
 
 			var handlers = list.Select(x => x.EventHandler).ToArray();
@@ -688,8 +697,11 @@ namespace AberrantSMPP
 
 			lock (_RequestsAwaitingResponse)
 			{
+				RequestState reqstate;
 				foreach (var state in list)
-					_RequestsAwaitingResponse.Remove(state.SequenceNumber);
+				{
+					_RequestsAwaitingResponse.TryRemove(state.SequenceNumber, out reqstate);
+				}
 
 				if (signalled)
 				{
