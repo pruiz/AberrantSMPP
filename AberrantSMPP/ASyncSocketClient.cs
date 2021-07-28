@@ -19,9 +19,10 @@
 
 using System;
 using System.IO;
-using System.Collections.Generic;
-using System.Net.Sockets;
 using System.Threading;
+using System.Net.Sockets;
+using System.Net.Security;
+using System.Collections.Generic;
 
 //#define HARDCORE_LOGGING
 
@@ -84,6 +85,7 @@ namespace AberrantSMPP
 		private string _ServerAddress;
 		private UInt16 _ServerPort;
 		private object _StateObject;
+		private Stream _Stream;
 #if HARDCORE_LOGGING
 		private bool __SendPending;
 		private bool _SendPending
@@ -247,7 +249,7 @@ namespace AberrantSMPP
 		/// </summary>
 		/// <param name="address">The IP address of the server.</param>
 		/// <param name="port">The port to connect to.</param>
-		public void Connect(String address, UInt16 port)
+		public void Connect(String address, UInt16 port, bool useSsl)
 		{
 			using (new WriteLock(_socketLock))
 			{
@@ -269,6 +271,16 @@ namespace AberrantSMPP
 				_TcpClient.NoDelay = true;
 				//if the connection is dropped, drop all associated data
 				_TcpClient.LingerState = new LingerOption(false, 0);
+
+				if(useSsl)
+				{
+					_Stream = new SslStream(_TcpClient.GetStream());
+					(_Stream as SslStream).AuthenticateAsClient(_ServerAddress);
+				}
+				else
+				{
+					_Stream = _TcpClient.GetStream();
+				}
 			}
 
 			//start receiving messages
@@ -286,6 +298,11 @@ namespace AberrantSMPP
 				_Log.DebugFormat("Disconnecting instance ({0}).", this.GetHashCode());
 
 				//close down the connection, making sure it exists first
+				if (_Stream != null)
+				{
+					Helper.ShallowExceptions(() => _Stream.Close());
+				}
+
 				if (_TcpClient != null)
 				{
 					Helper.ShallowExceptions(() => _TcpClient.Close());
@@ -294,6 +311,7 @@ namespace AberrantSMPP
 				Helper.ShallowExceptions(() => _SendQueue.Clear());
 
 				//prep for garbage collection-we may want to use this instance again
+				_Stream = null;
 				_TcpClient = null;
 			}
 		}
@@ -329,9 +347,9 @@ namespace AberrantSMPP
 #endif
 
 						//send the data; don't worry about receiving any state information back;
-						_SendPending = true; 
-						_TcpClient.GetStream()
-							.BeginWrite(buffer, 0, buffer.Length, _CallbackWriteMethod, null);
+						_SendPending = true;
+
+						_Stream.BeginWrite(buffer, 0, buffer.Length, _CallbackWriteMethod, null);
 #if HARDCORE_LOGGING
 						_Log.DebugFormat("Instance {0} - {1} => Data sent..", this.GetHashCode(), _ThreadId);
 #endif
@@ -353,8 +371,7 @@ namespace AberrantSMPP
 
 				Array.Clear(_Buffer, 0, _Buffer.Length); // Clear contents..
 
-				_TcpClient.GetStream()
-					.BeginRead(_Buffer, 0, _Buffer.Length, _CallbackReadMethod, null);
+				_Stream.BeginRead(_Buffer, 0, _Buffer.Length, _CallbackReadMethod, null);
 			}
 		}
 		#endregion public methods
@@ -385,8 +402,8 @@ namespace AberrantSMPP
 
 					_SendPending = false;
 
-					if (_TcpClient != null)
-						_TcpClient.GetStream().EndWrite(state);
+					if(_Stream != null)
+						_Stream.EndWrite(state);
 				}
 			}
 			catch (Exception ex)
@@ -421,7 +438,8 @@ namespace AberrantSMPP
 				{
 					_SendPending = true;
 					var packet = _SendQueue.Dequeue();
-					_TcpClient.GetStream().BeginWrite(packet, 0, packet.Length, _CallbackWriteMethod, null);
+
+					_Stream.BeginWrite(packet, 0, packet.Length, _CallbackWriteMethod, null);
 				}
 			}
 		}
@@ -440,8 +458,8 @@ namespace AberrantSMPP
 
 				using (new ReadOnlyLock(_socketLock))
 				{
-					if (_TcpClient != null)
-						bytesReceived = _TcpClient.GetStream().EndRead(state);
+					if (_Stream != null)
+						bytesReceived = _Stream.EndRead(state);
 				}
 
 				//if there are bytes to process, do so.  Otherwise, the

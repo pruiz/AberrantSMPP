@@ -10,9 +10,10 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>AberrantSMPP</RootNamespace>
     <AssemblyName>AberrantSMPP</AssemblyName>
-    <TargetFrameworkVersion Condition=" '$(TargetFrameworkVersion)' == '' ">v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion Condition=" '$(TargetFrameworkVersion)' == '' ">v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile Condition=" '$(TargetFrameworkProfile)' == '' ">Client</TargetFrameworkProfile>
+    <TargetFrameworkProfile Condition=" '$(TargetFrameworkProfile)' == '' ">
+    </TargetFrameworkProfile>
     <!-- We need a framework full name to use as base artifacts directory name -->
     <TargetFrameworkFullName Condition=" '$(TargetFrameworkProfile)' == '' ">$(TargetFrameworkVersion)</TargetFrameworkFullName>
     <TargetFrameworkFullName Condition=" '$(TargetFrameworkProfile)' != '' ">$(TargetFrameworkVersion)-$(TargetFrameworkProfile)</TargetFrameworkFullName>
@@ -44,8 +45,11 @@
     <AssemblyOriginatorKeyFile>AberrantSMPP.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Common.Logging">
-      <HintPath>..\Packages\Common.Logging.2.0.0\lib\2.0\Common.Logging.dll</HintPath>
+    <Reference Include="Common.Logging, Version=3.4.1.0, Culture=neutral, PublicKeyToken=af08829b84f0328e, processorArchitecture=MSIL">
+      <HintPath>..\packages\Common.Logging.3.4.1\lib\net40\Common.Logging.dll</HintPath>
+    </Reference>
+    <Reference Include="Common.Logging.Core, Version=3.4.1.0, Culture=neutral, PublicKeyToken=af08829b84f0328e, processorArchitecture=MSIL">
+      <HintPath>..\packages\Common.Logging.Core.3.4.1\lib\net40\Common.Logging.Core.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
