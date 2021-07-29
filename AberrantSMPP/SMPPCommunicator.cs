@@ -87,6 +87,7 @@ namespace AberrantSMPP
 		private Random _random = new Random();
 		private uint _SequenceNumber = 0;
 		private IDictionary<uint, RequestState> _RequestsAwaitingResponse = new Dictionary<uint, RequestState>();
+		private bool _UseSsl;
 
 		/// <summary>
 		/// Required designer variable.
@@ -304,6 +305,17 @@ namespace AberrantSMPP
 		/// </summary>
 		/// <value><c>true</c> if bound; otherwise, <c>false</c>.</value>
 		public bool Bound { get { lock (_bindingLock) return _Bound; } }
+		public bool UseSsl
+		{
+			get
+			{
+				return _UseSsl;
+			}
+			set
+			{
+				_UseSsl = value;
+			}
+		}
 		#endregion
 		
 		#region events
@@ -782,7 +794,7 @@ namespace AberrantSMPP
 						new AsyncSocketClient.SocketClosingHandler(ClientCloseHandler),
 						new AsyncSocketClient.ErrorHandler(ClientErrorHandler));
 
-					asClient.Connect(Host, Port);
+					asClient.Connect(Host, Port, UseSsl);
 
 					// re-initialize seq. numbers.
 					lock (this) _SequenceNumber = 1; 
