@@ -23,6 +23,7 @@ using System.Threading;
 using System.Net.Sockets;
 using System.Net.Security;
 using System.Collections.Generic;
+using System.Security.Authentication;
 
 //#define HARDCORE_LOGGING
 
@@ -249,7 +250,7 @@ namespace AberrantSMPP
 		/// </summary>
 		/// <param name="address">The IP address of the server.</param>
 		/// <param name="port">The port to connect to.</param>
-		public void Connect(String address, UInt16 port, bool useSsl)
+		public void Connect(String address, UInt16 port, SslProtocols supportedSslProtocols)
 		{
 			using (new WriteLock(_socketLock))
 			{
@@ -272,10 +273,10 @@ namespace AberrantSMPP
 				//if the connection is dropped, drop all associated data
 				_TcpClient.LingerState = new LingerOption(false, 0);
 
-				if(useSsl)
+				if(supportedSslProtocols != SslProtocols.None)
 				{
 					_Stream = new SslStream(_TcpClient.GetStream());
-					(_Stream as SslStream).AuthenticateAsClient(_ServerAddress);
+					(_Stream as SslStream).AuthenticateAsClient(_ServerAddress, null, supportedSslProtocols, true);
 				}
 				else
 				{
