@@ -120,7 +120,11 @@ namespace AberrantSMPP.Utility
 			
 			data.TrimToSize();
 			//add the values to the hashtable
-			tlvTable.Add(tag, data.ToArray(typeof(byte)));
+			if (!tlvTable.ContainsKey(tag)) // Sometimes we receive mulitple tags.  http://smppapi.sourceforge.net/apidocs/ie/omk/smpp/message/tlv/TLVTable.html
+			{
+				tlvTable.Add(tag, data.ToArray(typeof(byte)));
+			}
+
 			//set it up for the next run
 			index += length;
 		}
