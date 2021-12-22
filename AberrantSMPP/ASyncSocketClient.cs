@@ -438,9 +438,23 @@ namespace AberrantSMPP
 				using (new ReadOnlyLock(_socketLock))
 				{
 					_SendPending = true;
-					var packet = _SendQueue.Dequeue();
 
-					_Stream.BeginWrite(packet, 0, packet.Length, _CallbackWriteMethod, null);
+					try
+					{
+						var packet = _SendQueue.Dequeue();
+						_Stream.BeginWrite(packet, 0, packet.Length, _CallbackWriteMethod, null);
+					}
+					catch (Exception ex)
+					{
+						_Log.Warn("SendComplete failed", ex);
+
+						_SendPending = false;
+
+						_ErrorHandler(this, ex);
+
+						// Call _SocketCloseHandler to force Rebind (set _ReBindRequired = true).
+						_SocketCloseHandler(this);
+					}
 				}
 			}
 		}
