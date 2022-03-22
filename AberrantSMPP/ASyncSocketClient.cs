@@ -372,7 +372,11 @@ namespace AberrantSMPP
 
 				Array.Clear(_Buffer, 0, _Buffer.Length); // Clear contents..
 
-				_Stream.BeginRead(_Buffer, 0, _Buffer.Length, _CallbackReadMethod, null);
+				var ares = _Stream.BeginRead(_Buffer, 0, _Buffer.Length, _CallbackReadMethod, null);
+				if (ares.CompletedSynchronously)
+				{
+					ReceiveComplete(ares);
+				}
 			}
 		}
 		#endregion public methods
@@ -493,15 +497,31 @@ namespace AberrantSMPP
 				}
 
 				// XXX: If readBytesCount == 0 --> Connection has been closed.
+				if (bytesReceived == 0)
+				{
+					_Log.DebugFormat("Instance {0} - {1} => BeginRead failed, 0 bytes returned.", this.GetHashCode(), _ThreadId);
+					throw new IOException("No data received while reading."); //< throw so upper layer handles error and tries to re-connect.
+				}
 
 				// XXX: Access _TcpClient.Client.Available to ensure socket is still working..
 
-				//start listening again
+				if (state.CompletedSynchronously)
+				{
+					// If request was completed synchronously, avoid (possible) infinite 
+					// recursion by scheduling next Receive call on a threadpool thread
+					if (!ThreadPool.QueueUserWorkItem(x => Receive()))
+					{
+						_Log.ErrorFormat("Instance {0} - {1} => Unable to schedule Receive call on ThreadPool?!", this.GetHashCode(), _ThreadId);
+						throw new Exception("Unable to schedule Receive call on ThreadPool");
+					}
+					return;
+				}
+
 				Receive();
 			}
 			catch (Exception ex)
 			{
-				_Log.Warn("Receive failed.", ex);
+				_Log.WarnFormat("Instance {0} - {1} => Receive failed.", ex, this.GetHashCode(), _ThreadId);
 
 				//the connection has been dropped so call the CloseHandler
 				try
