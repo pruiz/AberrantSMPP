@@ -18,6 +18,7 @@
  */
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using AberrantSMPP;
 using AberrantSMPP.Packet;
 using AberrantSMPP.Packet.Request;
@@ -43,7 +44,7 @@ namespace AberrantSMPP.Utility
 		/// </summary>
 		/// <param name="incomingPDUs">The SMSC response.</param>
 		/// <returns>The PDU.</returns>
-		public Queue GetPduQueue(byte[] incomingPDUs)
+		public Queue GetPduQueue(Queue<byte> incomingPDUs)
 		{
 			Queue packetQueue = new Queue();
 			//get the first packet
@@ -54,39 +55,36 @@ namespace AberrantSMPP.Utility
 			uint CommandLength = 0;
 			
 			//look for multiple PDUs in the response
-			while(incomingPDUs.Length > 0)
+			while(incomingPDUs.Count > 0)
 			{
 				//determine if we have another response PDU after this one
-				newLength =(int)(incomingPDUs.Length - CommandLength);
+				newLength =(int)(incomingPDUs.Count - CommandLength);
 				//could be empty data or it could be a PDU
-				if(newLength > 0)
+				//get the next PDU
+				response = Pdu.TrimResponsePdu(incomingPDUs);
+				//there could be none...
+				if (response.Length > 0)
 				{
-					//get the next PDU
-					response = Pdu.TrimResponsePdu(incomingPDUs);
-					//there could be none...
-					if(response.Length > 0)
+					//get the command length and command ID
+					CommandLength = Pdu.DecodeCommandLength(response);
+					if (CommandLength > 0)
 					{
-						//get the command length and command ID
-						CommandLength = Pdu.DecodeCommandLength(response);
-						//trim the packet down so we can look for more PDUs
-						long length = incomingPDUs.Length - CommandLength;
-						byte[] newRemainder = new byte[length];
-						Array.Copy(incomingPDUs, CommandLength, newRemainder, 0, length);
-						incomingPDUs = newRemainder;
-						newRemainder = null;
-						if(CommandLength > 0)
+						try
 						{
 							//process
 							packet = GetPDU(response);
 							if(packet != null)
 								packetQueue.Enqueue(packet);
 						}
+						catch (Exception ex)
+						{
+							Console.Error.WriteLine("PDU Parsing problem " + ex.ToString());
+						}
 					}
-					else
-					{
-						//kill it off and return
-						incomingPDUs = new Byte[0];
-					}
+				}
+				else
+				{
+					break;
 				}
 			}
 			

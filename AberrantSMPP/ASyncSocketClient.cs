@@ -1,6 +1,6 @@
 /* AberrantSMPP: SMPP communication library
  * Copyright (C) 2004, 2005 Christopher M. Bouzek
- * Copyright (C) 2010, 2011 Pablo Ruiz García <pruiz@crt0.net>
+ * Copyright (C) 2010, 2011 Pablo Ruiz GarcÃ­a <pruiz@crt0.net>
  *
  * This file is part of RoaminSMPP.
  *
@@ -155,13 +155,7 @@ namespace AberrantSMPP
 		/// <summary>
 		/// Buffer to hold data coming in from the socket.
 		/// </summary>
-		public byte[] Buffer
-		{
-			get
-			{
-				return _Buffer;
-			}
-		}
+		public Queue<byte> Buffer { get; private set; }
 		/// <summary>
 		/// Gets a value indicating whether this <see cref="AsyncSocketClient"/> is connected.
 		/// </summary>
@@ -190,8 +184,8 @@ namespace AberrantSMPP
 		/// <param name="errHandler">The user defined error handling method.
 		/// </param>
 		public AsyncSocketClient(Int32 bufferSize, object stateObject,
-		                         MessageHandler msgHandler, SocketClosingHandler closingHandler,
-		                         ErrorHandler errHandler)
+                                 MessageHandler msgHandler, SocketClosingHandler closingHandler,
+                                 ErrorHandler errHandler)
 		{
 			_Log.DebugFormat("Initializing new instance ({0}).", this.GetHashCode());
 
@@ -209,6 +203,8 @@ namespace AberrantSMPP
 
 			//haven't been disposed yet
 			_IsDisposed = false;
+
+			Buffer = new Queue<byte>(4096);
 		}
 
 		/// <summary>
@@ -377,7 +373,7 @@ namespace AberrantSMPP
 				{
 					ReceiveComplete(ares);
 				}
-			}
+            }
 		}
 		#endregion public methods
 
@@ -479,6 +475,11 @@ namespace AberrantSMPP
 				{
 					if (_Stream != null)
 						bytesReceived = _Stream.EndRead(state);
+
+					for (var i = 0; i < bytesReceived; i++)
+					{
+						Buffer.Enqueue(_Buffer[i]);
+					}
 				}
 
 				//if there are bytes to process, do so.  Otherwise, the
