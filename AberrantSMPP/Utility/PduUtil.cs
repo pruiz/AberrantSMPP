@@ -20,6 +20,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 using AberrantSMPP.Packet;
@@ -336,6 +337,47 @@ namespace AberrantSMPP.Utility
 						"Message Payload must be " + MAX_PAYLOAD_LENGTH + " characters or less in size.");
 				}
 			}
+		}
+		
+		/// Trims the trailing zeroes off of the response Pdu.  Useful for
+		/// tracing and other purposes.  This uses the command length to
+		/// actually trim it down, so TLVs and strings are not lost.  If the
+		/// response actually is the same length as the command length, this
+		/// method performs a pass-through.
+		/// </summary>
+		/// <returns>The trimmed Pdu(byte array).</returns>
+		public static byte[] TrimResponsePdu(Queue<byte> response)
+		{
+			if (response.Count <= 4)
+			{
+				return new Byte[0];
+			}
+
+			// 'Peek' the initial 4 bytes..
+			//		as we can't access to the value without iterate throught the FIFO queue.
+			var header = new byte[]
+			{
+				response.ElementAt(0),
+				response.ElementAt(1),
+				response.ElementAt(2),
+				response.ElementAt(3)
+			};
+
+			uint commLength = Pdu.DecodeCommandLength(header);
+
+			//trap any weird data coming in
+			if(commLength >= Int32.MaxValue || commLength > response.Count)
+			{
+				return new Byte[0];
+			}
+
+			byte[] trimmed = new Byte[commLength];
+			for(int i = 0; i < trimmed.Length; i++)
+			{
+				trimmed[i] = response.Dequeue();
+			}
+
+			return trimmed;
 		}
 	}
 }

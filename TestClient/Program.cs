@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Text;
 
@@ -12,15 +13,13 @@ namespace TestClient
 {
 	class Program
 	{
-		static IList<string> SentMessages = new List<string>();
+		static ConcurrentBag<string> SentMessages = new ConcurrentBag<string>();
 
 		static void Main(string[] args)
 		{
-			var client = new SMPPCommunicator();
-			client.Host = "127.0.0.1";
-			client.Port = 2775;
-			client.SystemId = "test1";
-			client.Password = "TEST1";
+			var client = new SMPPClient("127.0.0.1", 2775);
+			client.SystemId = "smppclient1";
+			client.Password = "password";
 			client.EnquireLinkInterval = 25;
 			client.BindType = AberrantSMPP.Packet.Request.SmppBind.BindingType.BindAsTransceiver;
 			client.NpiType = AberrantSMPP.Packet.Pdu.NpiType.ISDN;
@@ -39,7 +38,7 @@ namespace TestClient
 			client.OnDeliverSmResp += (s, e) => Console.WriteLine("OnDeliverSmResp: " + e.ResponsePdu);
 			client.OnEnquireLink += (s, e) => Console.WriteLine("OnEnquireLink: " + e.ResponsePdu);
 			client.OnEnquireLinkResp += (s, e) => Console.WriteLine("OnEnquireLinkResp: " + e.ResponsePdu);
-			client.OnError += (s, e) => Console.WriteLine("OnError: " + e.ThrownException.Message);
+			client.OnError += (s, e) => Console.WriteLine("OnError: " + e.ThrownException?.ToString());
 			client.OnGenericNack += (s, e) => Console.WriteLine("OnGenericNack: " + e.ResponsePdu);
 			client.OnQuerySm += (s, e) => Console.WriteLine("OnQuerySm: " + e.ResponsePdu);
 			client.OnQuerySmResp += (s, e) => Console.WriteLine("OnQuerySmResp: " + e.ResponsePdu);
@@ -48,11 +47,16 @@ namespace TestClient
 			client.OnSubmitMulti += (s, e) => Console.WriteLine("OnSubmitMulti: " + e.ResponsePdu);
 			client.OnSubmitMultiResp += (s, e) => Console.WriteLine("OnSubmitMultiResp: " + e.ResponsePdu);
 			client.OnSubmitSm += (s, e) => Console.WriteLine("OnSubmitSm: " + e.ResponsePdu);
-			client.OnSubmitSmResp += new SMPPCommunicator.SubmitSmRespEventHandler(client_OnSubmitSmResp);
+			client.OnSubmitSmResp += client_OnSubmitSmResp;
 			client.OnUnbind += (s, e) => Console.WriteLine("OnUnbind: " + e.ResponsePdu);
 			client.OnUnboundResp += (s, e) => Console.WriteLine("OnUnboundResp: " + e.ResponsePdu);
 
-			client.Bind();
+			if (!client.Bind())
+			{
+				Console.Error.WriteLine("Bind failed!");
+				client.Dispose();
+				Environment.Exit(1);
+			}
 
 			//var txt = new String('a', 200);
 			//var txt = "X de mas de 160 caractereñ.. @€34567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890ABCDEFGHIJKL987654321";
@@ -113,18 +117,22 @@ namespace TestClient
 			};
 #endif
 			//AberrantSMPP.Utility.PduUtil.SetMessagePayload(req, req.MessagePayload);
-			client.SendPdu(req);
-
-			while (true)
+			foreach (var _ in Enumerable.Range(1, 100))
+			{
+				client.SendPdu(req);
+			}
+			
+			while (false)
 			{
 				foreach (var id in SentMessages)
 				{
-					//var q = new SmppQuerySm() { MessageId = id };
-					//client.SendPdu(q);
+					var q = new SmppQuerySm() { MessageId = id };
+					client.SendPdu(req);
 				}
 
 				System.Threading.Thread.Sleep(1000);
 			}
+			System.Threading.Thread.Sleep(1000);
 		}
 
 		static void client_OnSubmitSmResp(object source, AberrantSMPP.EventObjects.SubmitSmRespEventArgs e)

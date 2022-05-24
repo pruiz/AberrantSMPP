@@ -1,6 +1,6 @@
-/* AberrantSMPP: SMPP communication library
+ï»¿/* AberrantSMPP: SMPP communication library
  * Copyright (C) 2004, 2005 Christopher M. Bouzek
- * Copyright (C) 2010, 2011 Pablo Ruiz García <pruiz@crt0.net>
+ * Copyright (C) 2010, 2011 Pablo Ruiz Garcï¿½a <pruiz@crt0.net>
  *
  * This file is part of RoaminSMPP.
  *
@@ -19,6 +19,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+
 using AberrantSMPP;
 using AberrantSMPP.Packet;
 using AberrantSMPP.Packet.Request;
@@ -60,99 +61,39 @@ namespace AberrantSMPP.Utility
 				//determine if we have another response PDU after this one
 				newLength =(int)(incomingPDUs.Count - CommandLength);
 				//could be empty data or it could be a PDU
-				//get the next PDU
-				response = Pdu.TrimResponsePdu(incomingPDUs);
-				//there could be none...
-				if (response.Length > 0)
+				if(newLength > 0)
 				{
-					//get the command length and command ID
-					CommandLength = Pdu.DecodeCommandLength(response);
-					if (CommandLength > 0)
+					//get the next PDU
+					response = PduUtil.TrimResponsePdu(incomingPDUs);
+					//there could be none...
+					if(response.Length > 0)
 					{
-						try
+						//get the command length and command ID
+						CommandLength = Pdu.DecodeCommandLength(response);
+						if(CommandLength > 0)
 						{
-							//process
-							packet = GetPDU(response);
-							if(packet != null)
-								packetQueue.Enqueue(packet);
-						}
-						catch (Exception ex)
-						{
-							Console.Error.WriteLine("PDU Parsing problem " + ex.ToString());
+							try
+							{
+								//process
+								packet = Pdu.Parse(response);
+								if (packet != null)
+									packetQueue.Enqueue(packet);
+							}
+							catch (Exception ex)
+							{
+								Console.Error.WriteLine("PDU Parsing problem " + ex.ToString());
+							}
 						}
 					}
-				}
-				else
-				{
-					break;
+					else
+					{
+						//kill it off and return
+						break;
+					}
 				}
 			}
 			
 			return packetQueue;
-		}
-		
-		/// <summary>
-		/// Gets a single PDU based on the response bytes.
-		/// </summary>
-		/// <param name="response">The SMSC response.</param>
-		/// <returns>The PDU corresponding to the bytes.</returns>
-		private Pdu GetPDU(byte[] response)
-		{
-			var commandID = Pdu.DecodeCommandId(response);
-
-			Pdu packet;
-			switch(commandID)
-			{
-				case CommandId.alert_notification:
-					packet = new SmppAlertNotification(response);
-					break;
-				case CommandId.bind_receiver_resp:
-				case CommandId.bind_transceiver_resp:
-				case CommandId.bind_transmitter_resp:
-					packet = new SmppBindResp(response);
-					break;
-				case CommandId.cancel_sm_resp:
-					packet = new SmppCancelSmResp(response);
-					break;
-				case CommandId.data_sm_resp:
-					packet = new SmppDataSmResp(response);
-					break;
-				case CommandId.deliver_sm:
-					packet = new SmppDeliverSm(response);
-					break;
-				case CommandId.enquire_link:
-					packet = new SmppEnquireLink(response);
-					break;
-				case CommandId.enquire_link_resp:
-					packet = new SmppEnquireLinkResp(response);
-					break;
-				case CommandId.outbind:
-					packet = new SmppOutbind(response);
-					break;
-				case CommandId.query_sm_resp:
-					packet = new SmppQuerySmResp(response);
-					break;
-				case CommandId.replace_sm_resp:
-					packet = new SmppReplaceSmResp(response);
-					break;
-				case CommandId.submit_multi_resp:
-					packet = new SmppSubmitMultiResp(response);
-					break;
-				case CommandId.submit_sm_resp:
-					packet = new SmppSubmitSmResp(response);
-					break;
-				case CommandId.unbind_resp:
-					packet = new SmppUnbindResp(response);
-					break;
-				case CommandId.generic_nack:
-					packet = new SmppGenericNack(response);
-					break;
-				default:
-					packet = null;
-					break;
-			}
-
-			return packet;
 		}
 	}
 }

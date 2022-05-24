@@ -19,14 +19,21 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Net.Sockets;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Timers;
 using System.ComponentModel;
+using System.Net.Security;
 using System.Security.Authentication;
-using System.Runtime.CompilerServices;
+
+using DotNetty.Codecs;
+using DotNetty.Handlers.Logging;
+using DotNetty.Handlers.Tls;
+using DotNetty.Transport.Bootstrapping;
+using DotNetty.Transport.Channels;
+using DotNetty.Transport.Channels.Sockets;
+using DotNetty.Common.Internal.Logging;
 
 using AberrantSMPP.Packet;
 using AberrantSMPP.Packet.Request;
@@ -34,6 +41,8 @@ using AberrantSMPP.Packet.Response;
 using AberrantSMPP.Exceptions;
 using AberrantSMPP.EventObjects;
 using AberrantSMPP.Utility;
+using DotNetty.Buffers;
+using Microsoft.Extensions.Logging;
 
 namespace AberrantSMPP 
 {
@@ -44,31 +53,15 @@ namespace AberrantSMPP
 	/// sent.  For example: there is a default deliver_sm_resp implemented.  If you "listen" to 
 	/// the deliver_sm event, it is your responsibility to then send the deliver_sm_resp packet.
 	/// </summary>
-	public class SMPPCommunicator : Component, IDisposable
+	public partial class SMPPClient : IDisposable
 	{
 		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-		#region Inner classes
-		private class RequestState 
-		{
-			public readonly uint SequenceNumber;
-			public readonly ManualResetEvent EventHandler;
-			public SmppResponse Response { get; set; }
-
-			public RequestState(uint seqno)
-			{
-				SequenceNumber = seqno;
-				EventHandler = new ManualResetEvent(false);
-				Response = null;
-			}
-		}
-		#endregion
-
 		private readonly object _bindingLock = new object();
 
-		private AsyncSocketClient asClient;
-		private string _Host;
-		private UInt16 _Port;
+		private Bootstrap _channelFactory;
+		private IEventLoopGroup _eventLoopGroup;
+		private IChannel _channel; 
 		private string _SystemId;
 		private string _Password;
 		private string _SystemType;
@@ -87,44 +80,21 @@ namespace AberrantSMPP
 		private bool _SentUnbindPacket = true;  //default to true since we start out unbound
 		private Random _random = new Random();
 		private uint _SequenceNumber = 0;
+		private uint _channelBufferSize = 10240;
 		private IDictionary<uint, RequestState> _RequestsAwaitingResponse = new Dictionary<uint, RequestState>();
 		private SslProtocols _supportedSslProtocols;
-		private bool _disableSslRevocationChecking;
-
-		/// <summary>
-		/// Required designer variable.
-		/// </summary>
-		protected Container components = null;
 
 		#region properties
+
 		/// <summary>
 		/// The host to bind this SMPPCommunicator to.
 		/// </summary>
-		public string Host
-		{
-			get
-			{
-				return _Host;
-			}
-			set
-			{
-				_Host = value;
-			}
-		}
+		public string Host { get; private set; } = "127.0.0.1";
+
 		/// <summary>
 		/// The port on the SMSC to connect to.
 		/// </summary>
-		public UInt16 Port
-		{
-			get
-			{
-				return _Port;
-			}
-			set
-			{
-				_Port = value;
-			}
-		}
+		public UInt16 Port { get; private set; } = 2775;
 		/// <summary>
 		/// Accessor to determine if we have sent the unbind packet out.  Once the packet is 
 		/// sent, you can consider this object to be unbound.
@@ -297,11 +267,12 @@ namespace AberrantSMPP
 			get { return _ResponseTimeout; }
 			set { _ResponseTimeout = value; }
 		}
+
 		/// <summary>
 		/// Gets a value indicating whether this <see cref="SMPPCommunicator"/> is connected.
 		/// </summary>
 		/// <value><c>true</c> if connected; otherwise, <c>false</c>.</value>
-		public bool Connected { get { return asClient != null && asClient.Connected; } }
+		public bool Connected => _channel?.Active == true;
 		/// <summary>
 		/// Gets a value indicating whether this <see cref="SMPPCommunicator"/> is bound.
 		/// </summary>
@@ -316,21 +287,6 @@ namespace AberrantSMPP
 			set
 			{
 				_supportedSslProtocols = value;
-			}
-		}
-
-		/// <summary>
-		/// Gets or sets if must check servers certificate revocation status.
-		/// </summary>
-		public bool DisableSslRevocationChecking
-		{
-			get
-			{
-				return _disableSslRevocationChecking;
-			}
-			set
-			{
-				_disableSslRevocationChecking = value;
 			}
 		}
 		#endregion
@@ -568,41 +524,190 @@ namespace AberrantSMPP
 		#endregion
 
 		#region constructors
-		/// <summary>
-		/// Creates a default SMPPCommunicator, with port 9999, bindtype set to 
-		/// transceiver, host set to localhost, NPI type set to ISDN, TON type 
-		/// set to International, version set to 3.4, enquire link interval set 
-		/// to 0(disabled), sleep time after socket failure set to 10 seconds, 
-		/// and address range, password, system type and system ID set to null 
-		///(no value).
-		/// </summary>
-		/// <param name="container">The container that will hold this 
-		/// component.</param>
-		public SMPPCommunicator(IContainer container)
+
+		public class OptionsMonitor<T> : Microsoft.Extensions.Options.IOptionsMonitor<T>
 		{
-			// Required for Windows.Forms Class Composition Designer support
-			InitCommunicator();
-			if (container != null) container.Add(this);
-			InitializeComponent();
+			private readonly T options;
+
+			public OptionsMonitor(T options)
+			{
+				this.options = options;
+			}
+
+			public T CurrentValue => options;
+
+			public T Get(string name) => options;
+
+			public IDisposable OnChange(Action<T, string> listener) => new NullDisposable();
+
+			private class NullDisposable : IDisposable
+			{
+				public void Dispose() { }
+			}
+		}
+		
+		static SMPPClient()
+		{
+			var options = new Microsoft.Extensions.Logging.Console.ConsoleLoggerOptions();
+			InternalLoggerFactory.DefaultFactory.AddProvider(new Microsoft.Extensions.Logging.Console.ConsoleLoggerProvider(new OptionsMonitor<Microsoft.Extensions.Logging.Console.ConsoleLoggerOptions>(options)));
 		}
 
 		/// <summary>
-		/// Creates a default SMPPCommunicator, with port 9999, bindtype set to 
+		/// Creates a default SMPPClient, with port 9999, bindtype set to 
 		/// transceiver, host set to localhost, NPI type set to ISDN, TON type 
 		/// set to International, version set to 3.4, enquire link interval set 
 		/// to 0(disabled), sleep time after socket failure set to 10 seconds, 
 		/// and address range, password, system type and system ID set to null 
 		///(no value).
 		/// </summary>
-		public SMPPCommunicator()
-			: this(null)
+		public SMPPClient(string host, ushort port) //< FIXME: No longer a component, so: pass parameters via .ctor
 		{
+			Host = host;
+			Port = port;
+			BindType = SmppBind.BindingType.BindAsTransceiver;
+			NpiType = Pdu.NpiType.ISDN;
+			TonType = Pdu.TonType.International; 
+			Version = Pdu.SmppVersionType.Version3_4;
+			AddressRange = null;
+			Password = null;
+			SystemId = null;
+			SystemType = null;
+			EnquireLinkInterval = 0;
+			ReBindInterval = 10;
+			ResponseTimeout = 2500;
+
+			// Initialize timers..
+			_EnquireLinkTimer = new System.Timers.Timer() { Enabled = false };
+			_EnquireLinkTimer.Elapsed += new ElapsedEventHandler(EnquireLinkTimerElapsed);
+			_ReBindTimer = new System.Timers.Timer() { Enabled = false };
+			_ReBindTimer.Elapsed += new ElapsedEventHandler(ReBindTimerElapsed);
+
+			_eventLoopGroup = new MultithreadEventLoopGroup();
+			_channelFactory = new Bootstrap()
+				.Group(_eventLoopGroup)
+				.Channel<TcpSocketChannel>()
+				.Option(ChannelOption.TcpNodelay, true)
+				.Option(ChannelOption.SoLinger, 0)
+				.Option(ChannelOption.SoRcvbuf, (int)_channelBufferSize)
+				.Option(ChannelOption.SoSndbuf, (int)_channelBufferSize)
+				.RemoteAddress(Host, Port)
+				.Handler(new ActionChannelInitializer<ISocketChannel>(channel =>
+				{
+					var pipeline = channel.Pipeline;
+
+					if (_supportedSslProtocols != SslProtocols.None)
+					{
+						//pipeline.AddLast("tls", new TlsHandler(stream => new SslStream()))
+					}
+
+					pipeline
+						.AddLast(new LoggingHandler())
+						//.AddLast("framing-enc", new LengthFieldPrepender(4, true))
+						.AddLast("framing-dec",
+							new LengthFieldBasedFrameDecoder(ByteOrder.BigEndian, Int32.MaxValue, 0, 4, -4, 0, false))
+						.AddLast("pdu-codec", new PduCodec())
+						.AddLast("inbound-handler", new InboundHandler(this));
+				}));
 		}
 		#endregion constructors
 
 		/// <summary>
-		/// Sends a user-specified Pdu(see the RoaminSMPP base library for
-		/// Pdu types).  This allows complete flexibility for sending Pdus.
+		/// Connects and binds the SMPPClient to the SMSC, using the
+		/// values that have been set in the constructor and through the
+		/// properties.  This will also start the timers that at regular intervals
+		/// send enquire_link packets and the one which re-binds the session, if their
+		/// interval properties have a non-zero value.
+		/// </summary>
+		/// <returns>
+		/// True if bind was successfull or false if connection/bind failed 
+		/// (and will be retried later upon ReBindInterval)
+		/// </returns>
+		public bool Bind()
+		{
+			lock (_bindingLock)
+			{
+				_Log.DebugFormat("Binding to {0}:{1}.", Host, Port);
+
+				if (_Bound)
+					throw new InvalidOperationException("Already bound to remote party, unbind session first!");
+
+				if (_channel != null)
+					throw new NotImplementedException("FIXME: Reconnecting not yet implemented");
+				
+				_ReBindTimer.Stop(); // (temporarilly) disable re-binding timer.
+				_EnquireLinkTimer.Stop(); // (temporarilly) disable enquire timer.
+				
+				//connect
+				try
+				{
+					// FIXME: Pass timeout & cancellator..
+					_channel = _channelFactory.ConnectAsync().GetAwaiter().GetResult();
+
+					// re-initialize seq. numbers.
+					lock (this) _SequenceNumber = 0;
+					// SequenceNumbers are per-session, so reset waiting list..
+					lock (_RequestsAwaitingResponse) _RequestsAwaitingResponse.Clear();
+
+					SmppBind request = new SmppBind();
+					request.SystemId = SystemId;
+					request.Password = Password;
+					request.SystemType = SystemType;
+					request.InterfaceVersion = Version;
+					request.AddressTon = TonType;
+					request.AddressNpi = NpiType;
+					request.AddressRange = AddressRange;
+					request.BindType = BindType;
+
+					var response = SendRequest(request);
+
+					if (response.CommandStatus != 0)
+						throw new SmppRemoteException("Bind request failed.", response.CommandStatus);
+
+					_SentUnbindPacket = false;
+					
+					if (_EnquireLinkInterval > 0)
+					{
+						_EnquireLinkTimer.Interval = _EnquireLinkInterval * 1000;
+						_EnquireLinkTimer.Start();
+					}
+
+					_Bound = true;
+					_ReBindRequired = false;
+
+					return true;
+				}
+				catch (Exception exc)
+				{
+					DispatchOnError(new BindErrorEventArgs(exc));
+				}
+				finally
+				{
+					// Re-enable rebinding timer..
+					if (_ReBindInterval > 0)
+					{
+						_ReBindTimer.Interval = _ReBindInterval * 1000;
+						_ReBindTimer.Start();
+					}
+				}
+			}
+
+			return false;
+		}
+
+		/// <summary>
+		/// Unbinds the SMPPCommunicator from the SMSC then disconnects the socket
+		/// when it receives the unbind response from the SMSC.  This will also stop the 
+		/// timer that sends out the enquire_link packets if it has been enabled.  You need to 
+		/// explicitly call this to unbind.; it will not be done for you.
+		/// </summary>
+		public void Unbind()
+		{
+			Unbind(true);
+		}
+
+		/// <summary>
+		/// Sends a user-specified Pdu (see Packet namespace for
+		/// Pdu types). This allows complete flexibility for sending Pdus.
 		/// </summary>
 		/// <param name="packet">The Pdu to send.</param>
 		/// <returns>The sequence number of the sent PDU, or null if failed.</returns>
@@ -612,18 +717,16 @@ namespace AberrantSMPP
 
 			if (packet.SequenceNumber == 0)
 				packet.SequenceNumber = GenerateSequenceNumber();
-
-			var bytes = packet.GetEncodedPdu();
-
+			
 			try
 			{
-				if (asClient == null || !asClient.Connected)
+				if (_channel?.Active != true)
 					throw new InvalidOperationException("Session not connected to remote party.");
 
 				if (!(packet is SmppBind) && !_Bound)
 					throw new InvalidOperationException("Session not bound to remote party.");
 
-				asClient.Send(bytes);
+				_channel.WriteAndFlushAsync(packet).Wait();
 				return packet.SequenceNumber;
 			}
 			catch
@@ -766,165 +869,7 @@ namespace AberrantSMPP
 
 			return responses.OfType<SmppSubmitSmResp>().Select(x => x.MessageId).ToArray();
 		}
-
-		/// <summary>
-		/// Connects and binds the SMPPCommunicator to the SMSC, using the
-		/// values that have been set in the constructor and through the
-		/// properties.  This will also start the timers that at regular intervals
-		/// send enquire_link packets and the one which re-binds the session, if their
-		/// interval properties have a non-zero value.
-		/// </summary>
-		/// <returns>
-		/// True if bind was successfull or false if connection/bind failed 
-		/// (and will be retried later upon ReBindInterval)
-		/// </returns>
-		public bool Bind()
-		{
-			lock (_bindingLock)
-			{
-				_Log.DebugFormat("Binding to {0}:{1}.", Host, Port);
-
-				if (_Bound)
-					throw new InvalidOperationException("Already bound to remote party, unbind session first!");
-
-				_ReBindTimer.Stop(); // (temporarilly) disable re-binding timer.
-
-				try
-				{
-					if (asClient != null)
-					{
-						var tmp = asClient;
-						asClient = null;
-						tmp.Dispose();
-					}
-				}
-				catch
-				{
-					//drop it on the floor
-				}
-
-				//connect
-				try
-				{
-					asClient = new AsyncSocketClient(10240, null,
-						new AsyncSocketClient.MessageHandler(ClientMessageHandler),
-						new AsyncSocketClient.SocketClosingHandler(ClientCloseHandler),
-						new AsyncSocketClient.ErrorHandler(ClientErrorHandler));
-
-					asClient.Connect(Host, Port, SupportedSslProtocols, DisableSslRevocationChecking);
-
-					// re-initialize seq. numbers.
-					lock (this) _SequenceNumber = 1; 
-					// SequenceNumbers are per-session, so reset waiting list..
-					lock (_RequestsAwaitingResponse) _RequestsAwaitingResponse.Clear();
-
-					SmppBind request = new SmppBind();
-					request.SystemId = SystemId;
-					request.Password = Password;
-					request.SystemType = SystemType;
-					request.InterfaceVersion = Version;
-					request.AddressTon = TonType;
-					request.AddressNpi = NpiType;
-					request.AddressRange = AddressRange;
-					request.BindType = BindType;
-
-					var response = SendRequest(request);
-
-					if (response.CommandStatus != 0)
-						throw new SmppRemoteException("Bind request failed.", response.CommandStatus);
-
-					_SentUnbindPacket = false;
-
-					// Enable/Disable enquire timer.
-					_EnquireLinkTimer.Stop();
-
-					if (_EnquireLinkInterval > 0)
-					{
-						_EnquireLinkTimer.Interval = _EnquireLinkInterval * 1000;
-						_EnquireLinkTimer.Start();
-					}
-
-					_Bound = true;
-					_ReBindRequired = false;
-
-					return true;
-				}
-				catch (Exception exc)
-				{
-					DispatchOnError(new BindErrorEventArgs(exc));
-				}
-				finally
-				{
-					// Re-enable rebinding timer..
-
-					if (_ReBindInterval > 0)
-					{
-						_ReBindTimer.Interval = _ReBindInterval * 1000;
-						_ReBindTimer.Start();
-					}
-				}
-			}
-
-			return false;
-		}
-
-		/// <summary>
-		/// Unbinds the SMPPCommunicator from the SMSC then disconnects the socket
-		/// when it receives the unbind response from the SMSC.  This will also stop the 
-		/// timer that sends out the enquire_link packets if it has been enabled.  You need to 
-		/// explicitly call this to unbind.; it will not be done for you.
-		/// </summary>
-		public void Unbind()
-		{
-			Unbind(true);
-		}
-
-		#region internal methods
-		/// <summary>
-		/// Callback method to handle received messages.  The AsyncSocketClient
-		/// library calls this; don't call it yourself.
-		/// </summary>
-		/// <param name="client">The client to receive messages from.</param>
-		internal void ClientMessageHandler(AsyncSocketClient client)
-		{
-			try
-			{
-				// OPTIMIZE: Use a single PduFactory instance, instead of a new one each time.
-				Queue responseQueue = new PduFactory().GetPduQueue(client.Buffer);
-				ThreadPool.QueueUserWorkItem(new WaitCallback(ProcessPduQueue), responseQueue);
-			}
-			catch (Exception exception)
-			{
-				DispatchOnError(new CommonErrorEventArgs(exception));
-			}
-		}
-
-		/// <summary>
-		/// Callback method to handle socket closing.
-		/// </summary>
-		/// <param name="client">The client to receive messages from.</param>
-		internal void ClientCloseHandler(AsyncSocketClient client)
-		{
-			lock (_bindingLock)
-			{
-				_Log.Warn("Socket closed, scheduling a rebind operation.");
-				_ReBindRequired = true;
-			}
-
-			DispatchOnClose(new EventArgs());
-		}
-
-		/// <summary>
-		/// Callback method to handle errors.
-		/// </summary>
-		/// <param name="client">The client to receive messages from.</param>
-		/// <param name="exception">The generated exception.</param>
-		internal void ClientErrorHandler(AsyncSocketClient client, Exception exception)
-		{
-			DispatchOnError(new CommonErrorEventArgs(exception));
-		}
-		#endregion internal methods
-
+		
 		#region private methods
 		/// <summary>
 		/// Generates a monotonically increasing sequence number for each Pdu.  When it
@@ -979,42 +924,37 @@ namespace AberrantSMPP
 		/// threads in the ThreadPool.
 		/// </summary>
 		/// <param name="queueStateObj">The queue of byte packets.</param>
-		private void ProcessPduQueue(object queueStateObj)
+		private void ProcessPdu(Pdu packet)
 		{
-			foreach(Pdu packet in (queueStateObj as Queue))
+			_Log.DebugFormat("Recived PDU: {0}", packet);
+
+			try
 			{
-				if (packet == null) continue;
-
-				_Log.DebugFormat("Recived PDU: {0}", packet);
-
-				try
+				// Handle packets related to a request awaiting response.
+				if (packet is SmppResponse || packet is SmppGenericNack)
 				{
-					// Handle packets related to a request awaiting response.
-					if (packet is SmppResponse || packet is SmppGenericNack)
+					lock (_RequestsAwaitingResponse)
 					{
-						lock (_RequestsAwaitingResponse)
+						if (_RequestsAwaitingResponse.ContainsKey(packet.SequenceNumber))
 						{
-							if (_RequestsAwaitingResponse.ContainsKey(packet.SequenceNumber))
-							{
-								var state = _RequestsAwaitingResponse[packet.SequenceNumber];
+							var state = _RequestsAwaitingResponse[packet.SequenceNumber];
 
-								// Save response at bucket..
-								state.Response = packet is SmppGenericNack ? 
-                                    new SmppGenericNackResp(packet.PacketBytes) : packet as SmppResponse;
-								// Signal response reception..
-								state.EventHandler.Set();
-								continue;
-							}
+							// Save response at bucket..
+							state.Response = packet is SmppGenericNack
+								? new SmppGenericNackResp(packet.PacketBytes)
+								: packet as SmppResponse;
+							// Signal response reception..
+							state.EventHandler.Set();
 						}
 					}
+				}
 
-					// based on each Pdu, fire off an event
-					FireEvents(packet);
-				}
-				catch (Exception exception)
-				{
-					DispatchOnError(new CommonErrorEventArgs(exception));
-				}
+				// based on each Pdu, fire off an event
+				FireEvents(packet);
+			}
+			catch (Exception exception)
+			{
+				DispatchOnError(new CommonErrorEventArgs(exception));
 			}
 		}
 		
@@ -1099,7 +1039,7 @@ namespace AberrantSMPP
 			else if(response is SmppUnbindResp)
 			{
 				//disconnect
-				asClient.Disconnect();
+				_channel.DisconnectAsync().Wait();
 				if(OnUnboundResp != null)
 				{
 					OnUnboundResp(this, new UnbindRespEventArgs((SmppUnbindResp)response));
@@ -1314,24 +1254,21 @@ namespace AberrantSMPP
 					SendPdu(pdu);
 				}
 			}
-			else if(response is SmppReplaceSmResp)
+			else if(response is SmppReplaceSmResp resp)
 			{
-				if(OnReplaceSmResp != null)
-				{
-					OnReplaceSmResp(this, new ReplaceSmRespEventArgs((SmppReplaceSmResp)response));
-				}
+				OnReplaceSmResp?.Invoke(this, new ReplaceSmRespEventArgs(resp));
 			}
-			else if(response is SmppSubmitMulti)
+			else if(response is SmppSubmitMulti multi)
 			{
 				if(OnSubmitMulti != null)
 				{
-					OnSubmitMulti(this, new SubmitMultiEventArgs((SmppSubmitMulti)response));
+					OnSubmitMulti(this, new SubmitMultiEventArgs(multi));
 				}
 				else
 				{
 					//default a response
 					SmppSubmitMultiResp pdu = new SmppSubmitMultiResp();
-					pdu.SequenceNumber = response.SequenceNumber;
+					pdu.SequenceNumber = multi.SequenceNumber;
 					pdu.CommandStatus = 0;
 	
 					SendPdu(pdu);
@@ -1345,72 +1282,23 @@ namespace AberrantSMPP
 				}
 			}
 		}
-	
-		/// <summary>
-		/// Initializes the SMPPCommunicator with some default values.
-		/// </summary>
-		private void InitCommunicator()
-		{		
-			Port = 9999;
-			BindType = SmppBind.BindingType.BindAsTransceiver;
-			Host = "localhost";
-			NpiType = Pdu.NpiType.ISDN;
-			TonType = Pdu.TonType.International; 
-			Version = SmppBind.SmppVersionType.Version3_4;
-			AddressRange = null;
-			Password = null;
-			SystemId = null;
-			SystemType = null;
-			EnquireLinkInterval = 0;
-			ReBindInterval = 10;
-			ResponseTimeout = 2500;
 
-			// Initialize timers..
-			_EnquireLinkTimer = new System.Timers.Timer() { Enabled = false };
-			_EnquireLinkTimer.Elapsed += new ElapsedEventHandler(EnquireLinkTimerElapsed);
-			_ReBindTimer = new System.Timers.Timer() { Enabled = false };
-			_ReBindTimer.Elapsed += new ElapsedEventHandler(ReBindTimerElapsed);
-		}
 		#endregion private methods
-		
-		#region Component Designer generated code
-		
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
-		protected void InitializeComponent()
-		{
-			components = new System.ComponentModel.Container();
-		}
-		#endregion
-		
+
 		/// <summary>
 		/// Disposes of this component.  Called by the framework; do not call it 
 		/// directly.
 		/// </summary>
-		/// <param name="disposing">This is set to false during garbage collection but 
-		/// true during a disposal.</param>
-		protected override void Dispose(bool disposing)
+		public void Dispose()
 		{
-			if(disposing)
-			{
-				if(components != null)
-				{
-					components.Dispose();
-				}
-			}
-
 			Helper.ShallowExceptions(() => Unbind(true));
-			Helper.ShallowExceptions(() => { if (asClient != null) asClient.Dispose(); });
+			Helper.ShallowExceptions(() => { _channel?.CloseAsync().Wait(); });
 
 			lock (_RequestsAwaitingResponse)
 			{
 				_RequestsAwaitingResponse.Clear();
 				_RequestsAwaitingResponse = null;
 			}
-
-			base.Dispose(disposing);
 		}
 	}
 }
