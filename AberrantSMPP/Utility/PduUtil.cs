@@ -337,5 +337,34 @@ namespace AberrantSMPP.Utility
 				}
 			}
 		}
+		
+		/// Trims the trailing zeroes off of the response Pdu.  Useful for
+        /// tracing and other purposes.  This uses the command length to
+        /// actually trim it down, so TLVs and strings are not lost.  If the
+        /// response actually is the same length as the command length, this
+        /// method performs a pass-through.
+        /// </summary>
+        /// <returns>The trimmed Pdu(byte array).</returns>
+        public static byte[] TrimResponsePdu(byte[] response)
+        {
+            uint commLength = Pdu.DecodeCommandLength(response);
+            if(commLength == response.Length)
+            {
+                return response;
+            }
+            //trap any weird data coming in
+            if(commLength >= Int32.MaxValue || commLength > response.Length)
+            {
+                return new Byte[0];
+            }
+
+            byte[] trimmed = new Byte[commLength];
+            for(int i = 0; i < trimmed.Length; i++)
+            {
+                trimmed[i] = response[i];
+            }
+
+            return trimmed;
+        }
 	}
 }
