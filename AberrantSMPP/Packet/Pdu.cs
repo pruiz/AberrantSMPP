@@ -17,7 +17,9 @@
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
 using System;
+using System.Linq;
 using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using AberrantSMPP.Utility;
 using System.Text;
@@ -160,10 +162,13 @@ namespace AberrantSMPP.Packet
 		{
 			_PacketBytes = incomingBytes;
 			_CommandLength = DecodeCommandLength(_PacketBytes);
+
+			if (_CommandLength != _PacketBytes.Length)
+				throw new ArgumentException(string.Format("{0} ({1}) differ from {2} length ({3})!", nameof(_CommandLength), _CommandLength, nameof(_PacketBytes), _PacketBytes.Length));
+
 			_CommandID = DecodeCommandId(_PacketBytes);
 			_CommandStatus = (CommandStatus)UnsignedNumConverter.SwapByteOrdering(BitConverter.ToUInt32(_PacketBytes, 8));
 			_SequenceNumber = UnsignedNumConverter.SwapByteOrdering(BitConverter.ToUInt32(_PacketBytes, 12));
-			_PacketBytes = TrimResponsePdu(_PacketBytes);
 			
 			//set the other Pdu-specific fields
 			DecodeSmscResponse();
@@ -1006,15 +1011,31 @@ namespace AberrantSMPP.Packet
 		/// method performs a pass-through.
 		/// </summary>
 		/// <returns>The trimmed Pdu(byte array).</returns>
-		public static byte[] TrimResponsePdu(byte[] response)
+		public static byte[] TrimResponsePdu(Queue<byte> response)
 		{
-			uint commLength = DecodeCommandLength(response);
-			if(commLength == response.Length)
+			if (response.Count <= 4)
 			{
-				return response;
+				return new Byte[0];
+			}
+
+			// 'Peek' the initial 4 bytes..
+			//		as we can't access to the value without iterate throught the FIFO queue.
+			var header = new byte[]
+			{
+				response.ElementAt(0),
+				response.ElementAt(1),
+				response.ElementAt(2),
+				response.ElementAt(3)
+			};
+
+			uint commLength = DecodeCommandLength(header);
+
+			if(commLength > response.Count)
+			{
+				return new Byte[0]; // Not enough data..
 			}
 			//trap any weird data coming in
-			if(commLength >= Int32.MaxValue || commLength > response.Length)
+			if(commLength >= Int32.MaxValue || commLength > response.Count)
 			{
 				return new Byte[0];
 			}
@@ -1022,7 +1043,7 @@ namespace AberrantSMPP.Packet
 			byte[] trimmed = new Byte[commLength];
 			for(int i = 0; i < trimmed.Length; i++)
 			{
-				trimmed[i] = response[i];
+				trimmed[i] = response.Dequeue();
 			}
 			
 			return trimmed;
