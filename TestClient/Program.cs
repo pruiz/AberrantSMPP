@@ -51,14 +51,10 @@ namespace TestClient
 			client.OnUnbind += (s, e) => Console.WriteLine("OnUnbind: " + e.ResponsePdu);
 			client.OnUnboundResp += (s, e) => Console.WriteLine("OnUnboundResp: " + e.ResponsePdu);
 
-			if (!client.Bind())
-			{
-				Console.Error.WriteLine("Bind failed!");
-				client.Dispose();
-				Environment.Exit(1);
-			}
+			client.Connect();
+			client.Bind();
 
-			//var txt = new String('a', 200);
+				//var txt = new String('a', 200);
 			//var txt = "X de mas de 160 caractereñ.. @€34567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890ABCDEFGHIJKL987654321";
 			var txt = @"X de mas de 160 caractereñ.. @€abcdefghijklmnopqrstxyz!!!0987654321-ABCDE";
 #if true

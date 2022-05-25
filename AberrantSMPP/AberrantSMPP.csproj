@@ -183,7 +183,7 @@
     <Compile Include="EventObject\SubmitSmRespEventArgs.cs" />
     <Compile Include="EventObject\UnbindEventArgs.cs" />
     <Compile Include="EventObject\UnbindRespEventArgs.cs" />
-    <Compile Include="Exceptions\SmppRemoteException.cs" />
+    <Compile Include="Exceptions\SmppRequestException.cs" />
     <Compile Include="Exceptions\SmppTimeoutException.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="SMPPClient.InboundHandler.cs" />
@@ -232,17 +232,21 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="SMPPClient.RequestState.cs" />
+    <Compile Include="SMPPClient.States.cs" />
     <Compile Include="SMPPCommunicator.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="SmppSarMethod.cs" />
     <Compile Include="Utility\DestinationAddress.cs" />
     <Compile Include="Utility\GSMEncoding.cs" />
+    <Compile Include="Utility\GuardEx.cs" />
     <Compile Include="Utility\IEnumerableExtensions.cs" />
+    <Compile Include="Utility\InterlockedEx.cs" />
     <Compile Include="Utility\PduFactory.cs" />
     <Compile Include="Utility\PduUtil.cs" />
     <Compile Include="Utility\SmppStringUtil.cs" />
     <Compile Include="Utility\SmppUtil.cs" />
+    <Compile Include="Utility\TaskExtensions.cs" />
     <Compile Include="Utility\TlvTable.cs" />
     <Compile Include="Utility\UnsignedNumConverter.cs" />
     <Compile Include="Utility\UnsuccessAddress.cs" />

@@ -187,7 +187,7 @@ namespace AberrantSMPP.Utility
 		public static bool IsValidChar(char character)
 		{
 			var @byte = NOCHAR;
-			var escape = false;
+			//var escape = false;
 
 			if (character < Ucs2ToGsm.Length)
 			{
@@ -195,18 +195,18 @@ namespace AberrantSMPP.Utility
 
 				if (@byte == ESCAPE)
 				{
-					escape = true;
+					//escape = true;
 					@byte = Ucs2ToGsmExtended[character];
 				}
 			}
 			else if (character >= Ucs2GclToGsmBase && character <= Ucs2GclToGsmMax)
 			{
-				escape = true;
+				//escape = true;
 				@byte = Ucs2GclToGsm[character - Ucs2GclToGsmBase];
 			}
 			else if (character == '\x20AC') // Euro sign.
 			{
-				escape = true;
+				//escape = true;
 				@byte = 0x65;
 			}
 
@@ -218,7 +218,7 @@ namespace AberrantSMPP.Utility
 			foreach (var character in text.ToCharArray())
 			{
 				var @byte = NOCHAR;
-				var escape = false;
+				//var escape = false;
 
 				if (character < Ucs2ToGsm.Length)
 				{
@@ -226,18 +226,18 @@ namespace AberrantSMPP.Utility
 
 					if (@byte == ESCAPE)
 					{
-						escape = true;
+						//escape = true;
 						@byte = Ucs2ToGsmExtended[character];
 					}
 				}
 				else if (character >= Ucs2GclToGsmBase && character <= Ucs2GclToGsmMax)
 				{
-					escape = true;
+					//escape = true;
 					@byte = Ucs2GclToGsm[character - Ucs2GclToGsmBase];
 				}
 				else if (character == '\x20AC') // Euro sign.
 				{
-					escape = true;
+					//escape = true;
 					@byte = 0x65;
 				}
 

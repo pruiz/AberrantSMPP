@@ -23,10 +23,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Timers;
-using System.ComponentModel;
 using System.Net.Security;
+using System.Runtime.CompilerServices;
 using System.Security.Authentication;
 
+using DotNetty.Buffers;
 using DotNetty.Codecs;
 using DotNetty.Handlers.Logging;
 using DotNetty.Handlers.Tls;
@@ -35,14 +36,15 @@ using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
 using DotNetty.Common.Internal.Logging;
 
+using Microsoft.Extensions.Logging;
+
 using AberrantSMPP.Packet;
 using AberrantSMPP.Packet.Request;
 using AberrantSMPP.Packet.Response;
 using AberrantSMPP.Exceptions;
 using AberrantSMPP.EventObjects;
 using AberrantSMPP.Utility;
-using DotNetty.Buffers;
-using Microsoft.Extensions.Logging;
+using Dawn;
 
 namespace AberrantSMPP 
 {
@@ -58,10 +60,14 @@ namespace AberrantSMPP
 		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
 		private readonly object _bindingLock = new object();
+		// XXX: Beware of the implications of using ReaderWriterLockSlim with Async/Await code. (pruiz)
+		private readonly ReaderWriterLockSlim _stateLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+		private CancellationTokenSource _cancellator = new CancellationTokenSource();
 
 		private Bootstrap _channelFactory;
 		private IEventLoopGroup _eventLoopGroup;
-		private IChannel _channel; 
+		private IChannel _channel;
+		private States _state = States.Inactive;
 		private string _SystemId;
 		private string _Password;
 		private string _SystemType;
@@ -72,12 +78,9 @@ namespace AberrantSMPP
 		private string _AddressRange;
 		private int _EnquireLinkInterval;
 		private System.Timers.Timer _EnquireLinkTimer;
-		private int _ResponseTimeout;		
+		private int _ResponseTimeout;
 		private int _ReBindInterval;
 		private System.Timers.Timer _ReBindTimer;
-		private bool _ReBindRequired = true; // True until first successfull bind.
-		private bool _Bound;
-		private bool _SentUnbindPacket = true;  //default to true since we start out unbound
 		private Random _random = new Random();
 		private uint _SequenceNumber = 0;
 		private uint _channelBufferSize = 10240;
@@ -95,17 +98,6 @@ namespace AberrantSMPP
 		/// The port on the SMSC to connect to.
 		/// </summary>
 		public UInt16 Port { get; private set; } = 2775;
-		/// <summary>
-		/// Accessor to determine if we have sent the unbind packet out.  Once the packet is 
-		/// sent, you can consider this object to be unbound.
-		/// </summary>
-		public bool SentUnbindPacket
-		{
-			get
-			{
-				return _SentUnbindPacket;
-			}
-		}
 		/// <summary>
 		/// The binding type(receiver, transmitter, or transceiver)to use 
 		/// when connecting to the SMSC.
@@ -267,17 +259,7 @@ namespace AberrantSMPP
 			get { return _ResponseTimeout; }
 			set { _ResponseTimeout = value; }
 		}
-
-		/// <summary>
-		/// Gets a value indicating whether this <see cref="SMPPCommunicator"/> is connected.
-		/// </summary>
-		/// <value><c>true</c> if connected; otherwise, <c>false</c>.</value>
-		public bool Connected => _channel?.Active == true;
-		/// <summary>
-		/// Gets a value indicating whether this <see cref="SMPPCommunicator"/> is bound.
-		/// </summary>
-		/// <value><c>true</c> if bound; otherwise, <c>false</c>.</value>
-		public bool Bound { get { lock (_bindingLock) return _Bound; } }
+		
 		public SslProtocols SupportedSslProtocols
 		{
 			get
@@ -289,6 +271,15 @@ namespace AberrantSMPP
 				_supportedSslProtocols = value;
 			}
 		}
+		
+		public States State 
+		{
+			get
+			{
+				using (_stateLock.ForReadOnly()) return _state;
+			}
+		}
+
 		#endregion
 		
 		#region events
@@ -611,6 +602,53 @@ namespace AberrantSMPP
 		}
 		#endregion constructors
 
+		// Starts SMPP client w/ background reconnecting / re-binding as needed.
+		/// <returns>
+		/// True if bind was successfull or false if connection/bind failed 
+		/// (and will be retried later upon ReBindInterval)
+		/// </returns>
+		public void Start()
+		{
+			throw new NotImplementedException();
+			
+			_ReBindTimer.Stop(); // (temporarilly) disable re-binding timer.
+			_EnquireLinkTimer.Stop(); // (temporarilly) disable enquire timer.
+			
+			//	finally
+			{
+				// Re-enable rebinding timer..
+				if (_ReBindInterval > 0)
+				{
+					_ReBindTimer.Interval = _ReBindInterval * 1000;
+					_ReBindTimer.Start();
+				}
+			}
+		}
+
+		public void Stop()
+		{
+			throw new NotImplementedException();
+		}
+		
+		public void Connect()
+		{
+			using (_stateLock.ForWrite())
+			{
+				Guard.Operation(_state is States.Inactive,
+					$"Can't connect an a client w/ state {_state}, already connected?");
+
+				_cancellator.Token.ThrowIfCancellationRequested();
+				
+				_Log.DebugFormat("Connecting to {0}:{1}.", Host, Port);
+				// FIXME: Pass timeout & cancellator..
+				_channel = _channelFactory.ConnectAsync()
+					.WithCancellation(_cancellator.Token)
+					.GetAwaiter().GetResult();
+
+				_state = States.Connected;
+			}
+		}
+
 		/// <summary>
 		/// Connects and binds the SMPPClient to the SMSC, using the
 		/// values that have been set in the constructor and through the
@@ -618,91 +656,73 @@ namespace AberrantSMPP
 		/// send enquire_link packets and the one which re-binds the session, if their
 		/// interval properties have a non-zero value.
 		/// </summary>
-		/// <returns>
-		/// True if bind was successfull or false if connection/bind failed 
-		/// (and will be retried later upon ReBindInterval)
-		/// </returns>
-		public bool Bind()
+		public void Bind()
 		{
-			lock (_bindingLock)
+			using (_stateLock.ForWrite()) //< FIXME: Allow timing out..
 			{
-				_Log.DebugFormat("Binding to {0}:{1}.", Host, Port);
+				_cancellator.Token.ThrowIfCancellationRequested();
+				GuardEx.Against(_state == States.Bound, "Already bound to remote party, unbind session first.");
+				GuardEx.Against(_state != States.Connected, "Can't bind non-connected session, call Connect() first.");
+				GuardEx.Against(_EnquireLinkTimer.Enabled, "EnquireLinkTimer Enabled while binding?!");
 
-				if (_Bound)
-					throw new InvalidOperationException("Already bound to remote party, unbind session first!");
+				_Log.InfoFormat("Binding to {0}:{1}..", Host, Port);
 
-				if (_channel != null)
-					throw new NotImplementedException("FIXME: Reconnecting not yet implemented");
+				// re-initialize seq. numbers.
+				InterlockedEx.Exchange(ref _SequenceNumber, 0);
+
+				// SequenceNumbers are per-session, so reset waiting list..
+				lock (_RequestsAwaitingResponse) _RequestsAwaitingResponse.Clear();
+
+				var response = SendAndWait(new SmppBind()
+				{
+					SystemId = SystemId,
+					Password = Password,
+					SystemType = SystemType,
+					InterfaceVersion = Version,
+					AddressTon = TonType,
+					AddressNpi = NpiType,
+					AddressRange = AddressRange,
+					BindType = BindType,
+				});
+
+				if (response.CommandStatus != 0)
+					throw new SmppRequestException("Bind request failed.", response.CommandStatus);
+
+				if (_EnquireLinkInterval > 0)
+				{
+					_EnquireLinkTimer.Interval = _EnquireLinkInterval * 1000;
+					_EnquireLinkTimer.Start();
+				}
+
+				_state = States.Bound;
 				
-				_ReBindTimer.Stop(); // (temporarilly) disable re-binding timer.
-				_EnquireLinkTimer.Stop(); // (temporarilly) disable enquire timer.
-				
-				//connect
-				try
-				{
-					// FIXME: Pass timeout & cancellator..
-					_channel = _channelFactory.ConnectAsync().GetAwaiter().GetResult();
-
-					// re-initialize seq. numbers.
-					lock (this) _SequenceNumber = 0;
-					// SequenceNumbers are per-session, so reset waiting list..
-					lock (_RequestsAwaitingResponse) _RequestsAwaitingResponse.Clear();
-
-					SmppBind request = new SmppBind();
-					request.SystemId = SystemId;
-					request.Password = Password;
-					request.SystemType = SystemType;
-					request.InterfaceVersion = Version;
-					request.AddressTon = TonType;
-					request.AddressNpi = NpiType;
-					request.AddressRange = AddressRange;
-					request.BindType = BindType;
-
-					var response = SendRequest(request);
-
-					if (response.CommandStatus != 0)
-						throw new SmppRemoteException("Bind request failed.", response.CommandStatus);
-
-					_SentUnbindPacket = false;
-					
-					if (_EnquireLinkInterval > 0)
-					{
-						_EnquireLinkTimer.Interval = _EnquireLinkInterval * 1000;
-						_EnquireLinkTimer.Start();
-					}
-
-					_Bound = true;
-					_ReBindRequired = false;
-
-					return true;
-				}
-				catch (Exception exc)
-				{
-					DispatchOnError(new BindErrorEventArgs(exc));
-				}
-				finally
-				{
-					// Re-enable rebinding timer..
-					if (_ReBindInterval > 0)
-					{
-						_ReBindTimer.Interval = _ReBindInterval * 1000;
-						_ReBindTimer.Start();
-					}
-				}
+				_Log.InfoFormat("Bound to {0}:{1}.", Host, Port);
 			}
-
-			return false;
 		}
 
 		/// <summary>
-		/// Unbinds the SMPPCommunicator from the SMSC then disconnects the socket
-		/// when it receives the unbind response from the SMSC.  This will also stop the 
-		/// timer that sends out the enquire_link packets if it has been enabled.  You need to 
-		/// explicitly call this to unbind.; it will not be done for you.
+		/// Unbinds the SMPPClient from the SMSC when it receives the unbind response from the SMSC.
+		/// This will also stop the timer that sends out the enquire_link packets if it has been enabled.
+		/// You need to explicitly call this to unbind.; it will not be done for you.
 		/// </summary>
 		public void Unbind()
 		{
-			Unbind(true);
+			using (_stateLock.ForWrite()) //< FIXME: Allow timing out..
+			{
+				_cancellator.Token.ThrowIfCancellationRequested();
+				Guard.Operation(_state == States.Bound, $"Can't unbind a session w/ state {_state}, try binding first.");
+				
+				_Log.InfoFormat("Unbinding from {0}:{1}..", Host, Port);
+
+				if (_EnquireLinkTimer.Enabled)
+					_EnquireLinkTimer.Stop();
+
+				SendAndWait(new SmppUnbind());
+
+				_state = States.Connected;
+				
+				_Log.InfoFormat("Unbound from {0}:{1}.", Host, Port);
+			}
 		}
 
 		/// <summary>
@@ -713,41 +733,46 @@ namespace AberrantSMPP
 		/// <returns>The sequence number of the sent PDU, or null if failed.</returns>
 		public uint SendPdu(Pdu packet)
 		{
-			_Log.DebugFormat("Sending PDU: {0}", packet);
+			_cancellator.Token.ThrowIfCancellationRequested();
 
-			if (packet.SequenceNumber == 0)
-				packet.SequenceNumber = GenerateSequenceNumber();
-			
 			try
 			{
-				if (_channel?.Active != true)
-					throw new InvalidOperationException("Session not connected to remote party.");
+				_Log.DebugFormat("Sending PDU: {0}", packet);
 
-				if (!(packet is SmppBind) && !_Bound)
-					throw new InvalidOperationException("Session not bound to remote party.");
-
-				_channel.WriteAndFlushAsync(packet).Wait();
-				return packet.SequenceNumber;
-			}
-			catch
-			{
-				lock (_bindingLock)
+				using (_stateLock.ForReadOnly()) //< FIXME: Allow timing out..
 				{
-					_Log.Debug("SendPdu failed, scheduling a re-bind operation.");
-					_ReBindRequired = true;
-				}
+					if (packet.SequenceNumber == 0)
+					{
+						// Generate a monotonically increasing sequence number for each Pdu.
+						// When it hits the the 32 bit unsigned int maximum, it starts over.
+						packet.SequenceNumber = InterlockedEx.Increment(ref _SequenceNumber);
+					}
+					
+					GuardEx.Against(_channel == null, "Channel has not been initialized?!");
+					Guard.Operation(_channel?.Active == true, "Channel is not active?!.");
+					GuardEx.Against(_state < States.Connected, "Session is not connected.");
+					GuardEx.Against(!(packet is SmppBind) && _state != States.Bound, "Session not bound to remote party.");
 
+					_channel!.WriteAndFlushAsync(packet).Wait(_cancellator.Token); //< FIXME: Allow timing out..
+					return packet.SequenceNumber;
+				}
+			}
+			catch (Exception ex)
+			{
+				_Log.Debug("SendPdu failed.", ex);
 				throw; // Let the exception flow..
 			}
 		}
 
 		/// <summary>
-		/// Sends a request and waits for the appropiate response.
+		/// Sends a request and waits for the appropriate response.
 		/// If no response is received before RequestTimeout seconds, an 
 		/// SmppTimeoutException is thrown.
+		/// If a response is received w/ CommandStatus != OK, an
+		/// SmppRequestException is thrown.
 		/// </summary>
 		/// <param name="request">The request.</param>
-		public SmppResponse SendRequest(SmppRequest request)
+		public SmppResponse SendAndWait(SmppRequest request)
 		{
 			RequestState state;
 
@@ -765,14 +790,15 @@ namespace AberrantSMPP
 
 				if (signalled)
 				{
-					return state.Response;
-				} else {
-					throw new SmppTimeoutException("Timeout while waiting for a response from remote side.");
+					return state.Response.CommandStatus == CommandStatus.ESME_ROK ? state.Response
+						: throw new SmppRequestException("SmppRequest failed.", request, state.Response);
 				}
+				
+				throw new SmppTimeoutException("Timeout while waiting for a response from remote side.");
 			}
 		}
 
-		public IEnumerable<SmppResponse> SendRequests(IEnumerable<SmppRequest> requests)
+		public IEnumerable<SmppResponse> SendAndWait(IEnumerable<SmppRequest> requests)
 		{
 			bool signalled = false;
 			var list = new List<RequestState>();
@@ -844,10 +870,10 @@ namespace AberrantSMPP
 		/// <param name="pdu">The pdu.</param>
 		/// <param name="method">The method.</param>
 		/// <returns>The list of messageIds assigned by remote party to each submitted PDU.</returns>
-		public IEnumerable<string> Send(SmppSubmitSm pdu, SmppSarMethod method)
+		public IEnumerable<string> SendAndWait(SmppSubmitSm pdu, SmppSarMethod method)
 		{
 			var requests = SmppUtil.SplitLongMessage(pdu, method, GetRandomByte()).Cast<SmppRequest>();
-			var responses = SendRequests(requests);
+			var responses = SendAndWait(requests);
 
 			if (responses.Any(x => (x is SmppGenericNackResp)))
 			{
@@ -855,7 +881,7 @@ namespace AberrantSMPP
 				var idx = responses.IndexWhere(x => x == nack);
 				var req = requests.ElementAt(idx);
 				var msg = string.Format("SMPP PDU was rejected by remote party. (error: {0})", nack.CommandStatus);
-				throw new SmppRemoteException(msg, req, nack);
+				throw new SmppRequestException(msg, req, nack);
 			}
 
 			if (responses.Any(x => x.CommandStatus != 0))
@@ -864,29 +890,52 @@ namespace AberrantSMPP
 				var idx = responses.IndexWhere(x => x == res);
 				var req = requests.ElementAt(idx);
 				var msg = string.Format("SMPP Request returned an error status. (code: {0})", res.CommandStatus);
-				throw new SmppRemoteException(msg, req, res);
+				throw new SmppRequestException(msg, req, res);
 			}
 
 			return responses.OfType<SmppSubmitSmResp>().Select(x => x.MessageId).ToArray();
 		}
 		
-		#region private methods
 		/// <summary>
-		/// Generates a monotonically increasing sequence number for each Pdu.  When it
-		/// hits the the 32 bit unsigned int maximum, it starts over.
+		/// Sends an SMS message synchronouslly, possibly splitting it on multiple PDUs 
+		/// using the specified segmentation & reassembly method.
 		/// </summary>
-		private uint GenerateSequenceNumber()
+		/// <param name="pdu">The pdu.</param>
+		/// <param name="method">The method.</param>
+		/// <returns>The submitted PDUs, along with it's correlated response PDUs.</returns>
+		public IDictionary<SmppSubmitSm, SmppSubmitSmResp> SendAndWaitEx(SmppSubmitSm pdu, SmppSarMethod method)
 		{
-			lock (this)
+			var requests = SmppUtil.SplitLongMessage(pdu, method, GetRandomByte()).Cast<SmppRequest>();
+			var responses = SendAndWait(requests);
+
+			if (responses.Any(x => (x is SmppGenericNackResp)))
 			{
-				_SequenceNumber++;
-				if (_SequenceNumber >= UInt32.MaxValue)
-				{
-					_SequenceNumber = 1;
-				}
-				return _SequenceNumber;
+				var nack = responses.First(x => x is SmppGenericNackResp);
+				var idx = responses.IndexWhere(x => x == nack);
+				var req = requests.ElementAt(idx);
+				var msg = string.Format("SMPP PDU was rejected by remote party. (error: {0})", nack.CommandStatus);
+				throw new SmppRequestException(msg, req, nack);
 			}
+
+			if (responses.Any(x => x.CommandStatus != 0))
+			{
+				var res = responses.First(x => x.CommandStatus != 0);
+				var idx = responses.IndexWhere(x => x == res);
+				var req = requests.ElementAt(idx);
+				var msg = string.Format("SMPP Request returned an error status. (code: {0})", res.CommandStatus);
+				throw new SmppRequestException(msg, req, res);
+			}
+
+			return responses.OfType<SmppSubmitSmResp>()
+				.Select(x => new
+				{
+					Request = requests.Single(r => r.SequenceNumber == x.SequenceNumber),
+					Response = x
+				})
+				.ToDictionary(x => (SmppSubmitSm)x.Request, x => x.Response);
 		}
+		
+		#region private methods
 
 		/// <summary>
 		/// Gets a random byte.
@@ -899,23 +948,26 @@ namespace AberrantSMPP
 				return Convert.ToByte(_random.Next(254));
 			}
 		}
-
-		private void Unbind(bool disableReBind)
+		
+		private void ThrowIfStateIs(string operation, params States[] invalidStates)
 		{
-			lock (_bindingLock)
+			using (_stateLock.ForReadOnly())
 			{
-				_ReBindTimer.Enabled = !disableReBind;
-
-				if (_EnquireLinkTimer.Enabled)
-					_EnquireLinkTimer.Stop();
-
-				if (!_SentUnbindPacket)
+				if (invalidStates.Contains((_state)))
 				{
-					Helper.ShallowExceptions(() => SendPdu(new SmppUnbind()));
-					_SentUnbindPacket = true;
+					throw new InvalidOperationException($"Invalid {operation} invoked while on state {_state}.");
 				}
-
-				_Bound = false;
+			}
+		}
+		
+		private void ThrowIfStateIsNot(string operation, params States[] validStates)
+		{
+			using (_stateLock.ForReadOnly())
+			{
+				if (!validStates.Contains((_state)))
+				{
+					throw new InvalidOperationException($"Invalid {operation} invoked while on state {_state}.");
+				}
 			}
 		}
 
@@ -967,19 +1019,27 @@ namespace AberrantSMPP
 		{
 			bool locked = false;
 
-			if (!_Bound)
-			{
-				_Log.Warn("Cannot send enquire request over an unbound session!");
-				return;
-			}
-
 			try
 			{
+				using (_stateLock.ForReadOnly())
+				{
+					if (_state != States.Bound)
+					{
+						_Log.Warn("Cannot send enquire request over an unbound session!");
+						return;
+					}
+				}
+
 				locked = Monitor.TryEnter(_EnquireLinkTimer);
 
 				if (!locked) return;
 
 				SendPdu(new SmppEnquireLink());
+			}
+			catch (Exception ex)
+			{
+				_Log.Warn("Unexpected error while sending enquire link request.", ex);
+				DispatchOnError(new CommonErrorEventArgs(ex));
 			}
 			finally
 			{
@@ -997,28 +1057,38 @@ namespace AberrantSMPP
 
 			try
 			{
-				locked = Monitor.TryEnter(_bindingLock);
+				locked = _stateLock.TryEnterUpgradeableReadLock(0);
 
-				if (!locked || !_ReBindRequired)
+				Guard.Operation(_state is States.Invalid, $"Invalid State={_state} while trying to rebind.");
+				
+				if (!locked || _state is States.Binding or States.Bound)
 					return;
-
-				_Log.Debug("Rebinding..");
-
-				try
-				{
-					Unbind(false);
-				}
-				catch { }
+				
+				_Log.Info("Session not bound, trying to re-establish session..");
 
 				try
 				{
-					Bind();
+					Unbind();
 				}
-				catch { }
+				catch
+				{
+				}
+				
+				if (_state is States.Inactive)
+				{
+					Connect();
+				}
+				
+				Bind();
+			}
+			catch (Exception ex)
+			{
+				_Log.Warn("Unexpected error while trying to rebind.", ex);
+				DispatchOnError(new CommonErrorEventArgs(ex));
 			}
 			finally
 			{
-				if (locked) Monitor.Exit(_bindingLock);
+				if (locked) _stateLock.ExitUpgradeableReadLock();
 			}
 		}
 
@@ -1291,7 +1361,9 @@ namespace AberrantSMPP
 		/// </summary>
 		public void Dispose()
 		{
-			Helper.ShallowExceptions(() => Unbind(true));
+			_Log.DebugFormat("Disposing session for {0}:{1}", Host, Port);
+			
+			Helper.ShallowExceptions(() => Unbind());
 			Helper.ShallowExceptions(() => { _channel?.CloseAsync().Wait(); });
 
 			lock (_RequestsAwaitingResponse)
