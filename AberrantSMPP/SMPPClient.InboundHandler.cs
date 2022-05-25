@@ -39,10 +39,10 @@ namespace AberrantSMPP
             {
                 base.ChannelInactive(context);
 
-                lock (_client._bindingLock)
+                using (_client._stateLock.ForWrite())
                 {
-                    _Log.Warn("Socket closed, scheduling a rebind operation.");
-                    _client._ReBindRequired = true;
+                    _Log.Warn("Socket closed..");
+                    _client._state = States.Inactive;
                 }
 
                 _client.DispatchOnClose(new EventArgs());

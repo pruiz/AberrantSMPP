@@ -752,7 +752,7 @@ namespace AberrantSMPP
 				var idx = responses.IndexWhere(x => x == nack);
 				var req = requests.ElementAt(idx);
 				var msg = string.Format("SMPP PDU was rejected by remote party. (error: {0})", nack.CommandStatus);
-				throw new SmppRemoteException(msg, req, nack);
+				throw new SmppRequestException(msg, req, nack);
 			}
 
 			if (responses.Any(x => x.CommandStatus != 0))
@@ -761,7 +761,7 @@ namespace AberrantSMPP
 				var idx = responses.IndexWhere(x => x == res);
 				var req = requests.ElementAt(idx);
 				var msg = string.Format("SMPP Request returned an error status. (code: {0})", res.CommandStatus);
-				throw new SmppRemoteException(msg, req, res);
+				throw new SmppRequestException(msg, req, res);
 			}
 
 			return responses.OfType<SmppSubmitSmResp>().Select(x => x.MessageId).ToArray();
@@ -831,7 +831,7 @@ namespace AberrantSMPP
 					var response = SendRequest(request);
 
 					if (response.CommandStatus != 0)
-						throw new SmppRemoteException("Bind request failed.", response.CommandStatus);
+						throw new SmppRequestException("Bind request failed.", response.CommandStatus);
 
 					_SentUnbindPacket = false;
 

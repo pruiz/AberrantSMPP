@@ -14,25 +14,25 @@ namespace AberrantSMPP.Exceptions
 	/// Remote party reported an error to our request.
 	/// </summary>
 	[Serializable]
-	public class SmppRemoteException : Exception
+	public class SmppRequestException : Exception
 	{
 		public SmppRequest Request { get; set; }
 		public SmppResponse Response { get; set; }
 		public CommandStatus CommandStatus { get; set; }
 
-		protected SmppRemoteException() { }
-		protected SmppRemoteException(
+		protected SmppRequestException() { }
+		protected SmppRequestException(
 		  System.Runtime.Serialization.SerializationInfo info,
 		  System.Runtime.Serialization.StreamingContext context)
 			: base(info, context) { }
 
-		public SmppRemoteException(string message, CommandStatus status) 
+		public SmppRequestException(string message, CommandStatus status) 
 			: base(message) 
 		{
 			CommandStatus = status;
 		}
 
-		public SmppRemoteException(string message, SmppRequest request, SmppResponse response)
+		public SmppRequestException(string message, SmppRequest request, SmppResponse response)
 			: base(message)
 		{
 			if (request == null) throw new ArgumentNullException("request");
