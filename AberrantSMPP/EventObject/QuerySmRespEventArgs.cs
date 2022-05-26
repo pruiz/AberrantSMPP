@@ -1,6 +1,6 @@
 /* AberrantSMPP: SMPP communication library
  * Copyright (C) 2004, 2005 Christopher M. Bouzek
- * Copyright (C) 2010, 2011 Pablo Ruiz García <pruiz@crt0.net>
+ * Copyright (C) 2010, 2011 Pablo Ruiz Garcï¿½a <pruiz@crt0.net>
  *
  * This file is part of RoaminSMPP.
  *
@@ -29,28 +29,15 @@ namespace AberrantSMPP.EventObjects
 	/// <summary>
 	/// Class that defines a query_sm_resp event.
 	/// </summary>
-	public class QuerySmRespEventArgs : SmppEventArgs 
+	public class QuerySmRespEventArgs : SmppPacketResponseEventArgs<SmppQuerySmResp>
 	{
-		private SmppQuerySmResp _response;
-
-		/// <summary>
-		/// Allows access to the underlying Pdu.
-		/// </summary>
-		public SmppQuerySmResp QuerySmRespPdu
-		{
-			get
-			{
-				return _response;
-			}
-		}
-		
 		/// <summary>
 		/// Creates a QuerySmRespEventArgs.
 		/// </summary>
 		/// <param name="packet">The PDU that was received.</param>
-		internal QuerySmRespEventArgs(SmppQuerySmResp packet): base(packet)
+		internal QuerySmRespEventArgs(SmppQuerySmResp packet)
+			: base(packet)
 		{
-			_response = packet;
 		}
 	}
 }

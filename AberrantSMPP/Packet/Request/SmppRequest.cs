@@ -1,11 +1,19 @@
 ﻿using System;
 using System.Collections;
 using System.Text;
+using System.Threading.Tasks;
+using AberrantSMPP.Packet.Response;
+using AberrantSMPP.Utility;
+using Dawn;
 
 namespace AberrantSMPP.Packet.Request
 {
 	public abstract class SmppRequest : Pdu
 	{
+		private TaskCompletionSource<SmppResponse> _taskSource;
+		internal Task<SmppResponse> ResponseTask => _taskSource?.Task;
+		internal bool ResponseTrackingEnabled => _taskSource != null;
+
 		#region constructors
 		
 		/// <summary>
@@ -26,6 +34,25 @@ namespace AberrantSMPP.Packet.Request
 		protected override void AppendPduData(ArrayList pdu)
 		{
 			// Do nothing..
+		}
+
+		internal Task<SmppResponse> EnableResponseTracking()
+		{
+			lock (this)
+			{
+				if (_taskSource == null)
+				{
+					_taskSource = new TaskCompletionSource<SmppResponse>();
+				}
+			}
+
+			return _taskSource.Task;
+		}
+
+		internal void SetResponse(SmppResponse response)
+		{
+			Guard.Operation(ResponseTrackingEnabled, "Response Tracking not enabled?!");
+			_taskSource.SetResult(response);
 		}
 	}
 }

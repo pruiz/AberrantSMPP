@@ -1,6 +1,6 @@
 /* AberrantSMPP: SMPP communication library
  * Copyright (C) 2004, 2005 Christopher M. Bouzek
- * Copyright (C) 2010, 2011 Pablo Ruiz García <pruiz@crt0.net>
+ * Copyright (C) 2010, 2011 Pablo Ruiz Garcï¿½a <pruiz@crt0.net>
  *
  * This file is part of RoaminSMPP.
  *
@@ -26,7 +26,7 @@ namespace AberrantSMPP.EventObjects
 	/// <summary>
 	/// Class that defines the submit_sm_resp event.
 	/// </summary>
-	public class SubmitSmRespEventArgs : SmppEventArgs<SmppSubmitSmResp> 
+	public class SubmitSmRespEventArgs : SmppPacketResponseEventArgs<SmppSubmitSmResp> 
 	{
 		/// <summary>
 		/// Sets up the SubmitSmRespEventArgs.

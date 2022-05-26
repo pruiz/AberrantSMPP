@@ -1,6 +1,6 @@
 /* AberrantSMPP: SMPP communication library
  * Copyright (C) 2004, 2005 Christopher M. Bouzek
- * Copyright (C) 2010, 2011 Pablo Ruiz García <pruiz@crt0.net>
+ * Copyright (C) 2010, 2011 Pablo Ruiz Garcï¿½a <pruiz@crt0.net>
  *
  * This file is part of RoaminSMPP.
  *
@@ -17,38 +17,26 @@
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 using System;
+
+using AberrantSMPP.Packet;
 using AberrantSMPP.Packet.Response;
+
 
 namespace AberrantSMPP.EventObjects 
 {
-
-	/// <summary>
-	/// Class that defines a cancel_sm_resp event.
-	/// </summary>
-	public class CancelEventArgs : SmppEventArgs 
-	{
-		private SmppCancelSmResp _response;
-
-		/// <summary>
-		/// Allows access to the underlying Pdu.
-		/// </summary>
-		public SmppCancelSmResp CancelPdu
-		{
-			get
-			{
-				return _response;
-			}
-		}
-
-		/// <summary>
-		/// Sets up the CancelEventArgs.
-		/// </summary>
-		/// <param name="response">The SmppCancelSmResp.</param>
-		internal CancelEventArgs(SmppCancelSmResp response): base(response)
-		{
-			_response = response;
-		}
-	}
+    /// <summary>
+    /// Class that defines a generic_nack event.
+    /// </summary>
+    public class GenericNackRespEventArgs : SmppPacketResponseEventArgs<SmppGenericNackResp>
+    {
+        /// <summary>
+        /// Creates a GenericNackRespEventArgs.
+        /// </summary>
+        /// <param name="packet">The PDU that was received.</param>
+        internal GenericNackRespEventArgs(SmppGenericNackResp packet)
+            : base(packet)
+        {
+        }
+    }
 }

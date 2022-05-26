@@ -11,6 +11,7 @@ namespace AberrantSMPP
             Connected,
             Binding,
             Bound,
+            Unbinding
         }
     }
 }
