@@ -26,7 +26,7 @@ using System.Timers;
 using System.Net.Security;
 using System.Runtime.CompilerServices;
 using System.Security.Authentication;
-
+using System.Threading.Tasks;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
 using DotNetty.Handlers.Logging;
@@ -58,16 +58,12 @@ namespace AberrantSMPP
 	public partial class SMPPClient : IDisposable
 	{
 		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
-		private readonly object _bindingLock = new object();
-		// XXX: Beware of the implications of using ReaderWriterLockSlim with Async/Await code. (pruiz)
-		private readonly ReaderWriterLockSlim _stateLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+		
 		private CancellationTokenSource _cancellator = new CancellationTokenSource();
 
 		private Bootstrap _channelFactory;
 		private IEventLoopGroup _eventLoopGroup;
 		private IChannel _channel;
-		private States _state = States.Inactive;
 		private string _SystemId;
 		private string _Password;
 		private string _SystemType;
@@ -82,9 +78,7 @@ namespace AberrantSMPP
 		private int _ReBindInterval;
 		private System.Timers.Timer _ReBindTimer;
 		private Random _random = new Random();
-		private uint _SequenceNumber = 0;
 		private uint _channelBufferSize = 10240;
-		private IDictionary<uint, RequestState> _RequestsAwaitingResponse = new Dictionary<uint, RequestState>();
 		private SslProtocols _supportedSslProtocols;
 
 		#region properties
@@ -271,14 +265,9 @@ namespace AberrantSMPP
 				_supportedSslProtocols = value;
 			}
 		}
-		
-		public States State 
-		{
-			get
-			{
-				using (_stateLock.ForReadOnly()) return _state;
-			}
-		}
+
+		// FIXME: Optimize this.. and verify if locking maybe needed..
+		public States State => (_channel?.Pipeline.Context<ChannelHandler>() as ChannelHandler)?.State ?? States.Inactive;
 
 		#endregion
 		
@@ -323,6 +312,10 @@ namespace AberrantSMPP
 		/// Event called when a generic_nack is received.
 		/// </summary>
 		public event GenericNackEventHandler OnGenericNack;
+		/// <summary>
+		/// Event called when a generic_nack is received.
+		/// </summary>
+		public event GenericNackRespEventHandler OnGenericNackResp;
 		/// <summary>
 		/// Event called when an enquire_link is received.
 		/// </summary>
@@ -379,6 +372,7 @@ namespace AberrantSMPP
 		/// Event called when the communicator receives a submit_multi_resp.
 		/// </summary>
 		public event SubmitMultiRespEventHandler OnSubmitMultiResp;
+
 		#endregion events
 		
 		#region delegates
@@ -390,7 +384,7 @@ namespace AberrantSMPP
 		/// <summary>
 		/// Delegate to handle any errors that come up.
 		/// </summary>
-		public delegate void ErrorEventHandler(object source, CommonErrorEventArgs e);
+		public delegate void ErrorEventHandler(object source, SmppExceptionEventArgs e);
 		/// <summary>
 		/// Delegate to handle the unbind_resp.
 		/// </summary>
@@ -423,6 +417,10 @@ namespace AberrantSMPP
 		/// Delegate to handle generic_nack.
 		/// </summary>
 		public delegate void GenericNackEventHandler(object source, GenericNackEventArgs e);
+		/// <summary>
+		/// Delegate to handle generic_nack.
+		/// </summary>
+		public delegate void GenericNackRespEventHandler(object source, GenericNackRespEventArgs e);
 		/// <summary>
 		/// Delegate to handle the enquire_link.
 		/// </summary>
@@ -481,38 +479,6 @@ namespace AberrantSMPP
 		public delegate void SubmitMultiRespEventHandler(object source, SubmitMultiRespEventArgs e);
 	
 		#endregion delegates
-
-		#region dispatchers
-		private void DispatchOnError(CommonErrorEventArgs e)
-		{
-			if (OnError != null)
-			{
-				try
-				{
-					OnError(this, e);
-				}
-				catch (Exception ex)
-				{
-					_Log.Error("Unhandled exception thrown OnError event handler.", ex);
-				}
-			}
-		}
-		private void DispatchOnClose(EventArgs e)
-		{
-			//fire off a closing event
-			if (OnClose != null)
-			{
-				try
-				{
-					OnClose(this, e);
-				}
-				catch (Exception ex)
-				{
-					_Log.Error("Unhandled exception thrown from OnClose handler.", ex);
-				}
-			}
-		}
-		#endregion
 
 		#region constructors
 
@@ -597,7 +563,7 @@ namespace AberrantSMPP
 						.AddLast("framing-dec",
 							new LengthFieldBasedFrameDecoder(ByteOrder.BigEndian, Int32.MaxValue, 0, 4, -4, 0, false))
 						.AddLast("pdu-codec", new PduCodec())
-						.AddLast("inbound-handler", new InboundHandler(this));
+						.AddLast("inbound-handler", new ChannelHandler(this));
 				}));
 		}
 		#endregion constructors
@@ -658,46 +624,35 @@ namespace AberrantSMPP
 		/// </summary>
 		public void Bind()
 		{
-			using (_stateLock.ForWrite()) //< FIXME: Allow timing out..
+			_cancellator.Token.ThrowIfCancellationRequested();
+			//GuardEx.Against(_state == States.Bound, "Already bound to remote party, unbind session first.");
+			//GuardEx.Against(_state != States.Connected, "Can't bind non-connected session, call Connect() first.");
+			//GuardEx.Against(_EnquireLinkTimer.Enabled, "EnquireLinkTimer Enabled while binding?!");
+
+			_Log.InfoFormat("Binding to {0}:{1}..", Host, Port);
+			
+			var response = SendAndWait(new SmppBind()
 			{
-				_cancellator.Token.ThrowIfCancellationRequested();
-				GuardEx.Against(_state == States.Bound, "Already bound to remote party, unbind session first.");
-				GuardEx.Against(_state != States.Connected, "Can't bind non-connected session, call Connect() first.");
-				GuardEx.Against(_EnquireLinkTimer.Enabled, "EnquireLinkTimer Enabled while binding?!");
+				SystemId = SystemId,
+				Password = Password,
+				SystemType = SystemType,
+				InterfaceVersion = Version,
+				AddressTon = TonType,
+				AddressNpi = NpiType,
+				AddressRange = AddressRange,
+				BindType = BindType,
+			});
 
-				_Log.InfoFormat("Binding to {0}:{1}..", Host, Port);
+			if (response.CommandStatus != 0)
+				throw new SmppRequestException("Bind request failed.", response.CommandStatus);
 
-				// re-initialize seq. numbers.
-				InterlockedEx.Exchange(ref _SequenceNumber, 0);
-
-				// SequenceNumbers are per-session, so reset waiting list..
-				lock (_RequestsAwaitingResponse) _RequestsAwaitingResponse.Clear();
-
-				var response = SendAndWait(new SmppBind()
-				{
-					SystemId = SystemId,
-					Password = Password,
-					SystemType = SystemType,
-					InterfaceVersion = Version,
-					AddressTon = TonType,
-					AddressNpi = NpiType,
-					AddressRange = AddressRange,
-					BindType = BindType,
-				});
-
-				if (response.CommandStatus != 0)
-					throw new SmppRequestException("Bind request failed.", response.CommandStatus);
-
-				if (_EnquireLinkInterval > 0)
-				{
-					_EnquireLinkTimer.Interval = _EnquireLinkInterval * 1000;
-					_EnquireLinkTimer.Start();
-				}
-
-				_state = States.Bound;
-				
-				_Log.InfoFormat("Bound to {0}:{1}.", Host, Port);
+			if (_EnquireLinkInterval > 0)
+			{
+				_EnquireLinkTimer.Interval = _EnquireLinkInterval * 1000;
+				//_EnquireLinkTimer.Start();
 			}
+			
+			_Log.InfoFormat("Bound to {0}:{1}.", Host, Port);
 		}
 
 		/// <summary>
@@ -707,22 +662,20 @@ namespace AberrantSMPP
 		/// </summary>
 		public void Unbind()
 		{
-			using (_stateLock.ForWrite()) //< FIXME: Allow timing out..
-			{
-				_cancellator.Token.ThrowIfCancellationRequested();
-				Guard.Operation(_state == States.Bound, $"Can't unbind a session w/ state {_state}, try binding first.");
-				
-				_Log.InfoFormat("Unbinding from {0}:{1}..", Host, Port);
+			_cancellator.Token.ThrowIfCancellationRequested();
+			//Guard.Operation(_state == States.Bound, $"Can't unbind a session w/ state {_state}, try binding first.");
+			
+			_Log.InfoFormat("Unbinding from {0}:{1}..", Host, Port);
 
-				if (_EnquireLinkTimer.Enabled)
-					_EnquireLinkTimer.Stop();
+			if (_EnquireLinkTimer.Enabled)
+				_EnquireLinkTimer.Stop();
 
-				SendAndWait(new SmppUnbind());
-
-				_state = States.Connected;
-				
-				_Log.InfoFormat("Unbound from {0}:{1}.", Host, Port);
-			}
+			var response = SendAndWait(new SmppUnbind());
+			
+			if (response.CommandStatus != 0)
+				throw new SmppRequestException("Bind request failed.", response.CommandStatus);
+			
+			_Log.InfoFormat("Unbound from {0}:{1}.", Host, Port);
 		}
 
 		/// <summary>
@@ -738,24 +691,14 @@ namespace AberrantSMPP
 			try
 			{
 				_Log.DebugFormat("Sending PDU: {0}", packet);
+				
+				GuardEx.Against(_channel == null, "Channel has not been initialized?!");
+				Guard.Operation(_channel?.Active == true, "Channel is not active?!.");
+				//GuardEx.Against(_state < States.Connected, "Session is not connected.");
+				//GuardEx.Against(!(packet is SmppBind) && _state != States.Bound, "Session not bound to remote party.");
 
-				using (_stateLock.ForReadOnly()) //< FIXME: Allow timing out..
-				{
-					if (packet.SequenceNumber == 0)
-					{
-						// Generate a monotonically increasing sequence number for each Pdu.
-						// When it hits the the 32 bit unsigned int maximum, it starts over.
-						packet.SequenceNumber = InterlockedEx.Increment(ref _SequenceNumber);
-					}
-					
-					GuardEx.Against(_channel == null, "Channel has not been initialized?!");
-					Guard.Operation(_channel?.Active == true, "Channel is not active?!.");
-					GuardEx.Against(_state < States.Connected, "Session is not connected.");
-					GuardEx.Against(!(packet is SmppBind) && _state != States.Bound, "Session not bound to remote party.");
-
-					_channel!.WriteAndFlushAsync(packet).Wait(_cancellator.Token); //< FIXME: Allow timing out..
-					return packet.SequenceNumber;
-				}
+				_channel!.WriteAndFlushAsync(packet).Wait(_ResponseTimeout, _cancellator.Token); //< FIXME: Use a new RequestTimeout instead..
+				return packet.SequenceNumber;
 			}
 			catch (Exception ex)
 			{
@@ -774,28 +717,18 @@ namespace AberrantSMPP
 		/// <param name="request">The request.</param>
 		public SmppResponse SendAndWait(SmppRequest request)
 		{
-			RequestState state;
-
-			lock (_RequestsAwaitingResponse)
+			var promise = request.EnableResponseTracking();
+			
+			SendPdu(request);
+			
+			if (promise.Wait(_ResponseTimeout, _cancellator.Token))
 			{
-				state = new RequestState(SendPdu(request));
-				_RequestsAwaitingResponse.Add(state.SequenceNumber, state);
+				var response = promise.Result;
+				return response.CommandStatus == CommandStatus.ESME_ROK ? response
+					: throw new SmppRequestException("SmppRequest failed.", request, response);
 			}
-
-			var signalled = state.EventHandler.WaitOne(_ResponseTimeout);
-
-			lock (_RequestsAwaitingResponse)
-			{
-				_RequestsAwaitingResponse.Remove(state.SequenceNumber);
-
-				if (signalled)
-				{
-					return state.Response.CommandStatus == CommandStatus.ESME_ROK ? state.Response
-						: throw new SmppRequestException("SmppRequest failed.", request, state.Response);
-				}
-				
-				throw new SmppTimeoutException("Timeout while waiting for a response from remote side.");
-			}
+			
+			throw new SmppTimeoutException("Timeout while waiting for a response from remote side.");
 		}
 
 		public IEnumerable<SmppResponse> SendAndWait(IEnumerable<SmppRequest> requests)
@@ -948,68 +881,7 @@ namespace AberrantSMPP
 				return Convert.ToByte(_random.Next(254));
 			}
 		}
-		
-		private void ThrowIfStateIs(string operation, params States[] invalidStates)
-		{
-			using (_stateLock.ForReadOnly())
-			{
-				if (invalidStates.Contains((_state)))
-				{
-					throw new InvalidOperationException($"Invalid {operation} invoked while on state {_state}.");
-				}
-			}
-		}
-		
-		private void ThrowIfStateIsNot(string operation, params States[] validStates)
-		{
-			using (_stateLock.ForReadOnly())
-			{
-				if (!validStates.Contains((_state)))
-				{
-					throw new InvalidOperationException($"Invalid {operation} invoked while on state {_state}.");
-				}
-			}
-		}
 
-		/// <summary>
-		/// Goes through the packets in the queue and fires events for them.  Called by the
-		/// threads in the ThreadPool.
-		/// </summary>
-		/// <param name="queueStateObj">The queue of byte packets.</param>
-		private void ProcessPdu(Pdu packet)
-		{
-			_Log.DebugFormat("Recived PDU: {0}", packet);
-
-			try
-			{
-				// Handle packets related to a request awaiting response.
-				if (packet is SmppResponse || packet is SmppGenericNack)
-				{
-					lock (_RequestsAwaitingResponse)
-					{
-						if (_RequestsAwaitingResponse.ContainsKey(packet.SequenceNumber))
-						{
-							var state = _RequestsAwaitingResponse[packet.SequenceNumber];
-
-							// Save response at bucket..
-							state.Response = packet is SmppGenericNack
-								? new SmppGenericNackResp(packet.PacketBytes)
-								: packet as SmppResponse;
-							// Signal response reception..
-							state.EventHandler.Set();
-						}
-					}
-				}
-
-				// based on each Pdu, fire off an event
-				FireEvents(packet);
-			}
-			catch (Exception exception)
-			{
-				DispatchOnError(new CommonErrorEventArgs(exception));
-			}
-		}
-		
 		/// <summary>
 		/// Sends out an enquire_link packet.
 		/// </summary>
@@ -1089,267 +961,6 @@ namespace AberrantSMPP
 			finally
 			{
 				if (locked) _stateLock.ExitUpgradeableReadLock();
-			}
-		}
-
-		/// <summary>
-		/// Fires an event off based on what Pdu is received in.
-		/// </summary>
-		/// <param name="response">The response to fire an event for.</param>
-		private void FireEvents(Pdu response)
-		{
-			//here we go...
-			if(response is SmppBindResp)
-			{
-				if(OnBindResp != null)
-				{
-					OnBindResp(this, new BindRespEventArgs((SmppBindResp)response));
-				}
-			} 
-			else if(response is SmppUnbindResp)
-			{
-				//disconnect
-				_channel.DisconnectAsync().Wait();
-				if(OnUnboundResp != null)
-				{
-					OnUnboundResp(this, new UnbindRespEventArgs((SmppUnbindResp)response));
-				}
-			} 
-			else if(response is SmppAlertNotification)
-			{
-				if(OnAlert != null)
-				{
-					OnAlert(this, new AlertEventArgs((SmppAlertNotification)response));
-				}
-			}	
-			else if(response is SmppSubmitSmResp)
-			{
-				if(OnSubmitSmResp != null)
-				{
-					OnSubmitSmResp(this,
-						new SubmitSmRespEventArgs((SmppSubmitSmResp)response));
-				}
-			}
-			else if(response is SmppEnquireLinkResp)
-			{
-				if(OnEnquireLinkResp != null)
-				{
-					OnEnquireLinkResp(this, new EnquireLinkRespEventArgs((SmppEnquireLinkResp)response));
-				}
-			}
-			else if(response is SmppSubmitSm)
-			{
-				if(OnSubmitSm != null)
-				{
-					OnSubmitSm(this, new SubmitSmEventArgs((SmppSubmitSm)response));
-				}
-				else
-				{
-					//default a response
-					SmppSubmitSmResp pdu = new SmppSubmitSmResp();
-					pdu.SequenceNumber = response.SequenceNumber;
-					pdu.MessageId = System.Guid.NewGuid().ToString().Substring(0, 10);
-					pdu.CommandStatus = 0;
-	
-					SendPdu(pdu);
-				}
-			}
-			else if(response is SmppQuerySm)
-			{
-				if(OnQuerySm != null)
-				{
-					OnQuerySm(this, new QuerySmEventArgs((SmppQuerySm)response));
-				}
-				else
-				{
-					//default a response
-					SmppQuerySmResp pdu = new SmppQuerySmResp();
-					pdu.SequenceNumber = response.SequenceNumber;
-					pdu.CommandStatus = 0;
-	
-					SendPdu(pdu);
-				}
-			}
-			else if(response is SmppGenericNack)
-			{
-				if(OnGenericNack != null)
-				{
-					OnGenericNack(this, new GenericNackEventArgs((SmppGenericNack)response));
-				}
-			}
-			else if(response is SmppEnquireLink)
-			{
-				if(OnEnquireLink != null)
-				{
-					OnEnquireLink(this, new EnquireLinkEventArgs((SmppEnquireLink)response));
-				}
-				
-				//send a response back
-				SmppEnquireLinkResp pdu = new SmppEnquireLinkResp();
-				pdu.SequenceNumber = response.SequenceNumber;
-				pdu.CommandStatus = 0;
-
-				SendPdu(pdu);
-			}
-			else if(response is SmppUnbind)
-			{
-				if(OnUnbind != null)
-				{
-					OnUnbind(this, new UnbindEventArgs((SmppUnbind)response));
-				}
-				else
-				{
-					//default a response
-					SmppUnbindResp pdu = new SmppUnbindResp();
-					pdu.SequenceNumber = response.SequenceNumber;
-					pdu.CommandStatus = 0;
-	
-					SendPdu(pdu);
-				}
-			}
-			else if(response is SmppBind)
-			{
-				if(OnBind != null)
-				{
-					OnBind(this, new BindEventArgs((SmppBind)response));
-				}
-				else
-				{
-					//default a response
-					SmppBindResp pdu = new SmppBindResp();
-					pdu.SequenceNumber = response.SequenceNumber;
-					pdu.CommandStatus = 0;
-					pdu.SystemId = "Generic";
-	
-					SendPdu(pdu);
-				}
-			}
-			else if(response is SmppCancelSm)
-			{
-				if(OnCancelSm != null)
-				{
-					OnCancelSm(this, new CancelSmEventArgs((SmppCancelSm)response));
-				}
-				else
-				{
-					//default a response
-					SmppCancelSmResp pdu = new SmppCancelSmResp();
-					pdu.SequenceNumber = response.SequenceNumber;
-					pdu.CommandStatus = 0;
-	
-					SendPdu(pdu);
-				}
-			}
-			else if(response is SmppCancelSmResp)
-			{
-				if(OnCancelSmResp != null)
-				{
-					OnCancelSmResp(this, new CancelSmRespEventArgs((SmppCancelSmResp)response));
-				}
-			}
-			else if(response is SmppCancelSmResp)
-			{
-				if(OnCancelSmResp != null)
-				{
-					OnCancelSmResp(this, new CancelSmRespEventArgs((SmppCancelSmResp)response));
-				}
-			}
-			else if(response is SmppQuerySmResp)
-			{
-				if(OnQuerySmResp != null)
-				{
-					OnQuerySmResp(this, new QuerySmRespEventArgs((SmppQuerySmResp)response));
-				}
-			}
-			else if(response is SmppDataSm)
-			{
-				if(OnDataSm != null)
-				{
-					OnDataSm(this, new DataSmEventArgs((SmppDataSm)response));
-				}
-				else
-				{
-					//default a response
-					SmppDataSmResp pdu = new SmppDataSmResp();
-					pdu.SequenceNumber = response.SequenceNumber;
-					pdu.CommandStatus = 0;
-					pdu.MessageId = "Generic";
-	
-					SendPdu(pdu);
-				}
-			}
-			else if(response is SmppDataSmResp)
-			{
-				if(OnDataSmResp != null)
-				{
-					OnDataSmResp(this, new DataSmRespEventArgs((SmppDataSmResp)response));
-				}
-			}
-			else if(response is SmppDeliverSm)
-			{
-				if(OnDeliverSm != null)
-				{
-					OnDeliverSm(this, new DeliverSmEventArgs((SmppDeliverSm)response));
-				}
-				else
-				{
-					//default a response
-					SmppDeliverSmResp pdu = new SmppDeliverSmResp();
-					pdu.SequenceNumber = response.SequenceNumber;
-					pdu.CommandStatus = 0;
-	
-					SendPdu(pdu);
-				}
-			}
-			else if(response is SmppDeliverSmResp)
-			{
-				if(OnDeliverSmResp != null)
-				{
-					OnDeliverSmResp(this, new DeliverSmRespEventArgs((SmppDeliverSmResp)response));
-				}
-			}
-			else if(response is SmppReplaceSm)
-			{
-				if(OnReplaceSm != null)
-				{
-					OnReplaceSm(this, new ReplaceSmEventArgs((SmppReplaceSm)response));
-				}
-				else
-				{
-					//default a response
-					SmppReplaceSmResp pdu = new SmppReplaceSmResp();
-					pdu.SequenceNumber = response.SequenceNumber;
-					pdu.CommandStatus = 0;
-	
-					SendPdu(pdu);
-				}
-			}
-			else if(response is SmppReplaceSmResp resp)
-			{
-				OnReplaceSmResp?.Invoke(this, new ReplaceSmRespEventArgs(resp));
-			}
-			else if(response is SmppSubmitMulti multi)
-			{
-				if(OnSubmitMulti != null)
-				{
-					OnSubmitMulti(this, new SubmitMultiEventArgs(multi));
-				}
-				else
-				{
-					//default a response
-					SmppSubmitMultiResp pdu = new SmppSubmitMultiResp();
-					pdu.SequenceNumber = multi.SequenceNumber;
-					pdu.CommandStatus = 0;
-	
-					SendPdu(pdu);
-				}
-			}
-			else if(response is SmppSubmitMultiResp)
-			{
-				if(OnSubmitMultiResp != null)
-				{
-					OnSubmitMultiResp(this, new SubmitMultiRespEventArgs((SmppSubmitMultiResp)response));
-				}
 			}
 		}
 

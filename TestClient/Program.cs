@@ -26,30 +26,30 @@ namespace TestClient
 			client.TonType = AberrantSMPP.Packet.Pdu.TonType.International;
 			client.Version = AberrantSMPP.Packet.Pdu.SmppVersionType.Version3_4;
 
-			client.OnAlert += (s, e) => Console.WriteLine("Alert: " + e.ResponsePdu);
-			client.OnBind += (s, e) => Console.WriteLine("OnBind: " + e.ResponsePdu);
-			client.OnBindResp += (s, e) => Console.WriteLine("OnBindResp: " + e.ResponsePdu);
-			client.OnCancelSm += (s, e) => Console.WriteLine("OnCancelSm: " + e.ResponsePdu);
-			client.OnCancelSmResp += (s, e) => Console.WriteLine("OnCancelResp: " + e.ResponsePdu);
+			client.OnAlert += (s, e) => Console.WriteLine("Alert: " + e.Response);
+			client.OnBind += (s, e) => Console.WriteLine("OnBind: " + e.Response);
+			client.OnBindResp += (s, e) => Console.WriteLine("OnBindResp: " + e.Response);
+			client.OnCancelSm += (s, e) => Console.WriteLine("OnCancelSm: " + e.Response);
+			client.OnCancelSmResp += (s, e) => Console.WriteLine("OnCancelResp: " + e.Response);
 			client.OnClose += (s, e) => Console.WriteLine("OnClose: " + e.GetType());
-			client.OnDataSm += (s, e) => Console.WriteLine("OnDataSm: " + e.ResponsePdu);
-			client.OnDataSmResp += (s, e) => Console.WriteLine("OnDataResp: " + e.ResponsePdu);
-			client.OnDeliverSm += (s, e) => Console.WriteLine("OnDeliverSm: " + e.ResponsePdu);
-			client.OnDeliverSmResp += (s, e) => Console.WriteLine("OnDeliverSmResp: " + e.ResponsePdu);
-			client.OnEnquireLink += (s, e) => Console.WriteLine("OnEnquireLink: " + e.ResponsePdu);
-			client.OnEnquireLinkResp += (s, e) => Console.WriteLine("OnEnquireLinkResp: " + e.ResponsePdu);
+			client.OnDataSm += (s, e) => Console.WriteLine("OnDataSm: " + e.Response);
+			client.OnDataSmResp += (s, e) => Console.WriteLine("OnDataResp: " + e.Response);
+			client.OnDeliverSm += (s, e) => Console.WriteLine("OnDeliverSm: " + e.Response);
+			client.OnDeliverSmResp += (s, e) => Console.WriteLine("OnDeliverSmResp: " + e.Response);
+			client.OnEnquireLink += (s, e) => Console.WriteLine("OnEnquireLink: " + e.Response);
+			client.OnEnquireLinkResp += (s, e) => Console.WriteLine("OnEnquireLinkResp: " + e.Response);
 			client.OnError += (s, e) => Console.WriteLine("OnError: " + e.ThrownException?.ToString());
-			client.OnGenericNack += (s, e) => Console.WriteLine("OnGenericNack: " + e.ResponsePdu);
-			client.OnQuerySm += (s, e) => Console.WriteLine("OnQuerySm: " + e.ResponsePdu);
-			client.OnQuerySmResp += (s, e) => Console.WriteLine("OnQuerySmResp: " + e.ResponsePdu);
-			client.OnReplaceSm += (s, e) => Console.WriteLine("OnReplaceSm: " + e.ResponsePdu);
-			client.OnReplaceSmResp += (s, e) => Console.WriteLine("OnReplaceSmResp: " + e.ResponsePdu);
-			client.OnSubmitMulti += (s, e) => Console.WriteLine("OnSubmitMulti: " + e.ResponsePdu);
-			client.OnSubmitMultiResp += (s, e) => Console.WriteLine("OnSubmitMultiResp: " + e.ResponsePdu);
-			client.OnSubmitSm += (s, e) => Console.WriteLine("OnSubmitSm: " + e.ResponsePdu);
+			client.OnGenericNack += (s, e) => Console.WriteLine("OnGenericNack: " + e.Response);
+			client.OnQuerySm += (s, e) => Console.WriteLine("OnQuerySm: " + e.Response);
+			client.OnQuerySmResp += (s, e) => Console.WriteLine("OnQuerySmResp: " + e.Response);
+			client.OnReplaceSm += (s, e) => Console.WriteLine("OnReplaceSm: " + e.Response);
+			client.OnReplaceSmResp += (s, e) => Console.WriteLine("OnReplaceSmResp: " + e.Response);
+			client.OnSubmitMulti += (s, e) => Console.WriteLine("OnSubmitMulti: " + e.Response);
+			client.OnSubmitMultiResp += (s, e) => Console.WriteLine("OnSubmitMultiResp: " + e.Response);
+			client.OnSubmitSm += (s, e) => Console.WriteLine("OnSubmitSm: " + e.Response);
 			client.OnSubmitSmResp += client_OnSubmitSmResp;
-			client.OnUnbind += (s, e) => Console.WriteLine("OnUnbind: " + e.ResponsePdu);
-			client.OnUnboundResp += (s, e) => Console.WriteLine("OnUnboundResp: " + e.ResponsePdu);
+			client.OnUnbind += (s, e) => Console.WriteLine("OnUnbind: " + e.Response);
+			client.OnUnboundResp += (s, e) => Console.WriteLine("OnUnboundResp: " + e.Response);
 
 			client.Connect();
 			client.Bind();
@@ -133,9 +133,9 @@ namespace TestClient
 
 		static void client_OnSubmitSmResp(object source, AberrantSMPP.EventObjects.SubmitSmRespEventArgs e)
 		{
-			Console.WriteLine("OnSubmitSmResp: " + e.ResponsePdu);
+			Console.WriteLine("OnSubmitSmResp: " + e.Response);
 
-			var res = e.ResponsePdu as SmppSubmitSmResp;
+			var res = e.Response as SmppSubmitSmResp;
 			SentMessages.Add(res.MessageId.Trim());
 		}
 	}

@@ -427,7 +427,7 @@ namespace AberrantSMPP
 		/// <summary>
 		/// Delegate to handle any errors that come up.
 		/// </summary>
-		public delegate void ErrorEventHandler(object source, CommonErrorEventArgs e);
+		public delegate void ErrorEventHandler(object source, SmppExceptionEventArgs e);
 		/// <summary>
 		/// Delegate to handle the unbind_resp.
 		/// </summary>
@@ -520,7 +520,7 @@ namespace AberrantSMPP
 		#endregion delegates
 
 		#region dispatchers
-		private void DispatchOnError(CommonErrorEventArgs e)
+		private void DispatchOnError(SmppExceptionEventArgs e)
 		{
 			if (OnError != null)
 			{
@@ -835,7 +835,7 @@ namespace AberrantSMPP
 				}
 				catch (Exception exc)
 				{
-					DispatchOnError(new BindErrorEventArgs(exc));
+					DispatchOnError(new SmppExceptionEventArgs(exc));
 				}
 				finally
 				{
@@ -879,7 +879,7 @@ namespace AberrantSMPP
 			}
 			catch (Exception exception)
 			{
-				DispatchOnError(new CommonErrorEventArgs(exception));
+				DispatchOnError(new SmppExceptionEventArgs(exception));
 			}
 		}
 
@@ -905,7 +905,7 @@ namespace AberrantSMPP
 		/// <param name="exception">The generated exception.</param>
 		internal void ClientErrorHandler(AsyncSocketClient client, Exception exception)
 		{
-			DispatchOnError(new CommonErrorEventArgs(exception));
+			DispatchOnError(new SmppExceptionEventArgs(exception));
 		}
 		#endregion internal methods
 
@@ -997,7 +997,7 @@ namespace AberrantSMPP
 				}
 				catch (Exception exception)
 				{
-					DispatchOnError(new CommonErrorEventArgs(exception));
+					DispatchOnError(new SmppExceptionEventArgs(exception));
 				}
 			}
 		}
