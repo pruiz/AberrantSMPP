@@ -411,6 +411,9 @@ namespace AberrantSMPP
 		
 		static SMPPClient()
 		{
+			// FIXME: Adapt internal DotNetty logging to Common.Logging..
+			// FIXME: Add a new InternalLogging property in order to enable / disable logging of DotNetty code.
+			// We may want to use: https://github.com/hippasus/Common.Logging.MicrosoftLogging/tree/main/src/Common.Logging.MicrosoftLogging
 			var options = new Microsoft.Extensions.Logging.Console.ConsoleLoggerOptions();
 			InternalLoggerFactory.DefaultFactory.AddProvider(new Microsoft.Extensions.Logging.Console.ConsoleLoggerProvider(new OptionsMonitor<Microsoft.Extensions.Logging.Console.ConsoleLoggerOptions>(options)));
 		}
@@ -446,7 +449,7 @@ namespace AberrantSMPP
 		/// True if bind was successfull or false if connection/bind failed 
 		/// (and will be retried later upon retryInterval)
 		/// </returns>
-		public void Start(TimeSpan retryInterval) //< FIXME: Support backoff intervals..
+		public Task Start(TimeSpan retryInterval) //< FIXME: Support backoff intervals..
 		{
 			try
 			{
@@ -460,6 +463,8 @@ namespace AberrantSMPP
 				RestablishInterval = TimeSpan.Zero;
 				throw;
 			}
+
+			return null; // FIXME: Return a promise so caller can know when we actually become connected/bound..
 		}
 
 		public void Stop()
