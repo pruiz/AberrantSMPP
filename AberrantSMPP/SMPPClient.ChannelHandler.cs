@@ -24,7 +24,7 @@ namespace AberrantSMPP
             private readonly bool autoRelease = true;
             private SMPPClient _client;
             private uint _SequenceNumber = 0;
-            private volatile States _state = States.Inactive;
+            private States _state = States.Inactive;
             private IDictionary<uint, SmppRequest> _requestQueue = new Dictionary<uint, SmppRequest>(); //< FIXME: Use a cache-like struct w/ auto-expire & trimming..
 
             public States State => _state;
@@ -35,12 +35,21 @@ namespace AberrantSMPP
                 _client = Guard.Argument(owner, nameof(owner)).NotNull();
             }
 
+            private void SetNewState(IChannelHandlerContext ctx, States newState)
+            {
+                var oldState = _state;
+                _state = newState;
+                ctx.FireUserEventTriggered(new StateChangedEvent(oldState, newState));
+                _client.SetNewState(newState);
+            }
+            
             private void ProcessOutbound(IChannelHandlerContext ctx, SmppBind bind)
             {
                 GuardEx.Against(_state == States.Bound, "Trying to send Pdu over an session not yet bound?!");
                 GuardEx.Against(_state != States.Connected, "Can't bind non-connected session, call Connect() first.");
                 
-                
+                _Log.InfoFormat("Binding to {0}..", ctx.Channel.RemoteAddress);
+                SetNewState(ctx, States.Binding);
             }
 
             private void ProcessOutbound(IChannelHandlerContext ctx, SmppRequest request)
@@ -62,7 +71,9 @@ namespace AberrantSMPP
                     case SmppBind bind:
                         ProcessOutbound(ctx, bind);
                         break;
-                    default: throw new NotImplementedException("FIXME");
+                    default:
+                        // do nothing, just let it go..
+                        break;
                 };
             }
             private void ProcessOutbound(IChannelHandlerContext ctx, Pdu packet)
@@ -213,12 +224,12 @@ namespace AberrantSMPP
                 {
                     case SmppBindResp bind:
                         GuardEx.Against(_state != States.Binding, $"Received bind response while on state {_state}?!");
-                        _state = States.Bound;
+                        SetNewState(ctx, States.Bound);
                         _client.OnBindResp?.Invoke(_client, new BindRespEventArgs(bind));
                         break;
                     case SmppUnbindResp unbind:
                         GuardEx.Against(_state != States.Unbinding, $"Received unbind response while on state {_state}?!");
-                        _state = States.Connected;
+                        SetNewState(ctx, States.Connected);
                         _client.OnUnboundResp?.Invoke(_client, new UnbindRespEventArgs(unbind));
                         break;
                     case SmppGenericNackResp nack:
@@ -227,28 +238,28 @@ namespace AberrantSMPP
                         break;
                     case SmppEnquireLinkResp enquire:
                         GuardEx.Against(_state != States.Bound, $"Received enquire_link response while on state {_state}?!");
-                        throw new NotImplementedException("FIXME: Handle enquire_link.. by warning if status != 0?");
+                        if (enquire.CommandStatus != CommandStatus.ESME_ROK)
+                        {
+                            _Log.Warn($"Received EnquireLinkResp with CommandStatus = {enquire.CommandStatus}?!");
+                        }
                         _client.OnEnquireLinkResp?.Invoke(_client, new EnquireLinkRespEventArgs(enquire));
                         break;
                     case SmppDataSmResp data:
                         GuardEx.Against(_state != States.Bound, $"Received data_sm response while on state {_state}?!");
-                        throw new NotImplementedException("FIXME: Handle data_sm_resp matching sequence numbers, and firing promises..");
                         _client.OnDataSmResp?.Invoke(_client, new DataSmRespEventArgs(data));
                         break;
                     case SmppSubmitMultiResp multi:
                         GuardEx.Against(_state != States.Bound, $"Received submit_multi_sm response while on state {_state}?!");
-                        throw new NotImplementedException("FIXME: Handle submit_multi_sm_resp matching sequence numbers, and firing promises..");
                         _client.OnSubmitMultiResp?.Invoke(_client, new SubmitMultiRespEventArgs(multi));
                         break;                        
                     case SmppSubmitSmResp submit:
                         GuardEx.Against(_state != States.Bound, $"Received submit_sm response while on state {_state}?!");
-                        throw new NotImplementedException("FIXME: Handle submit_sm_resp matching sequence numbers, and firing promises..");
                         _client.OnSubmitSmResp?.Invoke(_client, new SubmitSmRespEventArgs(submit));
                         break;
                     case SmppDeliverSmResp deliver:
                         GuardEx.Against(_state != States.Bound, $"Received deliver_sm response while on state {_state}?!");
-                        throw new NotImplementedException("FIXME: Handle deliver_sm_resp matching sequence numbers, and firing promises..");
                         _client.OnDeliverSmResp?.Invoke(_client, new DeliverSmRespEventArgs(deliver));
+                        break;
                     case SmppReplaceSmResp replace:
                         GuardEx.Against(_state != States.Bound, $"Received replace_sm response while on state {_state}?!");
                         _client.OnReplaceSmResp?.Invoke(_client, new ReplaceSmRespEventArgs(replace));
@@ -261,7 +272,7 @@ namespace AberrantSMPP
                         GuardEx.Against(_state != States.Bound, $"Received cancel response while on state {_state}?!");
                         _client.OnCancelSmResp?.Invoke(_client, new CancelSmRespEventArgs(cancel));
                         break;
-                    default: throw new NotImplementedException("FIXME");
+                    default: throw new NotImplementedException($"FIXME: Unexpected response of type {response?.GetType().Name}?!");
                 }
                 
                 // Handle packets related to a request awaiting response.
@@ -335,14 +346,25 @@ namespace AberrantSMPP
                 return base.WriteAsync(context, message);
             }
 
+            public override void ChannelActive(IChannelHandlerContext context)
+            {
+                base.ChannelActive(context);
+                
+                _Log.Debug("Channel activated..");
+                SetNewState(context, States.Connected);
+            }
+
             public override void ChannelInactive(IChannelHandlerContext context)
             {
                 base.ChannelInactive(context);
 
-                   _Log.Warn("Socket closed..");
-                    _state = States.Inactive;
+               _Log.Warn("Channel de-activated..");
+                SetNewState(context, States.Inactive);
 
                 _client.OnClose?.Invoke(_client, new EventArgs());
+                
+                // FIXME: If reconnect enabled, schedle reconnect event/action..
+                //context.Channel.EventLoop.Schedule(_ => this.doConnect((EndPoint)_), context.Channel.RemoteAddress, TimeSpan.FromMilliseconds(1000));
             }
 
             public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)

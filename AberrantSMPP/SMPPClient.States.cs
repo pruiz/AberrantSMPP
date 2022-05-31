@@ -13,5 +13,20 @@ namespace AberrantSMPP
             Bound,
             Unbinding
         }
+        
+        public class StateChangedEvent
+        {
+            public States OldState { get; }
+            public States NewState { get; }
+
+            /// <summary>
+            /// Sets up the SmppEventArgs.
+            /// </summary>
+            public StateChangedEvent(States oldState, States newState)
+            {
+                OldState = oldState;
+                NewState = newState;
+            }
+        }
     }
 }

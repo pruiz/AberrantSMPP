@@ -36,7 +36,7 @@ namespace AberrantSMPP.EventObjects
 		{
 		}
 	}
-	
+
 	/// <summary>
 	/// Base class to provide some functionality for error events.
 	/// </summary>
