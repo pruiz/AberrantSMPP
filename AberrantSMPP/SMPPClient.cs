@@ -61,22 +61,12 @@ namespace AberrantSMPP
 		
 		private CancellationTokenSource _cancellator = new CancellationTokenSource();
 
+		private readonly object _lock = new object();
 		private Bootstrap _channelFactory;
 		private IEventLoopGroup _eventLoopGroup;
 		private IChannel _channel;
-		private string _SystemId;
-		private string _Password;
-		private string _SystemType;
-		private SmppBind.BindingType _BindType;
-		private Pdu.NpiType _NpiType;
-		private Pdu.TonType _TonType; 
-		private SmppBind.SmppVersionType _Version;
-		private string _AddressRange;
-		private int _EnquireLinkInterval;
-		private System.Timers.Timer _EnquireLinkTimer;
-		private int _ResponseTimeout;
-		private int _ReBindInterval;
-		private System.Timers.Timer _ReBindTimer;
+		private volatile States _state;
+		private volatile uint _EnquireLinkInterval;
 		private Random _random = new Random();
 		private uint _channelBufferSize = 10240;
 		private SslProtocols _supportedSslProtocols;
@@ -92,288 +82,94 @@ namespace AberrantSMPP
 		/// The port on the SMSC to connect to.
 		/// </summary>
 		public UInt16 Port { get; private set; } = 2775;
+
 		/// <summary>
 		/// The binding type(receiver, transmitter, or transceiver)to use 
 		/// when connecting to the SMSC.
 		/// </summary>
-		public SmppBind.BindingType BindType
-		{
-			get
-			{
-				return _BindType;
-			}
-			set
-			{
-				_BindType = value;
-			}
-		
-		}
+		public SmppBind.BindingType BindType { get; set; } = SmppBind.BindingType.BindAsTransceiver;
+
 		/// <summary>
 		/// The system type to use when connecting to the SMSC.
 		/// </summary>
-		public string SystemType
-		{
-			get
-			{
-				return _SystemType;
-			}
-			set
-			{
-				_SystemType = value;
-			}
-		}
+		public string SystemType { get; set; }
+		
 		/// <summary>
 		/// The system ID to use when connecting to the SMSC.  This is, 
 		/// in essence, a user name.
 		/// </summary>
-		public string SystemId
-		{
-			get
-			{
-				return _SystemId;
-			}
-			set
-			{
-				_SystemId = value;
-			}
-		}
+		public string SystemId { get; set; }
+		
 		/// <summary>
 		/// The password to use when connecting to an SMSC.
 		/// </summary>
-		public string Password
-		{
-			get
-			{
-				return _Password;
-			}
-			set
-			{
-				_Password = value;
-			}
-		}
+		public string Password { get; set; }
+
 		/// <summary>
 		/// The number plan indicator that this SMPPCommunicator should use.  
 		/// </summary>
-		public Pdu.NpiType NpiType 
-		{
-			get
-			{
-				return _NpiType;
-			}
-			set 
-			{
-				_NpiType = value;
-			}
-		}
+		public Pdu.NpiType NpiType { get; set; } = Pdu.NpiType.ISDN;
+
 		/// <summary>
 		/// The type of number that this SMPPCommunicator should use.  
 		/// </summary>
-		public Pdu.TonType TonType 
-		{
-			get
-			{
-				return _TonType;
-			}
-			set 
-			{
-				_TonType = value;
-			}
-		}
+		public Pdu.TonType TonType { get; set; } = Pdu.TonType.International;
+
 		/// <summary>
 		/// The SMPP specification version to use.
 		/// </summary>
-		public SmppBind.SmppVersionType Version 
-		{
-			get
-			{
-				return _Version;
-			}
-			set 
-			{
-				_Version = value;
-			}
-		}
+		public SmppBind.SmppVersionType Version { get; set; } = Pdu.SmppVersionType.Version3_4;
+		
 		/// <summary>
 		/// The address range of this SMPPCommunicator.
 		/// </summary>
-		public string AddressRange 
-		{
-			get
-			{
-				return _AddressRange;
-			}
-			set 
-			{
-				_AddressRange = value;
-			}
-		}
-		/// <summary>
-		/// Set to the number of seconds that should elapse in between enquire_link 
-		/// packets.  Setting this to anything other than 0 will enable the timer, setting 
-		/// it to 0 will disable the timer.  Note that the timer is only started/stopped 
-		/// during a bind/unbind.  Negative values are ignored.
-		/// </summary>
-		public int EnquireLinkInterval
-		{
-			get 
-			{
-				return _EnquireLinkInterval;
-			}
+		public string AddressRange  { get; set; }
 
-			set
-			{
-				if(value >= 0)
-					_EnquireLinkInterval = value;
-			}
+		/// <summary>
+		/// Gets or sets the connect timeout (in miliseconds)
+		/// </summary>
+		/// <value>The response timeout.</value>
+		public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(30);
+		
+		/// <summary>
+		/// Gets or sets the request timeout (in miliseconds)
+		/// </summary>
+		/// <value>The response timeout.</value>
+		public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(5);
+		
+		/// <summary>
+		/// Gets or sets the response timeout (in miliseconds)
+		/// </summary>
+		/// <value>The response timeout.</value>
+		public TimeSpan ResponseTimeout { get; set; } = TimeSpan.FromSeconds(10);
+		
+		/// <summary>
+		/// Set to the interval that should elapse in between enquire_link packets.
+		/// Setting this to anything other than 0 will enable the timer, setting 
+		/// it to 0 will disable the timer.  Note that the timer is only started/stopped 
+		/// during a bind/unbind.
+		/// Also, EnquireLink packets are only sent when no other traffic went on between
+		/// state interval.
+		/// </summary>
+		public TimeSpan EnquireLinkInterval
+		{
+			get => TimeSpan.FromMilliseconds(_EnquireLinkInterval);
+			set => _EnquireLinkInterval = (uint)value.TotalMilliseconds;
 		}
+		
 		/// <summary>
 		/// Sets the number of seconds that the system will wait before trying to rebind 
 		/// after a total network failure(due to cable problems, etc).  Negative values are 
 		/// ignored, and 0 disables Re-Binding.
 		/// </summary>
-		public int ReBindInterval
-		{
-			get 
-			{
-				return _ReBindInterval;
-			}
+		public TimeSpan ReBindInterval { get; set;  }
 
-			set
-			{
-				if(value >= 0)
-					_ReBindInterval = value;
-			}
-		}
-		/// <summary>
-		/// Gets or sets the response timeout (in miliseconds)
-		/// </summary>
-		/// <value>The response timeout.</value>
-		public int ResponseTimeout
-		{
-			get { return _ResponseTimeout; }
-			set { _ResponseTimeout = value; }
-		}
-		
-		public SslProtocols SupportedSslProtocols
-		{
-			get
-			{
-				return _supportedSslProtocols;
-			}
-			set
-			{
-				_supportedSslProtocols = value;
-			}
-		}
+		public SslProtocols SupportedSslProtocols { get; set; }
 
 		// FIXME: Optimize this.. and verify if locking maybe needed..
-		public States State => (_channel?.Pipeline.Context<ChannelHandler>() as ChannelHandler)?.State ?? States.Inactive;
+		public States State => _state;
 
 		#endregion
-		
-		#region events
-		/// <summary>
-		/// Event called when the communicator receives a bind response.
-		/// </summary>
-		public event BindRespEventHandler OnBindResp;
-		/// <summary>
-		/// Event called when an error occurs.
-		/// </summary>
-		public event ErrorEventHandler OnError;
-		/// <summary>
-		/// Event called when the communicator is unbound.
-		/// </summary>
-		public event UnbindRespEventHandler OnUnboundResp;
-		/// <summary>
-		/// Event called when the connection is closed.
-		/// </summary>
-		public event ClosingEventHandler OnClose;
-		/// <summary>
-		/// Event called when an alert_notification comes in.
-		/// </summary>
-		public event AlertEventHandler OnAlert;
-		/// <summary>
-		/// Event called when a submit_sm_resp is received.
-		/// </summary>
-		public event SubmitSmRespEventHandler OnSubmitSmResp;
-		/// <summary>
-		/// Event called when a response to an enquire_link_resp is received.
-		/// </summary>
-		public event EnquireLinkRespEventHandler OnEnquireLinkResp;
-		/// <summary>
-		/// Event called when a submit_sm is received.
-		/// </summary>
-		public event SubmitSmEventHandler OnSubmitSm;
-		/// <summary>
-		/// Event called when a query_sm is received.
-		/// </summary>
-		public event QuerySmEventHandler OnQuerySm;
-		/// <summary>
-		/// Event called when a generic_nack is received.
-		/// </summary>
-		public event GenericNackEventHandler OnGenericNack;
-		/// <summary>
-		/// Event called when a generic_nack is received.
-		/// </summary>
-		public event GenericNackRespEventHandler OnGenericNackResp;
-		/// <summary>
-		/// Event called when an enquire_link is received.
-		/// </summary>
-		public event EnquireLinkEventHandler OnEnquireLink;
-		/// <summary>
-		/// Event called when an unbind is received.
-		/// </summary>
-		public event UnbindEventHandler OnUnbind;
-		/// <summary>
-		/// Event called when the communicator receives a request for a bind.
-		/// </summary>
-		public event BindEventHandler OnBind;
-		/// <summary>
-		/// Event called when the communicator receives a cancel_sm.
-		/// </summary>
-		public event CancelSmEventHandler OnCancelSm;
-		/// <summary>
-		/// Event called when the communicator receives a cancel_sm_resp.
-		/// </summary>
-		public event CancelSmRespEventHandler OnCancelSmResp;
-		/// <summary>
-		/// Event called when the communicator receives a query_sm_resp.
-		/// </summary>
-		public event QuerySmRespEventHandler OnQuerySmResp;
-		/// <summary>
-		/// Event called when the communicator receives a data_sm.
-		/// </summary>
-		public event DataSmEventHandler OnDataSm;
-		/// <summary>
-		/// Event called when the communicator receives a data_sm_resp.
-		/// </summary>
-		public event DataSmRespEventHandler OnDataSmResp;
-		/// <summary>
-		/// Event called when the communicator receives a deliver_sm.
-		/// </summary>
-		public event DeliverSmEventHandler OnDeliverSm;
-		/// <summary>
-		/// Event called when the communicator receives a deliver_sm_resp.
-		/// </summary>
-		public event DeliverSmRespEventHandler OnDeliverSmResp;
-		/// <summary>
-		/// Event called when the communicator receives a replace_sm.
-		/// </summary>
-		public event ReplaceSmEventHandler OnReplaceSm;
-		/// <summary>
-		/// Event called when the communicator receives a replace_sm_resp.
-		/// </summary>
-		public event ReplaceSmRespEventHandler OnReplaceSmResp;
-		/// <summary>
-		/// Event called when the communicator receives a submit_multi.
-		/// </summary>
-		public event SubmitMultiEventHandler OnSubmitMulti;
-		/// <summary>
-		/// Event called when the communicator receives a submit_multi_resp.
-		/// </summary>
-		public event SubmitMultiRespEventHandler OnSubmitMultiResp;
-
-		#endregion events
 		
 		#region delegates
 
@@ -477,8 +273,119 @@ namespace AberrantSMPP
 		/// Delegate to handle submit_multi_resp.
 		/// </summary>
 		public delegate void SubmitMultiRespEventHandler(object source, SubmitMultiRespEventArgs e);
-	
+		/// <summary>
+		/// Delegate to handle state changes.
+		/// </summary>
+		public delegate void ClientStateChangedEventHandler(object source, ClientStateChangedEventArgs e);
 		#endregion delegates
+		
+		#region events
+		/// <summary>
+		/// Event called when the client receives a bind response.
+		/// </summary>
+		public event BindRespEventHandler OnBindResp;
+		/// <summary>
+		/// Event called when an error occurs.
+		/// </summary>
+		public event ErrorEventHandler OnError;
+		/// <summary>
+		/// Event called when the client is unbound.
+		/// </summary>
+		public event UnbindRespEventHandler OnUnboundResp;
+		/// <summary>
+		/// Event called when the connection is closed.
+		/// </summary>
+		public event ClosingEventHandler OnClose;
+		/// <summary>
+		/// Event called when an alert_notification comes in.
+		/// </summary>
+		public event AlertEventHandler OnAlert;
+		/// <summary>
+		/// Event called when a submit_sm_resp is received.
+		/// </summary>
+		public event SubmitSmRespEventHandler OnSubmitSmResp;
+		/// <summary>
+		/// Event called when a response to an enquire_link_resp is received.
+		/// </summary>
+		public event EnquireLinkRespEventHandler OnEnquireLinkResp;
+		/// <summary>
+		/// Event called when a submit_sm is received.
+		/// </summary>
+		public event SubmitSmEventHandler OnSubmitSm;
+		/// <summary>
+		/// Event called when a query_sm is received.
+		/// </summary>
+		public event QuerySmEventHandler OnQuerySm;
+		/// <summary>
+		/// Event called when a generic_nack is received.
+		/// </summary>
+		public event GenericNackEventHandler OnGenericNack;
+		/// <summary>
+		/// Event called when a generic_nack is received.
+		/// </summary>
+		public event GenericNackRespEventHandler OnGenericNackResp;
+		/// <summary>
+		/// Event called when an enquire_link is received.
+		/// </summary>
+		public event EnquireLinkEventHandler OnEnquireLink;
+		/// <summary>
+		/// Event called when an unbind is received.
+		/// </summary>
+		public event UnbindEventHandler OnUnbind;
+		/// <summary>
+		/// Event called when the client receives a request for a bind.
+		/// </summary>
+		public event BindEventHandler OnBind;
+		/// <summary>
+		/// Event called when the client receives a cancel_sm.
+		/// </summary>
+		public event CancelSmEventHandler OnCancelSm;
+		/// <summary>
+		/// Event called when the client receives a cancel_sm_resp.
+		/// </summary>
+		public event CancelSmRespEventHandler OnCancelSmResp;
+		/// <summary>
+		/// Event called when the client receives a query_sm_resp.
+		/// </summary>
+		public event QuerySmRespEventHandler OnQuerySmResp;
+		/// <summary>
+		/// Event called when the client receives a data_sm.
+		/// </summary>
+		public event DataSmEventHandler OnDataSm;
+		/// <summary>
+		/// Event called when the client receives a data_sm_resp.
+		/// </summary>
+		public event DataSmRespEventHandler OnDataSmResp;
+		/// <summary>
+		/// Event called when the client receives a deliver_sm.
+		/// </summary>
+		public event DeliverSmEventHandler OnDeliverSm;
+		/// <summary>
+		/// Event called when the client receives a deliver_sm_resp.
+		/// </summary>
+		public event DeliverSmRespEventHandler OnDeliverSmResp;
+		/// <summary>
+		/// Event called when the client receives a replace_sm.
+		/// </summary>
+		public event ReplaceSmEventHandler OnReplaceSm;
+		/// <summary>
+		/// Event called when the client receives a replace_sm_resp.
+		/// </summary>
+		public event ReplaceSmRespEventHandler OnReplaceSmResp;
+		/// <summary>
+		/// Event called when the client receives a submit_multi.
+		/// </summary>
+		public event SubmitMultiEventHandler OnSubmitMulti;
+		/// <summary>
+		/// Event called when the client receives a submit_multi_resp.
+		/// </summary>
+		public event SubmitMultiRespEventHandler OnSubmitMultiResp;
+		/// <summary>
+		/// Event called when the client' state changes.
+		/// </summary>
+		public event ClientStateChangedEventHandler OnClientStateChanged;
+
+		#endregion events
 
 		#region constructors
 
@@ -521,23 +428,10 @@ namespace AberrantSMPP
 		{
 			Host = host;
 			Port = port;
-			BindType = SmppBind.BindingType.BindAsTransceiver;
-			NpiType = Pdu.NpiType.ISDN;
-			TonType = Pdu.TonType.International; 
-			Version = Pdu.SmppVersionType.Version3_4;
-			AddressRange = null;
-			Password = null;
-			SystemId = null;
-			SystemType = null;
-			EnquireLinkInterval = 0;
-			ReBindInterval = 10;
-			ResponseTimeout = 2500;
 
 			// Initialize timers..
-			_EnquireLinkTimer = new System.Timers.Timer() { Enabled = false };
-			_EnquireLinkTimer.Elapsed += new ElapsedEventHandler(EnquireLinkTimerElapsed);
-			_ReBindTimer = new System.Timers.Timer() { Enabled = false };
-			_ReBindTimer.Elapsed += new ElapsedEventHandler(ReBindTimerElapsed);
+			//_ReBindTimer = new System.Timers.Timer() { Enabled = false };
+			//_ReBindTimer.Elapsed += new ElapsedEventHandler(ReBindTimerElapsed);
 
 			_eventLoopGroup = new MultithreadEventLoopGroup();
 			_channelFactory = new Bootstrap()
@@ -547,24 +441,8 @@ namespace AberrantSMPP
 				.Option(ChannelOption.SoLinger, 0)
 				.Option(ChannelOption.SoRcvbuf, (int)_channelBufferSize)
 				.Option(ChannelOption.SoSndbuf, (int)_channelBufferSize)
-				.RemoteAddress(Host, Port)
-				.Handler(new ActionChannelInitializer<ISocketChannel>(channel =>
-				{
-					var pipeline = channel.Pipeline;
-
-					if (_supportedSslProtocols != SslProtocols.None)
-					{
-						//pipeline.AddLast("tls", new TlsHandler(stream => new SslStream()))
-					}
-
-					pipeline
-						.AddLast(new LoggingHandler())
-						//.AddLast("framing-enc", new LengthFieldPrepender(4, true))
-						.AddLast("framing-dec",
-							new LengthFieldBasedFrameDecoder(ByteOrder.BigEndian, Int32.MaxValue, 0, 4, -4, 0, false))
-						.AddLast("pdu-codec", new PduCodec())
-						.AddLast("inbound-handler", new ChannelHandler(this));
-				}));
+				//.RemoteAddress(Host, Port)
+				.Handler(new ActionChannelInitializer<ISocketChannel>(channel => Setup(channel.Pipeline, this)));
 		}
 		#endregion constructors
 
@@ -577,16 +455,15 @@ namespace AberrantSMPP
 		{
 			throw new NotImplementedException();
 			
-			_ReBindTimer.Stop(); // (temporarilly) disable re-binding timer.
-			_EnquireLinkTimer.Stop(); // (temporarilly) disable enquire timer.
+			//_ReBindTimer.Stop(); // (temporarilly) disable re-binding timer.
 			
 			//	finally
 			{
 				// Re-enable rebinding timer..
-				if (_ReBindInterval > 0)
+			//	if (_ReBindInterval > 0)
 				{
-					_ReBindTimer.Interval = _ReBindInterval * 1000;
-					_ReBindTimer.Start();
+			//		_ReBindTimer.Interval = _ReBindInterval * 1000;
+			//		_ReBindTimer.Start();
 				}
 			}
 		}
@@ -598,21 +475,43 @@ namespace AberrantSMPP
 		
 		public void Connect()
 		{
-			using (_stateLock.ForWrite())
-			{
-				Guard.Operation(_state is States.Inactive,
-					$"Can't connect an a client w/ state {_state}, already connected?");
+			_cancellator.Token.ThrowIfCancellationRequested();
 
-				_cancellator.Token.ThrowIfCancellationRequested();
-				
-				_Log.DebugFormat("Connecting to {0}:{1}.", Host, Port);
+			Guard.Operation(State is States.Inactive, $"Can't connect a client w/ state {State}, already connected?");
+
+			_Log.DebugFormat("Connecting to {0}:{1}.", Host, Port);
+			
+			lock (_lock)
+			{
 				// FIXME: Pass timeout & cancellator..
-				_channel = _channelFactory.ConnectAsync()
+				_channel = _channelFactory.ConnectAsync(Host, Port)
 					.WithCancellation(_cancellator.Token)
 					.GetAwaiter().GetResult();
-
-				_state = States.Connected;
 			}
+
+			_Log.DebugFormat("Connected to {0}:{1}.", Host, Port);
+
+		}
+
+		public void Disconnect()
+		{
+			_cancellator.Token.ThrowIfCancellationRequested();
+
+			Guard.Operation(State >= States.Connected, $"Can't disconnect an a client w/ state {State}, not connected yet?");
+			
+			_Log.DebugFormat("Disconnecting from {0}:{1}.", Host, Port);
+
+			lock (_lock)
+			{
+				// FIXME: Pass timeout & cancellator..
+				_channel.DisconnectAsync()
+					.WithCancellation(_cancellator.Token)
+					.GetAwaiter().GetResult();
+				_channel = null;
+			}
+
+			_Log.DebugFormat("Disconnected from {0}:{1}.", Host, Port);
+
 		}
 
 		/// <summary>
@@ -625,9 +524,9 @@ namespace AberrantSMPP
 		public void Bind()
 		{
 			_cancellator.Token.ThrowIfCancellationRequested();
-			//GuardEx.Against(_state == States.Bound, "Already bound to remote party, unbind session first.");
-			//GuardEx.Against(_state != States.Connected, "Can't bind non-connected session, call Connect() first.");
-			//GuardEx.Against(_EnquireLinkTimer.Enabled, "EnquireLinkTimer Enabled while binding?!");
+			GuardEx.Against(_channel == null, "Can't bind non-connected client, call Connect() first.");
+			GuardEx.Against(State == States.Bound, "Already bound to remote party, unbind session first.");
+			GuardEx.Against(State != States.Connected, "Can't bind non-connected session, call Connect() first.");
 
 			_Log.InfoFormat("Binding to {0}:{1}..", Host, Port);
 			
@@ -645,12 +544,6 @@ namespace AberrantSMPP
 
 			if (response.CommandStatus != 0)
 				throw new SmppRequestException("Bind request failed.", response.CommandStatus);
-
-			if (_EnquireLinkInterval > 0)
-			{
-				_EnquireLinkTimer.Interval = _EnquireLinkInterval * 1000;
-				//_EnquireLinkTimer.Start();
-			}
 			
 			_Log.InfoFormat("Bound to {0}:{1}.", Host, Port);
 		}
@@ -663,17 +556,15 @@ namespace AberrantSMPP
 		public void Unbind()
 		{
 			_cancellator.Token.ThrowIfCancellationRequested();
-			//Guard.Operation(_state == States.Bound, $"Can't unbind a session w/ state {_state}, try binding first.");
+			GuardEx.Against(_channel == null, "Can't unbind non-connected client.");
+			Guard.Operation(State == States.Bound, $"Can't unbind a session w/ state {State}, try binding first.");
 			
 			_Log.InfoFormat("Unbinding from {0}:{1}..", Host, Port);
-
-			if (_EnquireLinkTimer.Enabled)
-				_EnquireLinkTimer.Stop();
-
+			
 			var response = SendAndWait(new SmppUnbind());
 			
 			if (response.CommandStatus != 0)
-				throw new SmppRequestException("Bind request failed.", response.CommandStatus);
+				throw new SmppRequestException("Unbind request failed.", response.CommandStatus);
 			
 			_Log.InfoFormat("Unbound from {0}:{1}.", Host, Port);
 		}
@@ -694,10 +585,11 @@ namespace AberrantSMPP
 				
 				GuardEx.Against(_channel == null, "Channel has not been initialized?!");
 				Guard.Operation(_channel?.Active == true, "Channel is not active?!.");
-				//GuardEx.Against(_state < States.Connected, "Session is not connected.");
-				//GuardEx.Against(!(packet is SmppBind) && _state != States.Bound, "Session not bound to remote party.");
+				GuardEx.Against(State < States.Connected, "Session is not connected.");
+				GuardEx.Against(!(packet is SmppBind) && State != States.Bound, "Session not bound to remote party.");
 
-				_channel!.WriteAndFlushAsync(packet).Wait(_ResponseTimeout, _cancellator.Token); //< FIXME: Use a new RequestTimeout instead..
+				var timeout = (int)RequestTimeout.TotalMilliseconds;
+				_channel!.WriteAndFlushAsync(packet).Wait(timeout, _cancellator.Token);
 				return packet.SequenceNumber;
 			}
 			catch (Exception ex)
@@ -721,9 +613,16 @@ namespace AberrantSMPP
 			
 			SendPdu(request);
 			
-			if (promise.Wait(_ResponseTimeout, _cancellator.Token))
+			if (promise.Wait((int)ResponseTimeout.TotalMilliseconds, _cancellator.Token))
 			{
 				var response = promise.Result;
+
+				if (response is SmppGenericNackResp nack)
+				{
+					var msg = $"SmppRequest was rejected by remote party. (error: {nack.CommandStatus})";
+					throw new SmppRequestException(msg, request, nack);
+				}
+
 				return response.CommandStatus == CommandStatus.ESME_ROK ? response
 					: throw new SmppRequestException("SmppRequest failed.", request, response);
 			}
@@ -733,67 +632,36 @@ namespace AberrantSMPP
 
 		public IEnumerable<SmppResponse> SendAndWait(IEnumerable<SmppRequest> requests)
 		{
-			bool signalled = false;
-			var list = new List<RequestState>();
+			var tasks = new Task<SmppResponse>[requests.Count()];
 
-			lock (_RequestsAwaitingResponse)
+			for (int i = 0; i < tasks.Length; i++)
 			{
-				foreach (var request in requests)
-					list.Add(new RequestState(SendPdu(request)));
-			
-				foreach (var state in list)
-					_RequestsAwaitingResponse.Add(state.SequenceNumber, state);
+				var request = requests.ElementAt(i);
+				tasks[i] = request.EnableResponseTracking();
+				SendPdu(request);
 			}
 
-			var handlers = list.Select(x => x.EventHandler).ToArray();
-
-			// WaitAll for multiple handles on an STA thread is not supported.
-			// ...so wait on each handle individually.
-			if (Thread.CurrentThread.GetApartmentState() == ApartmentState.STA)
+			if (!Task.WaitAll(tasks, (int)ResponseTimeout.TotalMilliseconds, _cancellator.Token))
 			{
-				var count = 0;
-
-				_Log.Debug("Running under STA threads, waiting for SMPP responses using WaitAny workaround.");
-
-				// FIXME: This has a worse case scenario which causes a timeout to last 
-				//		  N*_ResponseTimeout. (pruiz)
-				foreach (var handler in handlers)
-				{
-					if (WaitHandle.WaitAny(new[] { handler }, _ResponseTimeout) == 258)
-					{
-						break;
-					}
-					else
-					{
-						count++;
-					}
-				}
-
-				// Signal received signal from all handlers??
-				signalled = count == list.Count;
-			}
-			else
-			{
-				signalled = WaitHandle.WaitAll(handlers, _ResponseTimeout*handlers.Length);
+				throw new SmppTimeoutException(string.Format(
+					"Timeout while waiting for a responses from remote side. (Missing: {0}/{1})",
+					tasks.Select(x => !x.IsCompleted).Count(), tasks.Length
+				));
 			}
 
-			lock (_RequestsAwaitingResponse)
+			var responses = tasks.Select(x => x.Result).ToArray();
+			if (responses.Any(x => x is SmppGenericNackResp))
 			{
-				foreach (var state in list)
-					_RequestsAwaitingResponse.Remove(state.SequenceNumber);
-
-				if (signalled)
-				{
-					return list.Select(x => x.Response);
-				}
-				else
-				{
-					throw new SmppTimeoutException(string.Format(
-						"Timeout while waiting for a responses from remote side. (Missing: {0}/{1})",
-						list.Count(x => x.Response == null), list.Count()
-					));
-				}
+				var nack = responses.First(x => x is SmppGenericNackResp);
+				var msg = $"At least one SmppRequest was rejected by remote party. (error: {nack.CommandStatus})";
+				throw new SmppRequestsException(msg, requests, responses);
 			}
+			else if (responses.Any(x => x.CommandStatus != CommandStatus.ESME_ROK))
+			{
+				throw new SmppRequestsException("SmppRequest failed.", requests, responses);
+			}
+
+			return responses;
 		}
 
 		/// <summary>
@@ -807,25 +675,7 @@ namespace AberrantSMPP
 		{
 			var requests = SmppUtil.SplitLongMessage(pdu, method, GetRandomByte()).Cast<SmppRequest>();
 			var responses = SendAndWait(requests);
-
-			if (responses.Any(x => (x is SmppGenericNackResp)))
-			{
-				var nack = responses.First(x => x is SmppGenericNackResp);
-				var idx = responses.IndexWhere(x => x == nack);
-				var req = requests.ElementAt(idx);
-				var msg = string.Format("SMPP PDU was rejected by remote party. (error: {0})", nack.CommandStatus);
-				throw new SmppRequestException(msg, req, nack);
-			}
-
-			if (responses.Any(x => x.CommandStatus != 0))
-			{
-				var res = responses.First(x => x.CommandStatus != 0);
-				var idx = responses.IndexWhere(x => x == res);
-				var req = requests.ElementAt(idx);
-				var msg = string.Format("SMPP Request returned an error status. (code: {0})", res.CommandStatus);
-				throw new SmppRequestException(msg, req, res);
-			}
-
+			
 			return responses.OfType<SmppSubmitSmResp>().Select(x => x.MessageId).ToArray();
 		}
 		
@@ -840,25 +690,7 @@ namespace AberrantSMPP
 		{
 			var requests = SmppUtil.SplitLongMessage(pdu, method, GetRandomByte()).Cast<SmppRequest>();
 			var responses = SendAndWait(requests);
-
-			if (responses.Any(x => (x is SmppGenericNackResp)))
-			{
-				var nack = responses.First(x => x is SmppGenericNackResp);
-				var idx = responses.IndexWhere(x => x == nack);
-				var req = requests.ElementAt(idx);
-				var msg = string.Format("SMPP PDU was rejected by remote party. (error: {0})", nack.CommandStatus);
-				throw new SmppRequestException(msg, req, nack);
-			}
-
-			if (responses.Any(x => x.CommandStatus != 0))
-			{
-				var res = responses.First(x => x.CommandStatus != 0);
-				var idx = responses.IndexWhere(x => x == res);
-				var req = requests.ElementAt(idx);
-				var msg = string.Format("SMPP Request returned an error status. (code: {0})", res.CommandStatus);
-				throw new SmppRequestException(msg, req, res);
-			}
-
+			
 			return responses.OfType<SmppSubmitSmResp>()
 				.Select(x => new
 				{
@@ -881,43 +713,32 @@ namespace AberrantSMPP
 				return Convert.ToByte(_random.Next(254));
 			}
 		}
-
-		/// <summary>
-		/// Sends out an enquire_link packet.
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="ea"></param>
-		private void EnquireLinkTimerElapsed(object sender, ElapsedEventArgs ea)
+		
+		private static void Setup(IChannelPipeline pipeline, SMPPClient client)
 		{
-			bool locked = false;
-
-			try
+			if (client.SupportedSslProtocols != SslProtocols.None)
 			{
-				using (_stateLock.ForReadOnly())
-				{
-					if (_state != States.Bound)
-					{
-						_Log.Warn("Cannot send enquire request over an unbound session!");
-						return;
-					}
-				}
-
-				locked = Monitor.TryEnter(_EnquireLinkTimer);
-
-				if (!locked) return;
-
-				SendPdu(new SmppEnquireLink());
+				//pipeline.AddLast("tls", new TlsHandler(stream => new SslStream()))
 			}
-			catch (Exception ex)
-			{
-				_Log.Warn("Unexpected error while sending enquire link request.", ex);
-				DispatchOnError(new CommonErrorEventArgs(ex));
-			}
-			finally
-			{
-				if (locked) Monitor.Exit(_EnquireLinkTimer);
-			}
+
+			pipeline
+				.AddLast(new LoggingHandler())
+				//.AddLast("framing-enc", new LengthFieldPrepender(4, true))
+				.AddLast("framing-dec",
+					new LengthFieldBasedFrameDecoder(ByteOrder.BigEndian, Int32.MaxValue, 0, 4, -4, 0, false))
+				.AddLast("pdu-codec", new PduCodec())
+				.AddLast("enquire-link", new EnquireLinkHandler(client.EnquireLinkInterval))
+				.AddLast("channel-handler", new ChannelHandler(client));
 		}
+
+		private void SetNewState(States newState)
+		{
+			var oldState = _state;
+			_state = newState;
+			OnClientStateChanged?.Invoke(this, new ClientStateChangedEventArgs(oldState, newState));
+		}
+		
+		#if false
 		/// <summary>
 		/// Performs a re-bind if current connection was lost.
 		/// </summary>
@@ -964,6 +785,7 @@ namespace AberrantSMPP
 			}
 		}
 
+		#endif
 		#endregion private methods
 
 		/// <summary>
@@ -974,14 +796,10 @@ namespace AberrantSMPP
 		{
 			_Log.DebugFormat("Disposing session for {0}:{1}", Host, Port);
 			
-			Helper.ShallowExceptions(() => Unbind());
-			Helper.ShallowExceptions(() => { _channel?.CloseAsync().Wait(); });
-
-			lock (_RequestsAwaitingResponse)
-			{
-				_RequestsAwaitingResponse.Clear();
-				_RequestsAwaitingResponse = null;
-			}
+			//Helper.ShallowExceptions(() => Unbind());
+			_cancellator.Cancel();
+			Helper.ShallowExceptions(() => { _channel?.DisconnectAsync().Wait(500); });
+			Helper.ShallowExceptions(() => { _eventLoopGroup.ShutdownGracefullyAsync(TimeSpan.Zero, TimeSpan.FromMilliseconds(500)); });
 		}
 	}
 }

@@ -161,6 +161,7 @@
     <Compile Include="EventObject\BindRespEventArgs.cs" />
     <Compile Include="EventObject\CancelSmEventArgs.cs" />
     <Compile Include="EventObject\CancelSmRespEventArgs.cs" />
+    <Compile Include="EventObject\ClientStateChangedEventArgs.cs" />
     <Compile Include="EventObject\GenericNackRespEventArgs.cs" />
     <Compile Include="EventObject\DataSmEventArgs.cs" />
     <Compile Include="EventObject\DataSmRespEventArgs.cs" />
@@ -181,6 +182,7 @@
     <Compile Include="EventObject\UnbindEventArgs.cs" />
     <Compile Include="EventObject\UnbindRespEventArgs.cs" />
     <Compile Include="Exceptions\SmppRequestException.cs" />
+    <Compile Include="Exceptions\SmppRequestsException.cs" />
     <Compile Include="Exceptions\SmppTimeoutException.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="SMPPClient.ChannelHandler.cs" />
@@ -233,6 +235,7 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="SmppSarMethod.cs" />
+    <Compile Include="SMPPClient.EnquireLinkHandler.cs" />
     <Compile Include="Utility\DestinationAddress.cs" />
     <Compile Include="Utility\GSMEncoding.cs" />
     <Compile Include="Utility\GuardEx.cs" />
