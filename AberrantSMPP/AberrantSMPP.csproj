@@ -230,6 +230,7 @@
     <Compile Include="SMPPClient.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="SMPPClient.ResilientHandler.cs" />
     <Compile Include="SMPPClient.States.cs" />
     <Compile Include="SMPPCommunicator.cs">
       <SubType>Component</SubType>

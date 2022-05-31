@@ -1,8 +1,5 @@
 using System;
-using System.Buffers;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using DotNetty.Transport.Channels;
 using DotNetty.Common.Utilities;
@@ -22,10 +19,10 @@ namespace AberrantSMPP
         private class ChannelHandler : ChannelDuplexHandler
         {
             private readonly bool autoRelease = true;
-            private SMPPClient _client;
-            private uint _SequenceNumber = 0;
+            private readonly IDictionary<uint, SmppRequest> _requestQueue = new Dictionary<uint, SmppRequest>(); //< FIXME: Use a cache-like struct w/ auto-expire & trimming..
+            private readonly SMPPClient _client;
+            private uint _sequenceNumber;
             private States _state = States.Inactive;
-            private IDictionary<uint, SmppRequest> _requestQueue = new Dictionary<uint, SmppRequest>(); //< FIXME: Use a cache-like struct w/ auto-expire & trimming..
 
             public States State => _state;
             
@@ -58,7 +55,7 @@ namespace AberrantSMPP
                 {
                     // Generate a monotonically increasing sequence number for each Pdu.
                     // When it hits the the 32 bit unsigned int maximum, it starts over.
-                    request.SequenceNumber = _SequenceNumber++;
+                    request.SequenceNumber = _sequenceNumber++;
                 }
 
                 if (request.ResponseTrackingEnabled)
@@ -361,9 +358,9 @@ namespace AberrantSMPP
                _Log.Warn("Channel de-activated..");
                 SetNewState(context, States.Inactive);
 
-                _client.OnClose?.Invoke(_client, new EventArgs());
+                _client.OnClose?.Invoke(_client, EventArgs.Empty);
                 
-                // FIXME: If reconnect enabled, schedle reconnect event/action..
+                // FIXME: If reconnect enabled, schedule reconnect event/action..
                 //context.Channel.EventLoop.Schedule(_ => this.doConnect((EndPoint)_), context.Channel.RemoteAddress, TimeSpan.FromMilliseconds(1000));
             }
 

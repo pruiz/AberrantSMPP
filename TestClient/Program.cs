@@ -51,9 +51,9 @@ namespace TestClient
 			client.OnUnbind += (s, e) => Console.WriteLine("OnUnbind: " + e.Request);
 			client.OnUnboundResp += (s, e) => Console.WriteLine("OnUnboundResp: " + e.Response);
 
-			client.Connect();
-			client.Bind();
-
+			//client.Connect();
+			//client.Bind();
+			client.Start(TimeSpan.FromSeconds(5));
 				//var txt = new String('a', 200);
 			//var txt = "X de mas de 160 caractereñ.. @€34567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890ABCDEFGHIJKL987654321";
 			var txt = @"X de mas de 160 caractereñ.. @€abcdefghijklmnopqrstxyz!!!0987654321-ABCDE";
@@ -130,7 +130,10 @@ namespace TestClient
 			}
 			System.Threading.Thread.Sleep(1000);
 			
-			client.Disconnect();
+			Console.WriteLine("==> Disconnecting..");
+			//client.Disconnect();
+			client.Stop();
+			Console.WriteLine("==> Disposing..");
 			client.Dispose();
 		}
 
