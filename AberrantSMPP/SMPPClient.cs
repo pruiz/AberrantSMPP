@@ -69,7 +69,6 @@ namespace AberrantSMPP
 		private volatile uint _EnquireLinkInterval;
 		private Random _random = new Random();
 		private uint _channelBufferSize = 10240;
-		private SslProtocols _supportedSslProtocols;
 
 		#region properties
 
@@ -162,7 +161,7 @@ namespace AberrantSMPP
 		/// after a total network failure(due to cable problems, etc).  Negative values are 
 		/// ignored, and 0 disables Re-Binding.
 		/// </summary>
-		public TimeSpan ReBindInterval { get; set;  }
+		public TimeSpan RestablishInterval { get; private set;  }
 
 		public SslProtocols SupportedSslProtocols { get; set; }
 
@@ -428,11 +427,7 @@ namespace AberrantSMPP
 		{
 			Host = host;
 			Port = port;
-
-			// Initialize timers..
-			//_ReBindTimer = new System.Timers.Timer() { Enabled = false };
-			//_ReBindTimer.Elapsed += new ElapsedEventHandler(ReBindTimerElapsed);
-
+			
 			_eventLoopGroup = new MultithreadEventLoopGroup();
 			_channelFactory = new Bootstrap()
 				.Group(_eventLoopGroup)
@@ -449,22 +444,21 @@ namespace AberrantSMPP
 		// Starts SMPP client w/ background reconnecting / re-binding as needed.
 		/// <returns>
 		/// True if bind was successfull or false if connection/bind failed 
-		/// (and will be retried later upon ReBindInterval)
+		/// (and will be retried later upon retryInterval)
 		/// </returns>
-		public void Start()
+		public void Start(TimeSpan retryInterval) //< FIXME: Support backoff intervals..
 		{
-			throw new NotImplementedException();
-			
-			//_ReBindTimer.Stop(); // (temporarilly) disable re-binding timer.
-			
-			//	finally
+			try
 			{
-				// Re-enable rebinding timer..
-			//	if (_ReBindInterval > 0)
-				{
-			//		_ReBindTimer.Interval = _ReBindInterval * 1000;
-			//		_ReBindTimer.Start();
-				}
+				RestablishInterval = retryInterval;
+				// TODO: Start connection and binding in background..
+				_channel = _channelFactory.ConnectAsync(Host, Port).WithCancellation(_cancellator.Token).GetAwaiter().GetResult();
+				throw new NotImplementedException();
+			}
+			catch
+			{
+				RestablishInterval = TimeSpan.Zero;
+				throw;
 			}
 		}
 
@@ -728,6 +722,7 @@ namespace AberrantSMPP
 					new LengthFieldBasedFrameDecoder(ByteOrder.BigEndian, Int32.MaxValue, 0, 4, -4, 0, false))
 				.AddLast("pdu-codec", new PduCodec())
 				.AddLast("enquire-link", new EnquireLinkHandler(client.EnquireLinkInterval))
+				.AddLast("resilient-handler", new ResilientHandler(client))
 				.AddLast("channel-handler", new ChannelHandler(client));
 		}
 
@@ -796,10 +791,12 @@ namespace AberrantSMPP
 		{
 			_Log.DebugFormat("Disposing session for {0}:{1}", Host, Port);
 			
-			//Helper.ShallowExceptions(() => Unbind());
 			_cancellator.Cancel();
+			//Helper.ShallowExceptions(() => { _channel?.CloseAsync().Wait(500); });
 			Helper.ShallowExceptions(() => { _channel?.DisconnectAsync().Wait(500); });
-			Helper.ShallowExceptions(() => { _eventLoopGroup.ShutdownGracefullyAsync(TimeSpan.Zero, TimeSpan.FromMilliseconds(500)); });
+			Helper.ShallowExceptions(() => { _eventLoopGroup?.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500)).Wait(); });
+			
+			_Log.DebugFormat("Disposed session for {0}:{1}", Host, Port);
 		}
 	}
 }
