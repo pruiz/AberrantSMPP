@@ -811,7 +811,7 @@ namespace AberrantSMPP
 						new AsyncSocketClient.SocketClosingHandler(ClientCloseHandler),
 						new AsyncSocketClient.ErrorHandler(ClientErrorHandler));
 
-					asClient.Connect(Host, Port, SupportedSslProtocols, !DisableSslRevocationChecking);
+					asClient.Connect(Host, Port, SupportedSslProtocols, DisableSslRevocationChecking);
 
 					// re-initialize seq. numbers.
 					lock (this) _SequenceNumber = 1; 
