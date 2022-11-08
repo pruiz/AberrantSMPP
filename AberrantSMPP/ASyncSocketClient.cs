@@ -246,7 +246,7 @@ namespace AberrantSMPP
 		/// </summary>
 		/// <param name="address">The IP address of the server.</param>
 		/// <param name="port">The port to connect to.</param>
-		public void Connect(String address, UInt16 port, SslProtocols supportedSslProtocols)
+		public void Connect(String address, UInt16 port, SslProtocols supportedSslProtocols, bool disableSslRevocationChecking = false)
 		{
 			using (new WriteLock(_socketLock))
 			{
@@ -272,7 +272,7 @@ namespace AberrantSMPP
 				if(supportedSslProtocols != SslProtocols.None)
 				{
 					_Stream = new SslStream(_TcpClient.GetStream());
-					(_Stream as SslStream).AuthenticateAsClient(_ServerAddress, null, supportedSslProtocols, true);
+					(_Stream as SslStream).AuthenticateAsClient(_ServerAddress, null, supportedSslProtocols, !disableSslRevocationChecking);
 				}
 				else
 				{
