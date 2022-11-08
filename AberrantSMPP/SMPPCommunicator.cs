@@ -89,6 +89,7 @@ namespace AberrantSMPP
 		private uint _SequenceNumber = 0;
 		private IDictionary<uint, RequestState> _RequestsAwaitingResponse = new Dictionary<uint, RequestState>();
 		private SslProtocols _supportedSslProtocols;
+		private bool _disableSslRevocationChecking;
 
 		/// <summary>
 		/// Required designer variable.
@@ -315,6 +316,21 @@ namespace AberrantSMPP
 			set
 			{
 				_supportedSslProtocols = value;
+			}
+		}
+
+		/// <summary>
+		/// Gets or sets if must check servers certificate revocation status.
+		/// </summary>
+		public bool DisableSslRevocationChecking
+		{
+			get
+			{
+				return _disableSslRevocationChecking;
+			}
+			set
+			{
+				_disableSslRevocationChecking = value;
 			}
 		}
 		#endregion
@@ -795,7 +811,7 @@ namespace AberrantSMPP
 						new AsyncSocketClient.SocketClosingHandler(ClientCloseHandler),
 						new AsyncSocketClient.ErrorHandler(ClientErrorHandler));
 
-					asClient.Connect(Host, Port, SupportedSslProtocols);
+					asClient.Connect(Host, Port, SupportedSslProtocols, !DisableSslRevocationChecking);
 
 					// re-initialize seq. numbers.
 					lock (this) _SequenceNumber = 1; 
