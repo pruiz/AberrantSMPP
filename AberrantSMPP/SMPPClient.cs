@@ -164,6 +164,7 @@ namespace AberrantSMPP
 		public TimeSpan RestablishInterval { get; private set;  }
 
 		public SslProtocols SupportedSslProtocols { get; set; }
+		public bool DisableCheckCertificateRevocation { get; set; }
 
 		// FIXME: Optimize this.. and verify if locking maybe needed..
 		public States State => _state;
@@ -717,12 +718,14 @@ namespace AberrantSMPP
 		{
 			if (client.SupportedSslProtocols != SslProtocols.None)
 			{
-				//pipeline.AddLast("tls", new TlsHandler(stream => new SslStream()))
+				ClientTlsSettings tlsSettings = new ClientTlsSettings(
+					client.SupportedSslProtocols, !client.DisableCheckCertificateRevocation,
+					new List<X509Certificate>(), client.Host);
+				pipeline.AddLast("tls", new TlsHandler(tlsSettings));
 			}
 
 			pipeline
 				.AddLast(new LoggingHandler())
-				//.AddLast("framing-enc", new LengthFieldPrepender(4, true))
 				.AddLast("framing-dec",
 					new LengthFieldBasedFrameDecoder(ByteOrder.BigEndian, Int32.MaxValue, 0, 4, -4, 0, false))
 				.AddLast("pdu-codec", new PduCodec())
