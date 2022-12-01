@@ -165,6 +165,9 @@ namespace AberrantSMPP
 
 		public SslProtocols SupportedSslProtocols { get; set; }
 		public bool DisableCheckCertificateRevocation { get; set; }
+		public bool ThrowWhenAddExistingSequence { get; private set; } = false;
+
+		public int RequestQueueMemoryLimitMegabytes { get; private set; } = 32;
 
 		// FIXME: Optimize this.. and verify if locking maybe needed..
 		public States State => _state;
