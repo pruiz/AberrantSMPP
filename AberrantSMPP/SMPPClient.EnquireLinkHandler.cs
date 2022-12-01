@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Dawn;
 
 using DotNetty.Handlers.Timeout;
@@ -13,34 +13,28 @@ namespace AberrantSMPP
     {
         private class EnquireLinkHandler : IdleStateHandler
         {
-            private readonly TimeSpan _interval;
-            private bool _bound = false;
-            public EnquireLinkHandler(TimeSpan interval)
-                : base(false, interval, TimeSpan.Zero, interval)
+            private readonly SMPPClient _client;
+            public EnquireLinkHandler(SMPPClient client)
+                : base(false, client.EnquireLinkInterval, TimeSpan.Zero, TimeSpan.Zero)
             {
-                _interval = interval;
+                _client = client;
             }
 
             protected override void ChannelIdle(IChannelHandlerContext context, IdleStateEvent stateEvent)
             {
                 Guard.Argument(stateEvent).NotNull();
 
-                if (_interval <= TimeSpan.Zero)
+                _Log.DebugFormat("ChannelIdle(context:{0}, stateEvent:{1}, client.EnquiereLinkInterval:{2}, client.State:{3}",
+                    context.Name, stateEvent.State, _client.EnquireLinkInterval, _client.State);
+
+                if (_client.EnquireLinkInterval <= TimeSpan.Zero)
                     return;
 
-                if (!_bound)
+                if (_client.State != States.Bound)
                     return;
-                
+
                 ReferenceCountUtil.SafeRelease(stateEvent);
                 context.WriteAndFlushAsync(new SmppEnquireLink());
-            }
-
-            public override void UserEventTriggered(IChannelHandlerContext context, object evt)
-            {
-                if (evt is StateChangedEvent @event)
-                {
-                    _bound = @event.NewState == States.Bound;
-                }
             }
         }
     }

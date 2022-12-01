@@ -732,7 +732,7 @@ namespace AberrantSMPP
 				.AddLast("framing-dec",
 					new LengthFieldBasedFrameDecoder(ByteOrder.BigEndian, Int32.MaxValue, 0, 4, -4, 0, false))
 				.AddLast("pdu-codec", new PduCodec())
-				.AddLast("enquire-link", new EnquireLinkHandler(client.EnquireLinkInterval))
+				.AddLast("enquire-link", new EnquireLinkHandler(client))
 				.AddLast("resilient-handler", new ResilientHandler(client))
 				.AddLast("channel-handler", new ChannelHandler(client));
 		}
