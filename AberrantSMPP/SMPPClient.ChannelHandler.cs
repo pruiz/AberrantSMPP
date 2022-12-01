@@ -45,11 +45,18 @@ namespace AberrantSMPP
             
             private void ProcessOutbound(IChannelHandlerContext ctx, SmppBind bind)
             {
-                GuardEx.Against(_state == States.Bound, "Trying to send Pdu over an session not yet bound?!");
-                GuardEx.Against(_state != States.Connected, "Can't bind non-connected session, call Connect() first.");
+                GuardEx.Against(_state == States.Bound, "Trying to send Bind over an session already bound?!");
+                GuardEx.Against(_state != States.Connected, "Can't bind non-connected session, call ConnectAsync() first.");
                 
                 _Log.InfoFormat("Binding to {0}..", ctx.Channel.RemoteAddress);
                 SetNewState(ctx, States.Binding);
+            }
+
+            private void ProcessOutbound(IChannelHandlerContext ctx, SmppUnbind unbind)
+            {
+                GuardEx.Against(_state != States.Bound, "Trying to send Pdu over an session not yet bound?!");
+                _Log.InfoFormat("Unbinding from {0}..", ctx.Channel.RemoteAddress);
+                SetNewState(ctx, States.Unbinding);
             }
 
             private void ProcessOutbound(IChannelHandlerContext ctx, SmppRequest request)
@@ -58,7 +65,8 @@ namespace AberrantSMPP
                 {
                     // Generate a monotonically increasing sequence number for each Pdu.
                     // When it hits the the 32 bit unsigned int maximum, it starts over.
-                    request.SequenceNumber = _sequenceNumber++;
+                    // The recommended approach is to use monotonically increasing sequence numbers, starting at 1.
+                    request.SequenceNumber = ++_sequenceNumber;
                 }
 
                 if (request.ResponseTrackingEnabled)
@@ -69,8 +77,9 @@ namespace AberrantSMPP
                 switch (request)
                 {
                     case SmppBind bind:
-                        ProcessOutbound(ctx, bind);
-                        break;
+                        ProcessOutbound(ctx, bind); break;
+                    case SmppUnbind unbind:
+                        ProcessOutbound(ctx, unbind); break;
                     default:
                         // do nothing, just let it go..
                         break;
@@ -232,7 +241,7 @@ namespace AberrantSMPP
                         SetNewState(ctx, States.Connected);
                         _client.OnUnboundResp?.Invoke(_client, new UnbindRespEventArgs(unbind));
                         break;
-                    case SmppGenericNackResp nack:
+                    case SmppGenericNackResp nack: //ASK: Can arrive a GenericNackResp ONLY when state is Connected???
                         GuardEx.Against(_state != States.Connected, $"Received generic_nack response while on state {_state}?!");
                         _client?.OnGenericNackResp?.Invoke(_client, new GenericNackRespEventArgs(nack));
                         break;

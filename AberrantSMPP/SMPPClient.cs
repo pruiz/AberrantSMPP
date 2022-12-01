@@ -1,4 +1,4 @@
-/* AberrantSMPP: SMPP communication library
+﻿/* AberrantSMPP: SMPP communication library
  * Copyright (C) 2004, 2005 Christopher M. Bouzek
  * Copyright (C) 2010, 2011 Pablo Ruiz García <pruiz@crt0.net>
  *
@@ -26,6 +26,7 @@ using System.Timers;
 using System.Net.Security;
 using System.Runtime.CompilerServices;
 using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
@@ -58,29 +59,30 @@ namespace AberrantSMPP
 	public partial class SMPPClient : IDisposable
 	{
 		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-		
-		private CancellationTokenSource _cancellator = new CancellationTokenSource();
+
+        private static readonly uint CHANNEL_BUFFER_SIZE = 10240;
+
+        private CancellationTokenSource _cancellator = new CancellationTokenSource();
 
 		private readonly object _lock = new object();
 		private Bootstrap _channelFactory;
-		private IEventLoopGroup _eventLoopGroup;
+		private readonly IEventLoopGroup _eventLoopGroup;
 		private IChannel _channel;
 		private volatile States _state;
-		private volatile uint _EnquireLinkInterval;
+		private volatile uint _enquireLinkInterval;
 		private Random _random = new Random();
-		private uint _channelBufferSize = 10240;
 
 		#region properties
 
 		/// <summary>
 		/// The host to bind this SMPPCommunicator to.
 		/// </summary>
-		public string Host { get; private set; } = "127.0.0.1";
+		public string Host { get; private set; } = "127.0.0.1"; //ASK: readonly (only getter and setted in .ctor)
 
 		/// <summary>
 		/// The port on the SMSC to connect to.
 		/// </summary>
-		public UInt16 Port { get; private set; } = 2775;
+		public UInt16 Port { get; private set; } = 2775; //ASK: readonly (only getter and setted in .ctor)
 
 		/// <summary>
 		/// The binding type(receiver, transmitter, or transceiver)to use 
@@ -128,8 +130,14 @@ namespace AberrantSMPP
 		/// Gets or sets the connect timeout (in miliseconds)
 		/// </summary>
 		/// <value>The response timeout.</value>
-		public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(30);
-		
+		public TimeSpan ConnectTimeout { get; private set; } = TimeSpan.FromSeconds(30_000); //ASK: readonly (only getter and setted in .ctor)
+
+		/// <summary>
+		/// Gets or sets the disconnect timeout (in miliseconds)
+		/// </summary>
+		/// <value>The response timeout.</value>
+		public TimeSpan DisconnectTimeout { get; set; } = TimeSpan.FromMilliseconds(500);
+
 		/// <summary>
 		/// Gets or sets the request timeout (in miliseconds)
 		/// </summary>
@@ -152,8 +160,8 @@ namespace AberrantSMPP
 		/// </summary>
 		public TimeSpan EnquireLinkInterval
 		{
-			get => TimeSpan.FromMilliseconds(_EnquireLinkInterval);
-			set => _EnquireLinkInterval = (uint)value.TotalMilliseconds;
+			get => TimeSpan.FromMilliseconds(_enquireLinkInterval);
+			set => _enquireLinkInterval = (uint)value.TotalMilliseconds;
 		}
 		
 		/// <summary>
@@ -161,10 +169,12 @@ namespace AberrantSMPP
 		/// after a total network failure(due to cable problems, etc).  Negative values are 
 		/// ignored, and 0 disables Re-Binding.
 		/// </summary>
-		public TimeSpan RestablishInterval { get; private set;  }
+		public TimeSpan RestablishInterval { get; set; }
 
-		public SslProtocols SupportedSslProtocols { get; set; }
-		public bool DisableCheckCertificateRevocation { get; set; }
+		public SslProtocols SupportedSslProtocols { get; private set; }
+
+		public bool DisableCheckCertificateRevocation { get; private set; }
+
 		public bool ThrowWhenAddExistingSequence { get; private set; } = false;
 
 		public int RequestQueueMemoryLimitMegabytes { get; private set; } = 32;
@@ -430,21 +440,18 @@ namespace AberrantSMPP
 		/// and address range, password, system type and system ID set to null 
 		///(no value).
 		/// </summary>
-		public SMPPClient(string host, ushort port) //< FIXME: No longer a component, so: pass parameters via .ctor
+		public SMPPClient(string host, ushort port, TimeSpan connectTimeout, 
+			SslProtocols supportedSslProtocols = SslProtocols.None, bool disableCheckCertificateRevocation = false)
+			//< FIXME: No longer a component, so: pass parameters via .ctor
+			//ASK if resolved FIXME
 		{
 			Host = host;
 			Port = port;
-			
+			ConnectTimeout = connectTimeout;
+			SupportedSslProtocols = supportedSslProtocols;
+			DisableCheckCertificateRevocation = disableCheckCertificateRevocation;
+
 			_eventLoopGroup = new MultithreadEventLoopGroup();
-			_channelFactory = new Bootstrap()
-				.Group(_eventLoopGroup)
-				.Channel<TcpSocketChannel>()
-				.Option(ChannelOption.TcpNodelay, true)
-				.Option(ChannelOption.SoLinger, 0)
-				.Option(ChannelOption.SoRcvbuf, (int)_channelBufferSize)
-				.Option(ChannelOption.SoSndbuf, (int)_channelBufferSize)
-				//.RemoteAddress(Host, Port)
-				.Handler(new ActionChannelInitializer<ISocketChannel>(channel => Setup(channel.Pipeline, this)));
 		}
 		#endregion constructors
 
@@ -455,66 +462,110 @@ namespace AberrantSMPP
 		/// </returns>
 		public Task Start(TimeSpan retryInterval) //< FIXME: Support backoff intervals..
 		{
-			try
-			{
-				RestablishInterval = retryInterval;
-				// TODO: Start connection and binding in background..
-				_channel = _channelFactory.ConnectAsync(Host, Port).WithCancellation(_cancellator.Token).GetAwaiter().GetResult();
-				throw new NotImplementedException();
-			}
-			catch
-			{
-				RestablishInterval = TimeSpan.Zero;
-				throw;
-			}
-
-			return null; // FIXME: Return a promise so caller can know when we actually become connected/bound..
-		}
-
-		public void Stop()
-		{
-			throw new NotImplementedException();
-		}
-		
-		public void Connect()
-		{
 			_cancellator.Token.ThrowIfCancellationRequested();
 
 			Guard.Operation(State is States.Inactive, $"Can't connect a client w/ state {State}, already connected?");
 
-			_Log.DebugFormat("Connecting to {0}:{1}.", Host, Port);
-			
+			try
+			{
+				lock (_lock)
+				{
+					RestablishInterval = retryInterval;
+					Connect();
+				}
+				Bind();
+			}
+			catch
+			{
+				RestablishInterval = TimeSpan.Zero;
+				Retry(retryInterval);
+			}
+			return Task.CompletedTask;
+		}
+
+		public void Retry(TimeSpan retryInterval)
+		{
+			_Log.InfoFormat("Scheduling restablishment of session after {0}...", retryInterval);
+			//FIXME: enable retry
+#if false
+			Task.Factory.StartNew(() =>
+			{
+				try
+				{
+					if (State >= States.Inactive)
+						Disconnect();
+				}
+				catch { }
+				Task.Delay(retryInterval);
+				Start(retryInterval, _bindFromStart);
+			});
+#endif
+		}
+
+		public Task Stop()
+		{
+			Unbind();
+			Disconnect();
+
+			return Task.CompletedTask;
+		}
+
+		public void Connect()
+		{
+			_cancellator.Token.ThrowIfCancellationRequested();
+
 			lock (_lock)
 			{
-				// FIXME: Pass timeout & cancellator..
-				_channel = _channelFactory.ConnectAsync(Host, Port)
-					.WithCancellation(_cancellator.Token)
-					.GetAwaiter().GetResult();
+				Guard.Operation(State is States.Inactive, $"Can't connect a client w/ state {State}, already connected?");
+
+				_Log.DebugFormat("Connecting to {0}:{1}.", Host, Port);
+
+				using (var connectCancellator = new CancellationTokenSource(ConnectTimeout))
+				using (var linkedCancellators = CancellationTokenSource.CreateLinkedTokenSource(_cancellator.Token, connectCancellator.Token))
+				{
+					try
+					{
+						SetNewState(States.Connecting);
+
+						if (_channelFactory == null)
+							_channelFactory = BuildBootstrap();
+
+						_channel = _channelFactory.ConnectAsync(Host, Port)
+							.WithCancellation(linkedCancellators.Token)
+							.GetAwaiter().GetResult();
+
+						_Log.DebugFormat("Connected to {0}:{1}.", Host, Port);
+					}
+					catch (Exception ex)
+					{
+						SetNewState(States.Inactive);
+						_Log.ErrorFormat("Error Connecting to {0}:{1}.", ex is AggregateException aex ? aex.Flatten() : ex, Host, Port);
+						throw;
+					}
+				}
+				
 			}
-
-			_Log.DebugFormat("Connected to {0}:{1}.", Host, Port);
-
 		}
 
 		public void Disconnect()
 		{
 			_cancellator.Token.ThrowIfCancellationRequested();
 
-			Guard.Operation(State >= States.Connected, $"Can't disconnect an a client w/ state {State}, not connected yet?");
-			
-			_Log.DebugFormat("Disconnecting from {0}:{1}.", Host, Port);
-
 			lock (_lock)
 			{
-				// FIXME: Pass timeout & cancellator..
-				_channel.DisconnectAsync()
-					.WithCancellation(_cancellator.Token)
-					.GetAwaiter().GetResult();
-				_channel = null;
+				Guard.Operation(State >= States.Connected, $"Can't disconnect an a client w/ state {State}, not connected yet?");
+
+				RestablishInterval = TimeSpan.Zero;
+
+				using (var disconnectCancellator = new CancellationTokenSource(DisconnectTimeout))
+				using (var linkedCancellators = CancellationTokenSource.CreateLinkedTokenSource(_cancellator.Token, disconnectCancellator.Token))
+				{
+					_channel.DisconnectAsync()
+						.WithCancellation(linkedCancellators.Token)
+						.GetAwaiter().GetResult();
+					_channel = null;
+				}
 			}
-
-			_Log.DebugFormat("Disconnected from {0}:{1}.", Host, Port);
-
 		}
 
 		/// <summary>
@@ -527,13 +578,13 @@ namespace AberrantSMPP
 		public void Bind()
 		{
 			_cancellator.Token.ThrowIfCancellationRequested();
-			GuardEx.Against(_channel == null, "Can't bind non-connected client, call Connect() first.");
+			GuardEx.Against(_channel == null, "Can't bind non-connected client, call ConnectAsync() first.");
 			GuardEx.Against(State == States.Bound, "Already bound to remote party, unbind session first.");
-			GuardEx.Against(State != States.Connected, "Can't bind non-connected session, call Connect() first.");
+			GuardEx.Against(State != States.Connected, "Can't bind non-connected session, call ConnectAsync() first.");
 
 			_Log.InfoFormat("Binding to {0}:{1}..", Host, Port);
 			
-			var response = SendAndWait(new SmppBind()
+			SendAndWait(new SmppBind()
 			{
 				SystemId = SystemId,
 				Password = Password,
@@ -544,9 +595,6 @@ namespace AberrantSMPP
 				AddressRange = AddressRange,
 				BindType = BindType,
 			});
-
-			if (response.CommandStatus != 0)
-				throw new SmppRequestException("Bind request failed.", response.CommandStatus);
 			
 			_Log.InfoFormat("Bound to {0}:{1}.", Host, Port);
 		}
@@ -561,13 +609,12 @@ namespace AberrantSMPP
 			_cancellator.Token.ThrowIfCancellationRequested();
 			GuardEx.Against(_channel == null, "Can't unbind non-connected client.");
 			Guard.Operation(State == States.Bound, $"Can't unbind a session w/ state {State}, try binding first.");
-			
+
+			RestablishInterval = TimeSpan.Zero;
+
 			_Log.InfoFormat("Unbinding from {0}:{1}..", Host, Port);
 			
-			var response = SendAndWait(new SmppUnbind());
-			
-			if (response.CommandStatus != 0)
-				throw new SmppRequestException("Unbind request failed.", response.CommandStatus);
+			SendAndWait(new SmppUnbind());
 			
 			_Log.InfoFormat("Unbound from {0}:{1}.", Host, Port);
 		}
@@ -589,7 +636,8 @@ namespace AberrantSMPP
 				GuardEx.Against(_channel == null, "Channel has not been initialized?!");
 				Guard.Operation(_channel?.Active == true, "Channel is not active?!.");
 				GuardEx.Against(State < States.Connected, "Session is not connected.");
-				GuardEx.Against(!(packet is SmppBind) && State != States.Bound, "Session not bound to remote party.");
+				GuardEx.Against(packet is SmppBind && State != States.Connected, "Session is not connected.");
+				GuardEx.Against(packet is not SmppBind && State != States.Bound, "Session not bound to remote party.");
 
 				var timeout = (int)RequestTimeout.TotalMilliseconds;
 				_channel!.WriteAndFlushAsync(packet).Wait(timeout, _cancellator.Token);
@@ -612,6 +660,7 @@ namespace AberrantSMPP
 		/// <param name="request">The request.</param>
 		public SmppResponse SendAndWait(SmppRequest request)
 		{
+
 			var promise = request.EnableResponseTracking();
 			
 			SendPdu(request);
@@ -627,7 +676,7 @@ namespace AberrantSMPP
 				}
 
 				return response.CommandStatus == CommandStatus.ESME_ROK ? response
-					: throw new SmppRequestException("SmppRequest failed.", request, response);
+					: throw new SmppRequestException($"{request.GetType().Name} failed.", request, response);
 			}
 			
 			throw new SmppTimeoutException("Timeout while waiting for a response from remote side.");
@@ -703,7 +752,7 @@ namespace AberrantSMPP
 				.ToDictionary(x => (SmppSubmitSm)x.Request, x => x.Response);
 		}
 		
-		#region private methods
+#region private methods
 
 		/// <summary>
 		/// Gets a random byte.
@@ -717,6 +766,21 @@ namespace AberrantSMPP
 			}
 		}
 		
+		private Bootstrap BuildBootstrap()
+		{
+			return new Bootstrap()
+				.Group(_eventLoopGroup)
+				.Channel<TcpSocketChannel>()
+				.Option(ChannelOption.TcpNodelay, true)
+				.Option(ChannelOption.SoKeepalive, true)
+				.Option(ChannelOption.SoLinger, 0)
+				.Option(ChannelOption.SoRcvbuf, (int)CHANNEL_BUFFER_SIZE)
+				.Option(ChannelOption.SoSndbuf, (int)CHANNEL_BUFFER_SIZE)
+				.Option(ChannelOption.ConnectTimeout, ConnectTimeout)
+				//.RemoteAddress(Host, Port)
+				.Handler(new ActionChannelInitializer<ISocketChannel>(channel => Setup(channel.Pipeline, this)));
+		}
+
 		private static void Setup(IChannelPipeline pipeline, SMPPClient client)
 		{
 			if (client.SupportedSslProtocols != SslProtocols.None)
@@ -744,7 +808,7 @@ namespace AberrantSMPP
 			OnClientStateChanged?.Invoke(this, new ClientStateChangedEventArgs(oldState, newState));
 		}
 		
-		#if false
+#if false
 		/// <summary>
 		/// Performs a re-bind if current connection was lost.
 		/// </summary>
@@ -791,8 +855,8 @@ namespace AberrantSMPP
 			}
 		}
 
-		#endif
-		#endregion private methods
+#endif
+#endregion private methods
 
 		/// <summary>
 		/// Disposes of this component.  Called by the framework; do not call it 
@@ -801,10 +865,12 @@ namespace AberrantSMPP
 		public void Dispose()
 		{
 			_Log.DebugFormat("Disposing session for {0}:{1}", Host, Port);
-			
+
+			RestablishInterval = TimeSpan.Zero;
+
 			_cancellator.Cancel();
 			//Helper.ShallowExceptions(() => { _channel?.CloseAsync().Wait(500); });
-			Helper.ShallowExceptions(() => { _channel?.DisconnectAsync().Wait(500); });
+			Helper.ShallowExceptions(() => { _channel?.DisconnectAsync().Wait(DisconnectTimeout); });
 			Helper.ShallowExceptions(() => { _eventLoopGroup?.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500)).Wait(); });
 			
 			_Log.DebugFormat("Disposed session for {0}:{1}", Host, Port);

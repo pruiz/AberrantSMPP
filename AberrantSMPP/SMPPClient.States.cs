@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace AberrantSMPP
 {
@@ -8,6 +8,7 @@ namespace AberrantSMPP
         {
             Invalid = -1,
             Inactive = 0,
+            Connecting,
             Connected,
             Binding,
             Bound,
