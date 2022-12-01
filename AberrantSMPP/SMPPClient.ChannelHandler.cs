@@ -361,9 +361,6 @@ namespace AberrantSMPP
                 SetNewState(context, States.Inactive);
 
                 _client.OnClose?.Invoke(_client, EventArgs.Empty);
-                
-                // FIXME: If reconnect enabled, schedule reconnect event/action..
-                //context.Channel.EventLoop.Schedule(_ => this.doConnect((EndPoint)_), context.Channel.RemoteAddress, TimeSpan.FromMilliseconds(1000));
             }
 
             public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
