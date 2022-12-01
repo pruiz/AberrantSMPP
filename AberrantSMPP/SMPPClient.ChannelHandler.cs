@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using DotNetty.Transport.Channels;
@@ -19,17 +19,20 @@ namespace AberrantSMPP
         private class ChannelHandler : ChannelDuplexHandler
         {
             private readonly bool autoRelease = true;
-            private readonly IDictionary<uint, SmppRequest> _requestQueue = new Dictionary<uint, SmppRequest>(); //< FIXME: Use a cache-like struct w/ auto-expire & trimming..
             private readonly SMPPClient _client;
+            private readonly RequestQueue _requestQueue;
             private uint _sequenceNumber;
             private States _state = States.Inactive;
 
             public States State => _state;
-            
+
             public ChannelHandler(SMPPClient owner)
             {
                 base.EnsureNotSharable();
                 _client = Guard.Argument(owner, nameof(owner)).NotNull();
+
+                var queueName = owner.SystemId + "@" + owner.Host + ":" + owner.Port.ToString();
+                _requestQueue = new RequestQueue(queueName, owner.ResponseTimeout, owner.ThrowWhenAddExistingSequence, owner.RequestQueueMemoryLimitMegabytes);
             }
 
             private void SetNewState(IChannelHandlerContext ctx, States newState)
@@ -273,10 +276,9 @@ namespace AberrantSMPP
                 }
                 
                 // Handle packets related to a request awaiting response.
-                if (_requestQueue.TryGetValue(response.SequenceNumber, out var request))
+                if (_requestQueue.Remove(response.SequenceNumber, out var request))
                 {
                     request.SetResponse(response);
-                    _requestQueue.Remove(request.SequenceNumber);
                 }
             }
             
