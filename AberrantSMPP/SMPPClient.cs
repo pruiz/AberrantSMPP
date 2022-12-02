@@ -778,16 +778,16 @@ namespace AberrantSMPP
 				.Option(ChannelOption.SoSndbuf, (int)CHANNEL_BUFFER_SIZE)
 				.Option(ChannelOption.ConnectTimeout, ConnectTimeout)
 				//.RemoteAddress(Host, Port)
-				.Handler(new ActionChannelInitializer<ISocketChannel>(channel => Setup(channel.Pipeline, this)));
+				.Handler(new ActionChannelInitializer<ISocketChannel>(channel => Setup(channel.Pipeline)));
 		}
 
-		private static void Setup(IChannelPipeline pipeline, SMPPClient client)
+		private void Setup(IChannelPipeline pipeline)
 		{
-			if (client.SupportedSslProtocols != SslProtocols.None)
+			if (SupportedSslProtocols != SslProtocols.None)
 			{
 				ClientTlsSettings tlsSettings = new ClientTlsSettings(
-					client.SupportedSslProtocols, !client.DisableCheckCertificateRevocation,
-					new List<X509Certificate>(), client.Host);
+                    SupportedSslProtocols, !DisableCheckCertificateRevocation,
+					new List<X509Certificate>(), Host);
 				pipeline.AddLast("tls", new TlsHandler(tlsSettings));
 			}
 
@@ -796,9 +796,9 @@ namespace AberrantSMPP
 				.AddLast("framing-dec",
 					new LengthFieldBasedFrameDecoder(ByteOrder.BigEndian, Int32.MaxValue, 0, 4, -4, 0, false))
 				.AddLast("pdu-codec", new PduCodec())
-				.AddLast("enquire-link", new EnquireLinkHandler(client))
-				.AddLast("resilient-handler", new ResilientHandler(client))
-				.AddLast("channel-handler", new ChannelHandler(client));
+				.AddLast("enquire-link", new EnquireLinkHandler(this))
+				.AddLast("resilient-handler", new ResilientHandler(this))
+				.AddLast("channel-handler", new ChannelHandler(this));
 		}
 
 		private void SetNewState(States newState)
