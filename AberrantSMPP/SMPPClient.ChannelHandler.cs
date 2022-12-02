@@ -11,6 +11,7 @@ using AberrantSMPP.Packet;
 using AberrantSMPP.Packet.Request;
 using AberrantSMPP.Packet.Response;
 using AberrantSMPP.Utility;
+using System.Runtime.Remoting.Contexts;
 
 namespace AberrantSMPP
 {
@@ -22,9 +23,8 @@ namespace AberrantSMPP
             private readonly SMPPClient _client;
             private readonly RequestQueue _requestQueue;
             private uint _sequenceNumber;
-            private States _state = States.Inactive;
 
-            public States State => _state;
+            public States State => _client?.State ?? States.Inactive;
 
             public ChannelHandler(SMPPClient owner)
             {
@@ -37,16 +37,13 @@ namespace AberrantSMPP
 
             private void SetNewState(IChannelHandlerContext ctx, States newState)
             {
-                var oldState = _state;
-                _state = newState;
-                ctx.FireUserEventTriggered(new StateChangedEvent(oldState, newState));
                 _client.SetNewState(newState);
             }
-            
+
             private void ProcessOutbound(IChannelHandlerContext ctx, SmppBind bind)
             {
-                GuardEx.Against(_state == States.Bound, "Trying to send Bind over an session already bound?!");
-                GuardEx.Against(_state != States.Connected, "Can't bind non-connected session, call ConnectAsync() first.");
+                GuardEx.Against(State == States.Bound, "Trying to send Bind over an session already bound?!");
+                GuardEx.Against(State != States.Connected, "Can't bind non-connected session, call ConnectAsync() first.");
                 
                 _Log.InfoFormat("Binding to {0}..", ctx.Channel.RemoteAddress);
                 SetNewState(ctx, States.Binding);
@@ -54,7 +51,7 @@ namespace AberrantSMPP
 
             private void ProcessOutbound(IChannelHandlerContext ctx, SmppUnbind unbind)
             {
-                GuardEx.Against(_state != States.Bound, "Trying to send Pdu over an session not yet bound?!");
+                GuardEx.Against(State != States.Bound, "Trying to send Pdu over an session not yet bound?!");
                 _Log.InfoFormat("Unbinding from {0}..", ctx.Channel.RemoteAddress);
                 SetNewState(ctx, States.Unbinding);
             }
@@ -88,8 +85,8 @@ namespace AberrantSMPP
             private void ProcessOutbound(IChannelHandlerContext ctx, Pdu packet)
             {
                 Guard.Argument(packet).NotNull();
-                GuardEx.Against(_state < States.Connected, "Can't send requests over a channel not yet connected.");
-                GuardEx.Against(!(packet is SmppBind) && _state != States.Bound, "Can't send requests over a channel not bound to remote party.");
+                GuardEx.Against(State < States.Connected, "Can't send requests over a channel not yet connected.");
+                GuardEx.Against(!(packet is SmppBind) && State != States.Bound, "Can't send requests over a channel not bound to remote party.");
 
                 if (packet is SmppRequest request)
                 {
@@ -103,7 +100,7 @@ namespace AberrantSMPP
 
             private void ProcessInbound(IChannelHandlerContext ctx, SmppRequest request)
             {
-                GuardEx.Against( request is not SmppBind && _state != States.Bound, $"Received {request.GetType().Name} while on state {_state}?!");
+                GuardEx.Against( request is not SmppBind && State != States.Bound, $"Received {request.GetType().Name} while on state {State}?!");
 
                 switch (request)
                 {
@@ -232,21 +229,21 @@ namespace AberrantSMPP
                 switch (response)
                 {
                     case SmppBindResp bind:
-                        GuardEx.Against(_state != States.Binding, $"Received bind response while on state {_state}?!");
+                        GuardEx.Against(State != States.Binding, $"Received bind response while on state {State}?!");
                         SetNewState(ctx, States.Bound);
                         _client.OnBindResp?.Invoke(_client, new BindRespEventArgs(bind));
                         break;
                     case SmppUnbindResp unbind:
-                        GuardEx.Against(_state != States.Unbinding, $"Received unbind response while on state {_state}?!");
+                        GuardEx.Against(State != States.Unbinding, $"Received unbind response while on state {State}?!");
                         SetNewState(ctx, States.Connected);
                         _client.OnUnboundResp?.Invoke(_client, new UnbindRespEventArgs(unbind));
                         break;
                     case SmppGenericNackResp nack: //ASK: Can arrive a GenericNackResp ONLY when state is Connected???
-                        GuardEx.Against(_state != States.Connected, $"Received generic_nack response while on state {_state}?!");
+                        GuardEx.Against(State != States.Connected, $"Received generic_nack response while on state {State}?!");
                         _client?.OnGenericNackResp?.Invoke(_client, new GenericNackRespEventArgs(nack));
                         break;
                     case SmppEnquireLinkResp enquire:
-                        GuardEx.Against(_state != States.Bound, $"Received enquire_link response while on state {_state}?!");
+                        GuardEx.Against(State != States.Bound, $"Received enquire_link response while on state {State}?!");
                         if (enquire.CommandStatus != CommandStatus.ESME_ROK)
                         {
                             _Log.Warn($"Received EnquireLinkResp with CommandStatus = {enquire.CommandStatus}?!");
@@ -254,31 +251,31 @@ namespace AberrantSMPP
                         _client.OnEnquireLinkResp?.Invoke(_client, new EnquireLinkRespEventArgs(enquire));
                         break;
                     case SmppDataSmResp data:
-                        GuardEx.Against(_state != States.Bound, $"Received data_sm response while on state {_state}?!");
+                        GuardEx.Against(State != States.Bound, $"Received data_sm response while on state {State}?!");
                         _client.OnDataSmResp?.Invoke(_client, new DataSmRespEventArgs(data));
                         break;
                     case SmppSubmitMultiResp multi:
-                        GuardEx.Against(_state != States.Bound, $"Received submit_multi_sm response while on state {_state}?!");
+                        GuardEx.Against(State != States.Bound, $"Received submit_multi_sm response while on state {State}?!");
                         _client.OnSubmitMultiResp?.Invoke(_client, new SubmitMultiRespEventArgs(multi));
                         break;                        
                     case SmppSubmitSmResp submit:
-                        GuardEx.Against(_state != States.Bound, $"Received submit_sm response while on state {_state}?!");
+                        GuardEx.Against(State != States.Bound, $"Received submit_sm response while on state {State}?!");
                         _client.OnSubmitSmResp?.Invoke(_client, new SubmitSmRespEventArgs(submit));
                         break;
                     case SmppDeliverSmResp deliver:
-                        GuardEx.Against(_state != States.Bound, $"Received deliver_sm response while on state {_state}?!");
+                        GuardEx.Against(State != States.Bound, $"Received deliver_sm response while on state {State}?!");
                         _client.OnDeliverSmResp?.Invoke(_client, new DeliverSmRespEventArgs(deliver));
                         break;
                     case SmppReplaceSmResp replace:
-                        GuardEx.Against(_state != States.Bound, $"Received replace_sm response while on state {_state}?!");
+                        GuardEx.Against(State != States.Bound, $"Received replace_sm response while on state {State}?!");
                         _client.OnReplaceSmResp?.Invoke(_client, new ReplaceSmRespEventArgs(replace));
                         break;
                     case SmppQuerySmResp query:
-                        GuardEx.Against(_state != States.Bound, $"Received query_sm response while on state {_state}?!");
+                        GuardEx.Against(State != States.Bound, $"Received query_sm response while on state {State}?!");
                         _client.OnQuerySmResp?.Invoke(_client, new QuerySmRespEventArgs(query));
                         break;
                     case SmppCancelSmResp cancel:
-                        GuardEx.Against(_state != States.Bound, $"Received cancel response while on state {_state}?!");
+                        GuardEx.Against(State != States.Bound, $"Received cancel response while on state {State}?!");
                         _client.OnCancelSmResp?.Invoke(_client, new CancelSmRespEventArgs(cancel));
                         break;
                     default: throw new NotImplementedException($"FIXME: Unexpected response of type {response?.GetType().Name}?!");
@@ -294,7 +291,7 @@ namespace AberrantSMPP
             private void ProcessInbound(IChannelHandlerContext ctx, Pdu packet)
             {
                 Guard.Argument(packet).NotNull();
-                GuardEx.Against(_state < States.Connected, "Received a PDU over an unconnected channel?!.");
+                GuardEx.Against(State < States.Connected, "Received a PDU over an unconnected channel?!.");
                 
                 if (packet is SmppGenericNack)
                 {
@@ -310,7 +307,21 @@ namespace AberrantSMPP
                     ProcessInbound(ctx, response);
                 }
             }
-            
+
+            public override void ChannelRegistered(IChannelHandlerContext context)
+            {
+                base.ChannelRegistered(context);
+                _Log.InfoFormat("Channel [{0}] registered.", context.Channel.Id);
+                SetNewState(context, States.Connecting);
+            }
+
+            public override void ChannelUnregistered(IChannelHandlerContext context)
+            {
+                base.ChannelUnregistered(context);
+                _Log.InfoFormat("Channel [{0}] unregistered.", context.Channel.Id);
+                SetNewState(context, States.Inactive);
+            }
+
             public override void HandlerAdded(IChannelHandlerContext context)
             {
                 var codec = context.Channel.Pipeline.Context<PduCodec>();
@@ -339,7 +350,7 @@ namespace AberrantSMPP
                     {
                         ReferenceCountUtil.Release(message);
                     }
-                }            
+                }
             }
 
             public override Task WriteAsync(IChannelHandlerContext context, object message)
@@ -357,8 +368,7 @@ namespace AberrantSMPP
             public override void ChannelActive(IChannelHandlerContext context)
             {
                 base.ChannelActive(context);
-                
-                _Log.Debug("Channel activated..");
+                _Log.DebugFormat("Channel [{0}] activated.", context.Channel.Id);
                 SetNewState(context, States.Connected);
             }
 
@@ -366,9 +376,8 @@ namespace AberrantSMPP
             {
                 base.ChannelInactive(context);
 
-               _Log.Warn("Channel de-activated..");
+               _Log.WarnFormat("Channel [{0}] de-activated.", context.Channel.Id);
                 SetNewState(context, States.Inactive);
-
                 _client.OnClose?.Invoke(_client, EventArgs.Empty);
             }
 

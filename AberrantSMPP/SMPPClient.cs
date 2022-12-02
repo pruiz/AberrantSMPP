@@ -1,21 +1,21 @@
 ﻿/* AberrantSMPP: SMPP communication library
- * Copyright (C) 2004, 2005 Christopher M. Bouzek
- * Copyright (C) 2010, 2011 Pablo Ruiz García <pruiz@crt0.net>
- *
- * This file is part of RoaminSMPP.
- *
- * RoaminSMPP is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, version 3 of the License.
- *
- * RoaminSMPP is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
- */
+	* Copyright (C) 2004, 2005 Christopher M. Bouzek
+	* Copyright (C) 2010, 2011 Pablo Ruiz García <pruiz@crt0.net>
+	*
+	* This file is part of RoaminSMPP.
+	*
+	* RoaminSMPP is free software: you can redistribute it and/or modify
+	* it under the terms of the GNU Lesser General Public License as published by
+	* the Free Software Foundation, version 3 of the License.
+	*
+	* RoaminSMPP is distributed in the hope that it will be useful,
+	* but WITHOUT ANY WARRANTY; without even the implied warranty of
+	* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	* GNU Lesser General Public License for more details.
+	*
+	* You should have received a copy of the GNU Lesser General Public License
+	* along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
+	*/
 using System;
 using System.IO;
 using System.Linq;
@@ -47,6 +47,7 @@ using AberrantSMPP.EventObjects;
 using AberrantSMPP.Utility;
 using Dawn;
 using System.Runtime.Remoting.Contexts;
+using System.Reflection;
 
 namespace AberrantSMPP 
 {
@@ -63,16 +64,17 @@ namespace AberrantSMPP
 
 		private static readonly uint CHANNEL_BUFFER_SIZE = 10240;
 
-		private readonly CancellationTokenSource _cancellator = new CancellationTokenSource();
+		private readonly CancellationTokenSource _disposeCancellator = new CancellationTokenSource();
 
 		private readonly object _lock = new object();
-		private readonly RetryIntervals _restablishIntervals = new RetryIntervals();
 		private readonly IEventLoopGroup _eventLoopGroup;
 		private Bootstrap _channelFactory;
 		private IChannel _channel;
 		private volatile States _state;
-		private volatile uint _enquireLinkInterval;
+		private volatile uint _enquireLinkIntervalMilliseconds; //ASK: disabled by default. set default to 30 seconds?  = (uint)TimeSpan.FromSeconds(30).TotalMilliseconds
 		private Random _random = new Random();
+		private TimeSpan[] _reverseRestablishIntervals = { TimeSpan.FromSeconds(10) };
+		private int _reverseRestablishIntervalsIndex = 0;
 
 		#region properties
 
@@ -132,7 +134,7 @@ namespace AberrantSMPP
 		/// Gets or sets the connect timeout (in miliseconds)
 		/// </summary>
 		/// <value>The response timeout.</value>
-		public TimeSpan ConnectTimeout { get; private set; } = TimeSpan.FromSeconds(30_000); //ASK: readonly (only getter and setted in .ctor)
+		public TimeSpan ConnectTimeout { get; private set; } = TimeSpan.FromSeconds(30); //ASK: readonly (only getter and setted in .ctor)
 
 		/// <summary>
 		/// Gets or sets the disconnect timeout (in miliseconds)
@@ -151,7 +153,7 @@ namespace AberrantSMPP
 		/// </summary>
 		/// <value>The response timeout.</value>
 		public TimeSpan ResponseTimeout { get; set; } = TimeSpan.FromSeconds(10);
-		
+
 		/// <summary>
 		/// Set to the interval that should elapse in between enquire_link packets.
 		/// Setting this to anything other than 0 will enable the timer, setting 
@@ -162,8 +164,8 @@ namespace AberrantSMPP
 		/// </summary>
 		public TimeSpan EnquireLinkInterval
 		{
-			get => TimeSpan.FromMilliseconds(_enquireLinkInterval);
-			set => _enquireLinkInterval = (uint)value.TotalMilliseconds;
+			get => TimeSpan.FromMilliseconds(_enquireLinkIntervalMilliseconds);
+			set => _enquireLinkIntervalMilliseconds = (uint)value.TotalMilliseconds;
 		}
 
 		/// <summary>
@@ -171,8 +173,31 @@ namespace AberrantSMPP
 		/// </summary>
 		public TimeSpan[] RestablishIntervals 
 		{
-			get => _restablishIntervals.AllIntervals;
-			set => _restablishIntervals.Update(value);
+			get => _reverseRestablishIntervals.Reverse().ToArray();
+			set
+			{
+				var intervals = value ?? Enumerable.Empty<TimeSpan>();
+				_reverseRestablishIntervals = intervals.Reverse().ToArray();
+				ResetRestablishIntervalIndex();
+			}
+		}
+
+		private bool _restablishEnabled;
+
+		private bool RestablishEnabled 
+		{
+			get => _restablishEnabled;
+
+			set
+			{
+				if (value == _restablishEnabled)
+					return;
+				var linea = new string('-', 80);
+				Func<bool, string> b = (x) => x ? "enabled" : "disabled";
+				_Log.DebugFormat("\n\n{0}\nRestablishEnabled:{1} => {2}\n{0}\n\n", linea, b(_restablishEnabled), b(value));
+				_restablishEnabled = value;
+			}
+
 		}
 
 		public SslProtocols SupportedSslProtocols { get; private set; }
@@ -464,98 +489,135 @@ namespace AberrantSMPP
 		/// True if bind was successfull or false if connection/bind failed 
 		/// (and will be retried later upon retryInterval)
 		/// </returns>
-		public Task Start() //< FIXME: Support backoff intervals..
+		public Task Start()
 		{
-			_cancellator.Token.ThrowIfCancellationRequested();
+			_disposeCancellator.Token.ThrowIfCancellationRequested();
 
 			Guard.Operation(State is States.Inactive, $"Can't connect a client w/ state {State}, already connected?");
 
 			try
 			{
-				lock (_lock)
-				{
-					_restablishIntervals.Enabled = true;
-					Connect();
-				}
+				RestablishEnabled = true;
+				Connect();
 				Bind();
-				_restablishIntervals.ResetIndex();
+				ResetRestablishIntervalIndex();
 			}
-			catch
+			catch (Exception ex)
 			{
-				var interval = GetNextRestablishInterval();
-				if (interval.Ticks > 0)
-				{
-					_Log.InfoFormat("Scheduling restablishment of session after {0}..", interval);
-					_eventLoopGroup.Schedule(x =>
-						(x as SMPPClient).Start(), this, interval);
-				}
-
-            }
-            return Task.CompletedTask;
+				Exception flat = (ex as AggregateException)?.Flatten() ?? ex;
+				_Log.ErrorFormat("Error connecting to {0}:{1}.", flat, Host, Port);
+				ScheduleReconnect();
+			}
+			return Task.CompletedTask;
 		}
 
 		public TimeSpan GetNextRestablishInterval()
 		{
-			return _restablishIntervals.GetNext();
+			var index = _reverseRestablishIntervalsIndex;
+
+			if (index > 0)
+				_reverseRestablishIntervalsIndex = index - 1;
+
+			return _reverseRestablishIntervals[index % _reverseRestablishIntervals.Length];
 		}
 
-        public Task Stop()
+		private void ResetRestablishIntervalIndex()
+		{
+			_reverseRestablishIntervalsIndex = _reverseRestablishIntervals.Length - 1;
+		}
+
+		public Task Stop()
 		{
 			Unbind();
-			Disconnect();
-
+			if (State >= States.Connected)
+				Disconnect();
 			return Task.CompletedTask;
 		}
 
 		public void Connect()
 		{
-			_cancellator.Token.ThrowIfCancellationRequested();
+			_disposeCancellator.Token.ThrowIfCancellationRequested();
 
 			lock (_lock)
 			{
 				Guard.Operation(State is States.Inactive, $"Can't connect a client w/ state {State}, already connected?");
 
-				_Log.DebugFormat("Connecting to {0}:{1}.", Host, Port);
+				if (_channelFactory == null)
+					_channelFactory = CreateChannelFactory();
 
-				using (var connectCancellator = new CancellationTokenSource(ConnectTimeout))
-				using (var linkedCancellators = CancellationTokenSource.CreateLinkedTokenSource(_cancellator.Token, connectCancellator.Token))
-				{
-					try
-					{
-						SetNewState(States.Connecting);
-
-						if (_channelFactory == null)
-							_channelFactory = BuildBootstrap();
-
-						_channel = _channelFactory.ConnectAsync(Host, Port)
-							.WithCancellation(linkedCancellators.Token)
-							.GetAwaiter().GetResult();
-
-						_Log.DebugFormat("Connected to {0}:{1}.", Host, Port);
-					}
-					catch (Exception ex)
-					{
-						SetNewState(States.Inactive);
-						_Log.ErrorFormat("Error Connecting to {0}:{1}.", ex is AggregateException aex ? aex.Flatten() : ex, Host, Port);
-						throw;
-					}
-				}
-				
+				_channel = null;
+				_channel = ConnectAsync()
+					.GetAwaiter().GetResult();
 			}
+		}
+
+		public void ScheduleReconnect()
+		{
+			if (!RestablishEnabled)
+				_Log.InfoFormat("Reconnect scheduling disabled");
+
+			var interval = GetNextRestablishInterval();
+			_Log.InfoFormat("Scheduling reconnect of session after {0}...", interval);
+			_eventLoopGroup.ScheduleAsync(() => ReconnectAsync(), interval, _disposeCancellator.Token);
+		}
+
+		private Task ReconnectAsync()
+		{
+			_disposeCancellator.Token.ThrowIfCancellationRequested();
+
+			_Log.InfoFormat("Reconnecting to {0}:{1}...", Host, Port);
+
+			try
+			{
+				lock (_lock)
+				{
+					_channel = null;
+					//< Does not await to ConnectAsync because is called inside eventLoop, and it can cause dead-lock with
+					//  event dispached and hangs connection.
+					return ConnectAsync()
+						.ContinueWith(t =>
+						{
+							if (t.IsFaulted)
+							{
+								_Log.ErrorFormat("Error reconnecting to {0}:{1}.", t.Exception.Flatten(), Host, Port);
+								ScheduleReconnect();
+								throw t.Exception;
+							}
+							_channel = t.Result;
+							Bind();
+							ResetRestablishIntervalIndex();
+						}, _disposeCancellator.Token);
+				}
+			}
+			catch(Exception ex)
+			{
+				//< Ensure never throw an exception to caller (EventLoop)
+				var flat = (ex as AggregateException)?.Flatten() ?? ex;
+				_Log.ErrorFormat("Error reconnecting to {0}:{1}.", flat, Host, Port);
+				ScheduleReconnect();
+			}
+			return Task.CompletedTask;
+		}
+
+		private Task<IChannel> ConnectAsync()
+		{
+			_Log.DebugFormat("Connecting to {0}:{1}...", Host, Port);
+			return _channelFactory.ConnectAsync()
+				.WithCancellation(_disposeCancellator.Token);
 		}
 
 		public void Disconnect()
 		{
-			_cancellator.Token.ThrowIfCancellationRequested();
+			_disposeCancellator.Token.ThrowIfCancellationRequested();
 
 			lock (_lock)
 			{
 				Guard.Operation(State >= States.Connected, $"Can't disconnect an a client w/ state {State}, not connected yet?");
 
-				_restablishIntervals.Enabled = false;
+				RestablishEnabled = false;
 
 				using (var disconnectCancellator = new CancellationTokenSource(DisconnectTimeout))
-				using (var linkedCancellators = CancellationTokenSource.CreateLinkedTokenSource(_cancellator.Token, disconnectCancellator.Token))
+				using (var linkedCancellators = CancellationTokenSource.CreateLinkedTokenSource(_disposeCancellator.Token, disconnectCancellator.Token))
 				{
 					_channel.DisconnectAsync()
 						.WithCancellation(linkedCancellators.Token)
@@ -574,7 +636,7 @@ namespace AberrantSMPP
 		/// </summary>
 		public void Bind()
 		{
-			_cancellator.Token.ThrowIfCancellationRequested();
+			_disposeCancellator.Token.ThrowIfCancellationRequested();
 			GuardEx.Against(_channel == null, "Can't bind non-connected client, call ConnectAsync() first.");
 			GuardEx.Against(State == States.Bound, "Already bound to remote party, unbind session first.");
 			GuardEx.Against(State != States.Connected, "Can't bind non-connected session, call ConnectAsync() first.");
@@ -603,11 +665,11 @@ namespace AberrantSMPP
 		/// </summary>
 		public void Unbind()
 		{
-			_cancellator.Token.ThrowIfCancellationRequested();
+			_disposeCancellator.Token.ThrowIfCancellationRequested();
 			GuardEx.Against(_channel == null, "Can't unbind non-connected client.");
 			Guard.Operation(State == States.Bound, $"Can't unbind a session w/ state {State}, try binding first.");
 
-			_restablishIntervals.Enabled = false;
+			RestablishEnabled = false;
 
 			_Log.InfoFormat("Unbinding from {0}:{1}..", Host, Port);
 			
@@ -624,7 +686,7 @@ namespace AberrantSMPP
 		/// <returns>The sequence number of the sent PDU, or null if failed.</returns>
 		public uint SendPdu(Pdu packet)
 		{
-			_cancellator.Token.ThrowIfCancellationRequested();
+			_disposeCancellator.Token.ThrowIfCancellationRequested();
 
 			try
 			{
@@ -637,7 +699,7 @@ namespace AberrantSMPP
 				GuardEx.Against(packet is not SmppBind && State != States.Bound, "Session not bound to remote party.");
 
 				var timeout = (int)RequestTimeout.TotalMilliseconds;
-				_channel!.WriteAndFlushAsync(packet).Wait(timeout, _cancellator.Token);
+				_channel!.WriteAndFlushAsync(packet).Wait(timeout, _disposeCancellator.Token);
 				return packet.SequenceNumber;
 			}
 			catch (Exception ex)
@@ -662,7 +724,7 @@ namespace AberrantSMPP
 			
 			SendPdu(request);
 			
-			if (promise.Wait((int)ResponseTimeout.TotalMilliseconds, _cancellator.Token))
+			if (promise.Wait((int)ResponseTimeout.TotalMilliseconds, _disposeCancellator.Token))
 			{
 				var response = promise.Result;
 
@@ -690,7 +752,7 @@ namespace AberrantSMPP
 				SendPdu(request);
 			}
 
-			if (!Task.WaitAll(tasks, (int)ResponseTimeout.TotalMilliseconds, _cancellator.Token))
+			if (!Task.WaitAll(tasks, (int)ResponseTimeout.TotalMilliseconds, _disposeCancellator.Token))
 			{
 				throw new SmppTimeoutException(string.Format(
 					"Timeout while waiting for a responses from remote side. (Missing: {0}/{1})",
@@ -763,18 +825,18 @@ namespace AberrantSMPP
 			}
 		}
 		
-		private Bootstrap BuildBootstrap()
+		private Bootstrap CreateChannelFactory()
 		{
 			return new Bootstrap()
 				.Group(_eventLoopGroup)
 				.Channel<TcpSocketChannel>()
 				.Option(ChannelOption.TcpNodelay, true)
-				.Option(ChannelOption.SoKeepalive, true)
+				//.Option(ChannelOption.SoKeepalive, true)
 				.Option(ChannelOption.SoLinger, 0)
 				.Option(ChannelOption.SoRcvbuf, (int)CHANNEL_BUFFER_SIZE)
 				.Option(ChannelOption.SoSndbuf, (int)CHANNEL_BUFFER_SIZE)
 				.Option(ChannelOption.ConnectTimeout, ConnectTimeout)
-				//.RemoteAddress(Host, Port)
+				.RemoteAddress(Host, Port)
 				.Handler(new ActionChannelInitializer<ISocketChannel>(channel => Setup(channel.Pipeline)));
 		}
 
@@ -783,7 +845,7 @@ namespace AberrantSMPP
 			if (SupportedSslProtocols != SslProtocols.None)
 			{
 				ClientTlsSettings tlsSettings = new ClientTlsSettings(
-                    SupportedSslProtocols, !DisableCheckCertificateRevocation,
+					SupportedSslProtocols, !DisableCheckCertificateRevocation,
 					new List<X509Certificate>(), Host);
 				pipeline.AddLast("tls", new TlsHandler(tlsSettings));
 			}
@@ -804,7 +866,18 @@ namespace AberrantSMPP
 			_state = newState;
 			OnClientStateChanged?.Invoke(this, new ClientStateChangedEventArgs(oldState, newState));
 		}
-		
+
+		//private void Shutdown()
+		//{
+		//	_channel?.Flush();
+		//	//_channel?.DisconnectAsync().GetAwaiter().GetResult();
+		//	//(_channel as IDisposable)?.Dispose();
+		//	//_channel = null;
+
+		//	//(_channelFactory as IDisposable)?.Dispose();
+		//	//_channelFactory = null;
+		//}
+
 #if false
 		/// <summary>
 		/// Performs a re-bind if current connection was lost.
@@ -853,7 +926,7 @@ namespace AberrantSMPP
 		}
 
 #endif
-#endregion private methods
+		#endregion private methods
 
 		/// <summary>
 		/// Disposes of this component.  Called by the framework; do not call it 
@@ -863,9 +936,9 @@ namespace AberrantSMPP
 		{
 			_Log.DebugFormat("Disposing session for {0}:{1}", Host, Port);
 
-			_restablishIntervals.Enabled = false;
+			RestablishEnabled = false;
 
-			_cancellator.Cancel();
+			_disposeCancellator.Cancel();
 			//Helper.ShallowExceptions(() => { _channel?.CloseAsync().Wait(500); });
 			Helper.ShallowExceptions(() => { _channel?.DisconnectAsync().Wait(DisconnectTimeout); });
 			Helper.ShallowExceptions(() => { _eventLoopGroup?.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500)).Wait(); });

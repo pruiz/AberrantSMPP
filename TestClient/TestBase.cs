@@ -21,6 +21,7 @@ namespace TestClient
 		protected readonly Stopwatch _sw;
         protected readonly Dictionary<int, TClient> _clients;
         private readonly ConcurrentDictionary<int, (int? taskId, int threadId, int clientId, int clientRequestId, SmppRequest req, SmppResponse res, long elapsedMs)> _samples;
+        private int _numberOfClients;
 
         public bool StartOnBuildClient { get; protected set; } = true;
 
@@ -35,26 +36,30 @@ namespace TestClient
 
         public void Run(int numberOfClients, int requestPerClient)
         {
+            _numberOfClients = numberOfClients;
             var totalRequests = numberOfClients * requestPerClient;
 
             _log.DebugFormat("name:{0}, numberOfClients:{1}, requestPerClient:{2}, totalRequests:{3}",
-                _declaringType.Name, numberOfClients, requestPerClient, totalRequests);
+                _declaringType.Name, _numberOfClients, requestPerClient, totalRequests);
 
-            foreach (var clientId in Enumerable.Range(0, numberOfClients))
-            {
-                if (!_clients.TryGetValue(clientId, out var client))
-                {
-                    client = BuildClient($"client-{clientId}");
-                    _clients.Add(clientId, client);
-                }
-            }
+            RecreateClients();
 
             if (totalRequests != 0)
-                Execute(numberOfClients, requestPerClient);
+                Execute(requestPerClient);
 
-            PrintResume(numberOfClients, requestPerClient);
+            PrintResume(requestPerClient);
 
             DisposeClients();
+        }
+
+        protected void RecreateClients()
+        {
+            foreach (var clientId in Enumerable.Range(0, _numberOfClients))
+            {
+                if (_clients.TryGetValue(clientId, out var client))
+                    DisposeClient(client);
+                _clients[clientId] = BuildClient($"client-{clientId}"); ;
+            }
         }
 
         protected abstract TClient BuildClient(
@@ -64,8 +69,9 @@ namespace TestClient
             SslProtocols supportedSslProtocols = SslProtocols.None,
             bool disableCheckCertificateRevocation = true);
 
-        protected abstract void Execute(int numberOfClients, int requestPerClient);
+        protected abstract void Execute(int requestPerClient);
         protected abstract void DisposeClients();
+        protected abstract void DisposeClient(TClient client);
 
         protected static SmppSubmitSm CreateSubmitSm(string txt)
 		{
@@ -102,14 +108,14 @@ namespace TestClient
             _samples.TryAdd(uniqueRequestId, (Task.CurrentId, Thread.CurrentThread.ManagedThreadId, clientId, clientRequestId, request, response, elapsed));
         }
 
-        protected virtual void PrintResume(int numberOfClients, int requestPerClient)
+        protected virtual void PrintResume(int requestPerClient)
         {
             bool logToFile = false;
             while (true)
             {
                 Log("Press Q to quit.", logToFile);
                 Log($"Press A to show all request. Count:{_samples.Count}", logToFile);
-                Log($"Press R to re-run. numberOfClients:{numberOfClients}, requestPerClient:{requestPerClient}", logToFile);
+                Log($"Press R to re-run. numberOfClients:{_clients.Count}, requestPerClient:{requestPerClient}", logToFile);
                 Log($"Press L to toggle log to file. LogToFile {(logToFile ? "enabled" : "disabled")}", logToFile);
                 Log("Press any other key to Resume.", logToFile);
 
@@ -126,7 +132,7 @@ namespace TestClient
                 if (key == ConsoleKey.R)
                 {
                     _samples.Clear();
-                    Execute(numberOfClients: numberOfClients, requestPerClient: requestPerClient);
+                    Execute(requestPerClient: requestPerClient);
                     continue;
                 }
 

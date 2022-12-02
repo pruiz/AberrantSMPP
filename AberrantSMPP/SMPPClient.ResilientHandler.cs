@@ -2,6 +2,8 @@
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
+using Dawn;
+
 using DotNetty.Transport.Channels;
 
 namespace AberrantSMPP
@@ -26,25 +28,20 @@ namespace AberrantSMPP
         {
             private readonly SMPPClient _client;
 
-            public ResilientHandler(SMPPClient client)
+            public ResilientHandler(SMPPClient owner)
             {
-                _client = client;
+                _client = Guard.Argument(owner, nameof(owner)).NotNull();
             }
 
-
-
+            //public override void ChannelActive(IChannelHandlerContext context)
+            //{
+            //    base.ChannelActive(context);
+            //}
 
             public override void ChannelInactive(IChannelHandlerContext context)
             {
                 base.ChannelInactive(context);
-
-                var nextInterval = _client.GetNextRestablishInterval();
-                if (nextInterval.Ticks > 0)
-                {
-                    _Log.InfoFormat("Scheduling restablishment of session after {0}..", nextInterval);
-                    context.Channel.EventLoop.Parent.Schedule(x =>
-                        (x as SMPPClient).Retry(), _client, nextInterval);
-                }
+                _client.ScheduleReconnect();
             }
         }
     }
