@@ -14,18 +14,15 @@ namespace AberrantSMPP
         private class EnquireLinkHandler : IdleStateHandler
         {
             private readonly SMPPClient _client;
-            public EnquireLinkHandler(SMPPClient client)
-                : base(false, client.EnquireLinkInterval, TimeSpan.Zero, TimeSpan.Zero)
+            public EnquireLinkHandler(SMPPClient owner)
+                : base(false, owner.EnquireLinkInterval, TimeSpan.Zero, TimeSpan.Zero)
             {
-                _client = client;
+                _client = Guard.Argument(owner, nameof(owner)).NotNull();
             }
 
             protected override void ChannelIdle(IChannelHandlerContext context, IdleStateEvent stateEvent)
             {
                 Guard.Argument(stateEvent).NotNull();
-
-                _Log.DebugFormat("ChannelIdle(context:{0}, stateEvent:{1}, client.EnquiereLinkInterval:{2}, client.State:{3}",
-                    context.Name, stateEvent.State, _client.EnquireLinkInterval, _client.State);
 
                 if (_client.EnquireLinkInterval <= TimeSpan.Zero)
                     return;

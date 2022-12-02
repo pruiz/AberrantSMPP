@@ -24,7 +24,7 @@ namespace TestClient
 
 		}
 
-        protected override void Execute(int numberOfClients, int requestPerClient)
+        protected override void Execute(int requestPerClient)
         {
             foreach (var client in _clients)
             {
@@ -47,7 +47,12 @@ namespace TestClient
         {
             Log("==> Disposing..");
             foreach (var client in _clients.Values)
-                client.Dispose();
+                DisposeClient(client);
+        }
+
+        protected override void DisposeClient(SMPPCommunicator client)
+        {
+            client?.Dispose();
         }
 
         private void CreateAndSendSubmitSm(int requestPerClient, int clientId, SMPPCommunicator client, int clientRequestId)

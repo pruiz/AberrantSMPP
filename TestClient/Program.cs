@@ -68,7 +68,7 @@ namespace TestClient
 			Multi,
 			Legacy
 		}
-		
+
 
 		static void Main(string[] args)
 		{
@@ -96,7 +96,7 @@ namespace TestClient
 			}
 		}
 
-		private static void Log(string text, bool logToFile = true)
+        private static void Log(string text, bool logToFile = true)
 		{
 			if (logToFile)
 				_log.Debug(text);

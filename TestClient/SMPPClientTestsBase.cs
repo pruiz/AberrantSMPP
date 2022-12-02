@@ -29,10 +29,15 @@ namespace TestClient
 			//	client.Stop();
 			Log("==> Disposing..");
 			foreach (var client in _clients.Values)
-				client.Dispose();
+                DisposeClient(client);
 		}
 
-		protected override SMPPClient BuildClient(
+        protected override void DisposeClient(SMPPClient client)
+        {
+            client?.Dispose();
+        }
+
+        protected override SMPPClient BuildClient(
 			string systemId = "client", 
 			string host = "smppsim.smsdaemon.test",
 			ushort port = 12000,
@@ -40,7 +45,7 @@ namespace TestClient
 			bool disableCheckCertificateRevocation = true)
 		{
 			var client = new SMPPClient(
-				host: host, port: port, connectTimeout: TimeSpan.FromSeconds(30),
+				host: host, port: port, connectTimeout: TimeSpan.FromSeconds(5),
 				supportedSslProtocols: supportedSslProtocols, 
 				disableCheckCertificateRevocation: disableCheckCertificateRevocation);
 			client.SystemId = "client";
@@ -59,9 +64,9 @@ namespace TestClient
 			client.OnClose += (s, e) => Log("OnClose: " + e.GetType());
 			//client.OnDataSm += (s, e) => Log("OnDataSm: " + e.Request);
 			client.OnDataSmResp += (s, e) => Log("OnDataResp: " + e.Response);
-			client.OnDeliverSm += client_OnDeliverSm;
+			client.OnDeliverSm += Client_OnDeliverSm;
 			client.OnDeliverSmResp += (s, e) => Log("OnDeliverSmResp: " + e.Response);
-			client.OnEnquireLink += client_OnEnquireLink;
+			client.OnEnquireLink += Client_OnEnquireLink;
 			client.OnEnquireLinkResp += (s, e) => Log("OnEnquireLinkResp: " + e.Response);
 			client.OnError += (s, e) => Log("OnError: " + e.ThrownException?.ToString());
 			client.OnGenericNack += (s, e) => Log("OnGenericNack: " + e.Request);
@@ -78,18 +83,18 @@ namespace TestClient
 			client.OnClientStateChanged += (s, e) => Log("OnClientStateChanged: " + e.OldState + " => " + e.NewState);
 
 			if (StartOnBuildClient)
-				client.Start(TimeSpan.FromSeconds(5));
+				client.Start();
 
 			return client;
 		}
 
-		protected void client_OnEnquireLink(object source, EnquireLinkEventArgs e)
+		protected void Client_OnEnquireLink(object source, EnquireLinkEventArgs e)
 		{
 			Log("OnEnquireLink: " + e.Request);
 			(source as SMPPClient)?.SendPdu(new SmppEnquireLinkResp() { SequenceNumber = e.Request.SequenceNumber });
 		}
 
-		protected void client_OnDeliverSm(object source, DeliverSmEventArgs e)
+		protected void Client_OnDeliverSm(object source, DeliverSmEventArgs e)
 		{
 			Log("OnDeliverSm: " + e.Request);
 			(source as SMPPClient)?.SendPdu(new SmppDeliverSmResp() { SequenceNumber = e.Request.SequenceNumber });

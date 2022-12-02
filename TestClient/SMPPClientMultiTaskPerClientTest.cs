@@ -23,7 +23,7 @@ namespace TestClient
 		{
             
         }
-        protected override void Execute(int numberOfClients, int requestPerClient)
+        protected override void Execute(int requestPerClient)
         {
             foreach (var client in _clients)
             {

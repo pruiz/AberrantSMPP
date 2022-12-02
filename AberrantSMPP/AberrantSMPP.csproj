@@ -208,7 +208,6 @@
     <Compile Include="Exceptions\SmppTimeoutException.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="RequestQueue.cs" />
-    <Compile Include="Utility\RetryIntervals.cs" />
     <Compile Include="SMPPClient.ChannelHandler.cs" />
     <Compile Include="LockHelpers.cs" />
     <Compile Include="Packet\CommandId.cs" />
