@@ -46,6 +46,7 @@ using AberrantSMPP.Exceptions;
 using AberrantSMPP.EventObjects;
 using AberrantSMPP.Utility;
 using Dawn;
+using System.Runtime.Remoting.Contexts;
 
 namespace AberrantSMPP 
 {
@@ -60,13 +61,14 @@ namespace AberrantSMPP
 	{
 		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        private static readonly uint CHANNEL_BUFFER_SIZE = 10240;
+		private static readonly uint CHANNEL_BUFFER_SIZE = 10240;
 
-        private CancellationTokenSource _cancellator = new CancellationTokenSource();
+		private readonly CancellationTokenSource _cancellator = new CancellationTokenSource();
 
 		private readonly object _lock = new object();
-		private Bootstrap _channelFactory;
+		private readonly RetryIntervals _restablishIntervals = new RetryIntervals();
 		private readonly IEventLoopGroup _eventLoopGroup;
+		private Bootstrap _channelFactory;
 		private IChannel _channel;
 		private volatile States _state;
 		private volatile uint _enquireLinkInterval;
@@ -163,13 +165,15 @@ namespace AberrantSMPP
 			get => TimeSpan.FromMilliseconds(_enquireLinkInterval);
 			set => _enquireLinkInterval = (uint)value.TotalMilliseconds;
 		}
-		
+
 		/// <summary>
-		/// Sets the number of seconds that the system will wait before trying to rebind 
-		/// after a total network failure(due to cable problems, etc).  Negative values are 
-		/// ignored, and 0 disables Re-Binding.
+		/// Sets intervals the system will wait before trying to rebind after a total network failure(due to cable problems, etc).
 		/// </summary>
-		public TimeSpan RestablishInterval { get; set; }
+		public TimeSpan[] RestablishIntervals 
+		{
+			get => _restablishIntervals.AllIntervals;
+			set => _restablishIntervals.Update(value);
+		}
 
 		public SslProtocols SupportedSslProtocols { get; private set; }
 
@@ -460,7 +464,7 @@ namespace AberrantSMPP
 		/// True if bind was successfull or false if connection/bind failed 
 		/// (and will be retried later upon retryInterval)
 		/// </returns>
-		public Task Start(TimeSpan retryInterval) //< FIXME: Support backoff intervals..
+		public Task Start() //< FIXME: Support backoff intervals..
 		{
 			_cancellator.Token.ThrowIfCancellationRequested();
 
@@ -470,39 +474,32 @@ namespace AberrantSMPP
 			{
 				lock (_lock)
 				{
-					RestablishInterval = retryInterval;
+					_restablishIntervals.Enabled = true;
 					Connect();
 				}
 				Bind();
+				_restablishIntervals.ResetIndex();
 			}
 			catch
 			{
-				RestablishInterval = TimeSpan.Zero;
-				Retry(retryInterval);
-			}
-			return Task.CompletedTask;
-		}
-
-		public void Retry(TimeSpan retryInterval)
-		{
-			_Log.InfoFormat("Scheduling restablishment of session after {0}...", retryInterval);
-			//FIXME: enable retry
-#if false
-			Task.Factory.StartNew(() =>
-			{
-				try
+				var interval = GetNextRestablishInterval();
+				if (interval.Ticks > 0)
 				{
-					if (State >= States.Inactive)
-						Disconnect();
+					_Log.InfoFormat("Scheduling restablishment of session after {0}..", interval);
+					_eventLoopGroup.Schedule(x =>
+						(x as SMPPClient).Start(), this, interval);
 				}
-				catch { }
-				Task.Delay(retryInterval);
-				Start(retryInterval, _bindFromStart);
-			});
-#endif
+
+            }
+            return Task.CompletedTask;
 		}
 
-		public Task Stop()
+		public TimeSpan GetNextRestablishInterval()
+		{
+			return _restablishIntervals.GetNext();
+		}
+
+        public Task Stop()
 		{
 			Unbind();
 			Disconnect();
@@ -555,7 +552,7 @@ namespace AberrantSMPP
 			{
 				Guard.Operation(State >= States.Connected, $"Can't disconnect an a client w/ state {State}, not connected yet?");
 
-				RestablishInterval = TimeSpan.Zero;
+				_restablishIntervals.Enabled = false;
 
 				using (var disconnectCancellator = new CancellationTokenSource(DisconnectTimeout))
 				using (var linkedCancellators = CancellationTokenSource.CreateLinkedTokenSource(_cancellator.Token, disconnectCancellator.Token))
@@ -610,7 +607,7 @@ namespace AberrantSMPP
 			GuardEx.Against(_channel == null, "Can't unbind non-connected client.");
 			Guard.Operation(State == States.Bound, $"Can't unbind a session w/ state {State}, try binding first.");
 
-			RestablishInterval = TimeSpan.Zero;
+			_restablishIntervals.Enabled = false;
 
 			_Log.InfoFormat("Unbinding from {0}:{1}..", Host, Port);
 			
@@ -866,7 +863,7 @@ namespace AberrantSMPP
 		{
 			_Log.DebugFormat("Disposing session for {0}:{1}", Host, Port);
 
-			RestablishInterval = TimeSpan.Zero;
+			_restablishIntervals.Enabled = false;
 
 			_cancellator.Cancel();
 			//Helper.ShallowExceptions(() => { _channel?.CloseAsync().Wait(500); });

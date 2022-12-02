@@ -38,11 +38,12 @@ namespace AberrantSMPP
             {
                 base.ChannelInactive(context);
 
-                if (_client.RestablishInterval.Ticks > 0)
+                var nextInterval = _client.GetNextRestablishInterval();
+                if (nextInterval.Ticks > 0)
                 {
-                    _Log.InfoFormat("Scheduling restablishment of session after {0}..", _client.RestablishInterval);
+                    _Log.InfoFormat("Scheduling restablishment of session after {0}..", nextInterval);
                     context.Channel.EventLoop.Parent.Schedule(x =>
-                        (x as SMPPClient).Start(_client.RestablishInterval), _client, _client.RestablishInterval);
+                        (x as SMPPClient).Retry(), _client, nextInterval);
                 }
             }
         }
