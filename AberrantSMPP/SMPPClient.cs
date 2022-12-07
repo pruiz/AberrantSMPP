@@ -507,6 +507,7 @@ namespace AberrantSMPP
 				Exception flat = (ex as AggregateException)?.Flatten() ?? ex;
 				_Log.ErrorFormat("Error connecting to {0}:{1}.", flat, Host, Port);
 				ScheduleReconnect();
+				ExceptionCaught(null, ex);
 			}
 			return Task.CompletedTask;
 		}
@@ -581,7 +582,8 @@ namespace AberrantSMPP
 							{
 								_Log.ErrorFormat("Error reconnecting to {0}:{1}.", t.Exception.Flatten(), Host, Port);
 								ScheduleReconnect();
-								throw t.Exception;
+                                ExceptionCaught(null, t.Exception);
+                                throw t.Exception;
 							}
 							_channel = t.Result;
 							Bind();
@@ -595,6 +597,7 @@ namespace AberrantSMPP
 				var flat = (ex as AggregateException)?.Flatten() ?? ex;
 				_Log.ErrorFormat("Error reconnecting to {0}:{1}.", flat, Host, Port);
 				ScheduleReconnect();
+				ExceptionCaught(null, ex);
 			}
 			return Task.CompletedTask;
 		}
@@ -625,6 +628,11 @@ namespace AberrantSMPP
 					_channel = null;
 				}
 			}
+		}
+
+		protected void ExceptionCaught(IChannelHandlerContext context, Exception exception)
+		{
+			OnError?.Invoke(this, new SmppExceptionEventArgs(exception));
 		}
 
 		/// <summary>
@@ -864,7 +872,8 @@ namespace AberrantSMPP
 		{
 			var oldState = _state;
 			_state = newState;
-			OnClientStateChanged?.Invoke(this, new ClientStateChangedEventArgs(oldState, newState));
+			if (oldState != newState)
+				OnClientStateChanged?.Invoke(this, new ClientStateChangedEventArgs(oldState, newState));
 		}
 
 		//private void Shutdown()

@@ -383,7 +383,7 @@ namespace AberrantSMPP
 
             public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
             {
-                _client.OnError?.Invoke(_client, new SmppExceptionEventArgs(exception));
+                _client.ExceptionCaught(context, exception);
             }
         }
     }
