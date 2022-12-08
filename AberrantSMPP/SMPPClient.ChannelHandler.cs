@@ -338,6 +338,7 @@ namespace AberrantSMPP
                 base.ChannelUnregistered(context);
 				_client.SetNewState(States.Inactive);
 				_client.ReleaseChannel();
+				_requestQueue.Clear();
 			}
 
 			public override void ChannelActive(IChannelHandlerContext context)

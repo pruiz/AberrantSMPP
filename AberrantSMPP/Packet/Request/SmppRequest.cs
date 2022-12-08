@@ -54,5 +54,11 @@ namespace AberrantSMPP.Packet.Request
 			Guard.Operation(ResponseTrackingEnabled, "Response Tracking not enabled?!");
 			_taskSource.SetResult(response);
 		}
-	}
+
+        internal void CancelResponse()
+        {
+            Guard.Operation(ResponseTrackingEnabled, "Response Tracking not enabled?!");
+            _taskSource.TrySetCanceled();
+        }
+    }
 }
