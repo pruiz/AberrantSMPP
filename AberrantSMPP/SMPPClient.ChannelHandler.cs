@@ -22,22 +22,21 @@ namespace AberrantSMPP
             private readonly bool autoRelease = true;
             private readonly SMPPClient _client;
             private readonly RequestQueue _requestQueue;
-            private uint _sequenceNumber;
+            private uint _sequenceNumber = 0;
 
-            public States State => _client?.State ?? States.Inactive;
+            public States State => _client.State;
 
             public ChannelHandler(SMPPClient owner)
             {
-                base.EnsureNotSharable();
+				base.EnsureNotSharable();
+
                 _client = Guard.Argument(owner, nameof(owner)).NotNull();
-
-                var queueName = owner.SystemId + "@" + owner.Host + ":" + owner.Port.ToString();
-                _requestQueue = new RequestQueue(queueName, owner.ResponseTimeout, owner.ThrowWhenAddExistingSequence, owner.RequestQueueMemoryLimitMegabytes);
-            }
-
-            private void SetNewState(IChannelHandlerContext ctx, States newState)
-            {
-                _client.SetNewState(newState);
+                _requestQueue = new RequestQueue(
+					$"{owner.SystemId}@{owner.Host}:{owner.Port}",
+                    owner.ResponseTimeout,
+                    owner.ThrowWhenAddExistingSequence,
+                    owner.RequestQueueMemoryLimitMegabytes
+                );
             }
 
             private void ProcessOutbound(IChannelHandlerContext ctx, SmppBind bind)
@@ -46,14 +45,15 @@ namespace AberrantSMPP
                 GuardEx.Against(State != States.Connected, "Can't bind non-connected session, call ConnectAsync() first.");
                 
                 _Log.InfoFormat("Binding to {0}..", ctx.Channel.RemoteAddress);
-                SetNewState(ctx, States.Binding);
+                _client.SetNewState(States.Binding);
             }
 
             private void ProcessOutbound(IChannelHandlerContext ctx, SmppUnbind unbind)
             {
                 GuardEx.Against(State != States.Bound, "Trying to send Pdu over an session not yet bound?!");
+
                 _Log.InfoFormat("Unbinding from {0}..", ctx.Channel.RemoteAddress);
-                SetNewState(ctx, States.Unbinding);
+                _client.SetNewState(States.Unbinding);
             }
 
             private void ProcessOutbound(IChannelHandlerContext ctx, SmppRequest request)
@@ -82,6 +82,7 @@ namespace AberrantSMPP
                         break;
                 };
             }
+
             private void ProcessOutbound(IChannelHandlerContext ctx, Pdu packet)
             {
                 Guard.Argument(packet).NotNull();
@@ -230,16 +231,16 @@ namespace AberrantSMPP
                 {
                     case SmppBindResp bind:
                         GuardEx.Against(State != States.Binding, $"Received bind response while on state {State}?!");
-                        SetNewState(ctx, States.Bound);
+                        _client.SetNewState(States.Bound);
                         _client.OnBindResp?.Invoke(_client, new BindRespEventArgs(bind));
                         break;
                     case SmppUnbindResp unbind:
                         GuardEx.Against(State != States.Unbinding, $"Received unbind response while on state {State}?!");
-                        SetNewState(ctx, States.Connected);
+						_client.SetNewState(States.Connected);
                         _client.OnUnboundResp?.Invoke(_client, new UnbindRespEventArgs(unbind));
                         break;
-                    case SmppGenericNackResp nack: //ASK: Can arrive a GenericNackResp ONLY when state is Connected???
-                        GuardEx.Against(State != States.Connected, $"Received generic_nack response while on state {State}?!");
+                    case SmppGenericNackResp nack:
+                        GuardEx.Against(State < States.Connected, $"Received generic_nack response while on state {State}?!");
                         _client?.OnGenericNackResp?.Invoke(_client, new GenericNackRespEventArgs(nack));
                         break;
                     case SmppEnquireLinkResp enquire:
@@ -278,7 +279,7 @@ namespace AberrantSMPP
                         GuardEx.Against(State != States.Bound, $"Received cancel response while on state {State}?!");
                         _client.OnCancelSmResp?.Invoke(_client, new CancelSmRespEventArgs(cancel));
                         break;
-                    default: throw new NotImplementedException($"FIXME: Unexpected response of type {response?.GetType().Name}?!");
+                    default: throw new NotImplementedException($"Unexpected response of type {response?.GetType().Name}?!");
                 }
                 
                 // Handle packets related to a request awaiting response.
@@ -308,27 +309,50 @@ namespace AberrantSMPP
                 }
             }
 
-            public override void ChannelRegistered(IChannelHandlerContext context)
-            {
-                base.ChannelRegistered(context);
-                _Log.InfoFormat("Channel [{0}] registered.", context.Channel.Id);
-                SetNewState(context, States.Connecting);
-            }
-
-            public override void ChannelUnregistered(IChannelHandlerContext context)
-            {
-                base.ChannelUnregistered(context);
-                _Log.InfoFormat("Channel [{0}] unregistered.", context.Channel.Id);
-                SetNewState(context, States.Inactive);
-            }
-
             public override void HandlerAdded(IChannelHandlerContext context)
             {
                 var codec = context.Channel.Pipeline.Context<PduCodec>();
                 Guard.Operation(codec != null, "Missing PduCodec on HandlerPipeline.");
             }
 
-            public override void ChannelRead(IChannelHandlerContext context, object message)
+            public override void ChannelRegistered(IChannelHandlerContext context)
+            {
+                _Log.InfoFormat("Channel [{0}] registered..", context.Channel.Id);
+
+				// XXX: Order matters, first update state, then let it flow to base.
+				_client.SetNewState(States.Connecting);
+                base.ChannelRegistered(context);
+            }
+
+            public override void ChannelUnregistered(IChannelHandlerContext context)
+            {
+				_Log.InfoFormat("Channel [{0}] unregistered..", context.Channel.Id);
+
+                // XXX: Order matters, first let it flow to base, then update state.
+                base.ChannelUnregistered(context);
+				_client.SetNewState(States.Inactive);
+            }
+
+			public override void ChannelActive(IChannelHandlerContext context)
+			{
+				_Log.DebugFormat("Channel [{0}] activated.", context.Channel.Id);
+
+				// XXX: Order matters, first update state, then let it flow to base.
+				_client.SetNewState(States.Connected);
+				base.ChannelActive(context);
+			}
+
+			public override void ChannelInactive(IChannelHandlerContext context)
+			{
+				_Log.WarnFormat("Channel [{0}] de-activated.", context.Channel.Id);
+
+				// XXX: Order matters, first let it flow to base, then update state.
+				base.ChannelInactive(context);
+				_client.SetNewState(States.Inactive);
+				_client.OnClose?.Invoke(_client, EventArgs.Empty);
+			}
+
+			public override void ChannelRead(IChannelHandlerContext context, object message)
             {
                 var release = true;
                 try
@@ -361,29 +385,12 @@ namespace AberrantSMPP
                     ProcessOutbound(context, packet);
                 }
 
-                //return base.WriteAsync(context, message).ContinueWith(OnWriteComplete);
                 return base.WriteAsync(context, message);
-            }
-
-            public override void ChannelActive(IChannelHandlerContext context)
-            {
-                base.ChannelActive(context);
-                _Log.DebugFormat("Channel [{0}] activated.", context.Channel.Id);
-                SetNewState(context, States.Connected);
-            }
-
-            public override void ChannelInactive(IChannelHandlerContext context)
-            {
-                base.ChannelInactive(context);
-
-               _Log.WarnFormat("Channel [{0}] de-activated.", context.Channel.Id);
-                SetNewState(context, States.Inactive);
-                _client.OnClose?.Invoke(_client, EventArgs.Empty);
             }
 
             public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
             {
-                _client.ExceptionCaught(context, exception);
+                _client.OnError?.Invoke(_client, new SmppExceptionEventArgs(exception));
             }
         }
     }

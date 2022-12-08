@@ -14,6 +14,7 @@ namespace AberrantSMPP
         private class EnquireLinkHandler : IdleStateHandler
         {
             private readonly SMPPClient _client;
+
             public EnquireLinkHandler(SMPPClient owner)
                 : base(false, owner.EnquireLinkInterval, TimeSpan.Zero, TimeSpan.Zero)
             {
@@ -27,7 +28,9 @@ namespace AberrantSMPP
                 if (_client.EnquireLinkInterval <= TimeSpan.Zero)
                     return;
 
-                if (_client.State != States.Bound)
+                // SMPPv5.0 -- 2.4. Operation Matrix
+                // Once connected, enquire request can be sent on any state
+                if (_client.State < States.Connected)
                     return;
 
                 ReferenceCountUtil.SafeRelease(stateEvent);
