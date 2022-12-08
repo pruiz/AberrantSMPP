@@ -365,7 +365,6 @@ namespace AberrantSMPP
 				.Group(_eventLoopGroup)
 				.Channel<TcpSocketChannel>()
 				.Option(ChannelOption.TcpNodelay, true)
-				//.Option(ChannelOption.SoKeepalive, true)
 				.Option(ChannelOption.SoLinger, 0)
 				.Option(ChannelOption.SoRcvbuf, (int)CHANNEL_BUFFER_SIZE)
 				.Option(ChannelOption.SoSndbuf, (int)CHANNEL_BUFFER_SIZE)
@@ -419,8 +418,15 @@ namespace AberrantSMPP
 
 			if (oldState != newState)
 			{
-				// TODO: We may want to hold _lock while firing this event?
-				OnClientStateChanged?.Invoke(this, new ClientStateChangedEventArgs(oldState, newState));
+				var handler = OnClientStateChanged;
+
+				if (handler != null)
+				{
+					lock (_lock)
+					{
+						handler.Invoke(this, new ClientStateChangedEventArgs(oldState, newState));
+					}
+				}
 			}
 		}
 
