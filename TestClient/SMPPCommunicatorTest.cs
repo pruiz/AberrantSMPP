@@ -80,7 +80,7 @@ namespace TestClient
             client?.Dispose();
         }
 
-		protected override SMPPCommunicator CreateClient(string name)
+		protected override ISmppClient CreateClient(string name)
         {
 			var client = new SMPPCommunicator()
 			{
@@ -88,7 +88,7 @@ namespace TestClient
 				Port = 12000,
 				SystemId = "client",
 				Password = "password",
-				EnquireLinkInterval = 25, // TimeSpan.FromSeconds(25),
+				EnquireLinkInterval = TimeSpan.FromSeconds(25),
 				NpiType = AberrantSMPP.Packet.Pdu.NpiType.ISDN,
 				TonType = AberrantSMPP.Packet.Pdu.TonType.International,
 				Version = AberrantSMPP.Packet.Pdu.SmppVersionType.Version3_4,
@@ -99,32 +99,32 @@ namespace TestClient
 			return client;
 		}
 
-		protected override void Configure(SMPPCommunicator client)
+		protected override void Configure(ISmppClient client)
 		{
-			//client.OnAlert += (s, e) => Log("Alert: " + e.Request);
-			//client.OnBind += (s, e) => Log("OnBind: " + e.Request);
-			//client.OnBindResp += (s, e) => Log("OnBindResp: " + e.Response);
-			//client.OnCancelSm += (s, e) => Log("OnCancelSm: " + e.Request);
-			//client.OnCancelSmResp += (s, e) => Log("OnCancelResp: " + e.Response);
-			//client.OnClose += (s, e) => Log("OnClose: " + e.GetType());
-			//client.OnDataSm += (s, e) => Log("OnDataSm: " + e.Request);
-			//client.OnDataSmResp += (s, e) => Log("OnDataResp: " + e.Response);
-			//client.OnDeliverSm += (s, e) => Log("OnDeliverSm: " + e.Request);
-			//client.OnDeliverSmResp += (s, e) => Log("OnDeliverSmResp: " + e.Response);
-			//client.OnEnquireLink += (s, e) => Log("OnEnquireLink: " + e.Request);
-			//client.OnEnquireLinkResp += (s, e) => Log("OnEnquireLinkResp: " + e.Response);
-			//client.OnError += (s, e) => Log("OnError: " + e.ThrownException?.ToString());
-			//client.OnGenericNack += (s, e) => Log("OnGenericNack: " + e.Request);
-			//client.OnQuerySm += (s, e) => Log("OnQuerySm: " + e.Request);
-			//client.OnQuerySmResp += (s, e) => Log("OnQuerySmResp: " + e.Response);
-			//client.OnReplaceSm += (s, e) => Log("OnReplaceSm: " + e.Request);
-			//client.OnReplaceSmResp += (s, e) => Log("OnReplaceSmResp: " + e.Response);
-			//client.OnSubmitMulti += (s, e) => Log("OnSubmitMulti: " + e.Request);
-			//client.OnSubmitMultiResp += (s, e) => Log("OnSubmitMultiResp: " + e.Response);
-			//client.OnSubmitSm += (s, e) => Log("OnSubmitSm: " + e.Request);
+			client.OnAlert += (s, e) => Log("Alert: " + e.Request);
+			client.OnBind += (s, e) => Log("OnBind: " + e.Request);
+			client.OnBindResp += (s, e) => Log("OnBindResp: " + e.Response);
+			client.OnCancelSm += (s, e) => Log("OnCancelSm: " + e.Request);
+			client.OnCancelSmResp += (s, e) => Log("OnCancelResp: " + e.Response);
+			client.OnClose += (s, e) => Log("OnClose: " + e.GetType());
+			client.OnDataSm += (s, e) => Log("OnDataSm: " + e.Request);
+			client.OnDataSmResp += (s, e) => Log("OnDataResp: " + e.Response);
+			client.OnDeliverSm += (s, e) => Log("OnDeliverSm: " + e.Request);
+			client.OnDeliverSmResp += (s, e) => Log("OnDeliverSmResp: " + e.Response);
+			client.OnEnquireLink += (s, e) => Log("OnEnquireLink: " + e.Request);
+			client.OnEnquireLinkResp += (s, e) => Log("OnEnquireLinkResp: " + e.Response);
+			client.OnError += (s, e) => Log("OnError: " + e.ThrownException?.ToString());
+			client.OnGenericNack += (s, e) => Log("OnGenericNack: " + e.Request);
+			client.OnQuerySm += (s, e) => Log("OnQuerySm: " + e.Request);
+			client.OnQuerySmResp += (s, e) => Log("OnQuerySmResp: " + e.Response);
+			client.OnReplaceSm += (s, e) => Log("OnReplaceSm: " + e.Request);
+			client.OnReplaceSmResp += (s, e) => Log("OnReplaceSmResp: " + e.Response);
+			client.OnSubmitMulti += (s, e) => Log("OnSubmitMulti: " + e.Request);
+			client.OnSubmitMultiResp += (s, e) => Log("OnSubmitMultiResp: " + e.Response);
+			client.OnSubmitSm += (s, e) => Log("OnSubmitSm: " + e.Request);
 			client.OnSubmitSmResp += client_OnSubmitSmResp;
-			//client.OnUnbind += (s, e) => Log("OnUnbind: " + e.Request);
-			//client.OnUnboundResp += (s, e) => Log("OnUnboundResp: " + e.Response);
+			client.OnUnbind += (s, e) => Log("OnUnbind: " + e.Request);
+			client.OnUnboundResp += (s, e) => Log("OnUnboundResp: " + e.Response);
 		}
     }
 }

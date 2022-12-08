@@ -15,6 +15,7 @@ using System.Security.Authentication;
 namespace TestClient
 {
 	internal abstract class TestBase<TClient>
+        where TClient : class, ISmppClient
 	{
         private readonly Type _declaringType;
         protected readonly global::Common.Logging.ILog _log = null;
@@ -34,8 +35,8 @@ namespace TestClient
             _samples = new ConcurrentDictionary<int, (int? taskId, int threadId, int clientId, int clientRequestId, SmppRequest req, SmppResponse res, long elapsedMs)>();
 		}
 
-		protected abstract TClient CreateClient(string name);
-		protected abstract void Configure(TClient client);
+		protected abstract ISmppClient CreateClient(string name);
+		protected abstract void Configure(ISmppClient client);
 		protected abstract void Execute(int requestPerClient);
 		protected abstract void DisposeClients();
 		protected abstract void DisposeClient(TClient client);
@@ -47,7 +48,7 @@ namespace TestClient
                 if (_clients.TryGetValue(clientId, out var client))
                     DisposeClient(client);
 
-                client = CreateClient($"client-{clientId}");
+                client = CreateClient($"client-{clientId}") as TClient;
                 Configure(client);
 
                 // This is a hack.. but there is no common Start

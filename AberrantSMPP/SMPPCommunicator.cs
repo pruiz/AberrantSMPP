@@ -257,17 +257,16 @@ namespace AberrantSMPP
 		/// it to 0 will disable the timer.  Note that the timer is only started/stopped 
 		/// during a bind/unbind.  Negative values are ignored.
 		/// </summary>
-		public int EnquireLinkInterval
+		public TimeSpan EnquireLinkInterval
 		{
 			get 
 			{
-				return _EnquireLinkInterval;
+				return TimeSpan.FromSeconds(_EnquireLinkInterval);
 			}
 
 			set
 			{
-				if(value >= 0)
-					_EnquireLinkInterval = value;
+				_EnquireLinkInterval = (int)value.TotalSeconds;
 			}
 		}
 		/// <summary>
@@ -337,204 +336,103 @@ namespace AberrantSMPP
 		
 		#region events
 		/// <summary>
-		/// Event called when the communicator receives a bind response.
+		/// event ISmppClient.called when the communicator receives a bind response.
 		/// </summary>
-		public event BindRespEventHandler OnBindResp;
+		public event ISmppClient.BindRespEventHandler OnBindResp;
 		/// <summary>
-		/// Event called when an error occurs.
+		/// event ISmppClient.called when an error occurs.
 		/// </summary>
-		public event ErrorEventHandler OnError;
+		public event ISmppClient.ErrorEventHandler OnError;
 		/// <summary>
-		/// Event called when the communicator is unbound.
+		/// event ISmppClient.called when the communicator is unbound.
 		/// </summary>
-		public event UnbindRespEventHandler OnUnboundResp;
+		public event ISmppClient.UnbindRespEventHandler OnUnboundResp;
 		/// <summary>
-		/// Event called when the connection is closed.
+		/// event ISmppClient.called when the connection is closed.
 		/// </summary>
-		public event ClosingEventHandler OnClose;
+		public event ISmppClient.ClosingEventHandler OnClose;
 		/// <summary>
-		/// Event called when an alert_notification comes in.
+		/// event ISmppClient.called when an alert_notification comes in.
 		/// </summary>
-		public event AlertEventHandler OnAlert;
+		public event ISmppClient.AlertEventHandler OnAlert;
 		/// <summary>
-		/// Event called when a submit_sm_resp is received.
+		/// event ISmppClient.called when a submit_sm_resp is received.
 		/// </summary>
-		public event SubmitSmRespEventHandler OnSubmitSmResp;
+		public event ISmppClient.SubmitSmRespEventHandler OnSubmitSmResp;
 		/// <summary>
-		/// Event called when a response to an enquire_link_resp is received.
+		/// event ISmppClient.called when a response to an enquire_link_resp is received.
 		/// </summary>
-		public event EnquireLinkRespEventHandler OnEnquireLinkResp;
+		public event ISmppClient.EnquireLinkRespEventHandler OnEnquireLinkResp;
 		/// <summary>
-		/// Event called when a submit_sm is received.
+		/// event ISmppClient.called when a submit_sm is received.
 		/// </summary>
-		public event SubmitSmEventHandler OnSubmitSm;
+		public event ISmppClient.SubmitSmEventHandler OnSubmitSm;
 		/// <summary>
-		/// Event called when a query_sm is received.
+		/// event ISmppClient.called when a query_sm is received.
 		/// </summary>
-		public event QuerySmEventHandler OnQuerySm;
+		public event ISmppClient.QuerySmEventHandler OnQuerySm;
 		/// <summary>
-		/// Event called when a generic_nack is received.
+		/// event ISmppClient.called when a generic_nack is received.
 		/// </summary>
-		public event GenericNackEventHandler OnGenericNack;
+		public event ISmppClient.GenericNackEventHandler OnGenericNack;
 		/// <summary>
-		/// Event called when an enquire_link is received.
+		/// event ISmppClient.called when an enquire_link is received.
 		/// </summary>
-		public event EnquireLinkEventHandler OnEnquireLink;
+		public event ISmppClient.EnquireLinkEventHandler OnEnquireLink;
 		/// <summary>
-		/// Event called when an unbind is received.
+		/// event ISmppClient.called when an unbind is received.
 		/// </summary>
-		public event UnbindEventHandler OnUnbind;
+		public event ISmppClient.UnbindEventHandler OnUnbind;
 		/// <summary>
-		/// Event called when the communicator receives a request for a bind.
+		/// event ISmppClient.called when the communicator receives a request for a bind.
 		/// </summary>
-		public event BindEventHandler OnBind;
+		public event ISmppClient.BindEventHandler OnBind;
 		/// <summary>
-		/// Event called when the communicator receives a cancel_sm.
+		/// event ISmppClient.called when the communicator receives a cancel_sm.
 		/// </summary>
-		public event CancelSmEventHandler OnCancelSm;
+		public event ISmppClient.CancelSmEventHandler OnCancelSm;
 		/// <summary>
-		/// Event called when the communicator receives a cancel_sm_resp.
+		/// event ISmppClient.called when the communicator receives a cancel_sm_resp.
 		/// </summary>
-		public event CancelSmRespEventHandler OnCancelSmResp;
+		public event ISmppClient.CancelSmRespEventHandler OnCancelSmResp;
 		/// <summary>
-		/// Event called when the communicator receives a query_sm_resp.
+		/// event ISmppClient.called when the communicator receives a query_sm_resp.
 		/// </summary>
-		public event QuerySmRespEventHandler OnQuerySmResp;
+		public event ISmppClient.QuerySmRespEventHandler OnQuerySmResp;
 		/// <summary>
-		/// Event called when the communicator receives a data_sm.
+		/// event ISmppClient.called when the communicator receives a data_sm.
 		/// </summary>
-		public event DataSmEventHandler OnDataSm;
+		public event ISmppClient.DataSmEventHandler OnDataSm;
 		/// <summary>
-		/// Event called when the communicator receives a data_sm_resp.
+		/// event ISmppClient.called when the communicator receives a data_sm_resp.
 		/// </summary>
-		public event DataSmRespEventHandler OnDataSmResp;
+		public event ISmppClient.DataSmRespEventHandler OnDataSmResp;
 		/// <summary>
-		/// Event called when the communicator receives a deliver_sm.
+		/// event ISmppClient.called when the communicator receives a deliver_sm.
 		/// </summary>
-		public event DeliverSmEventHandler OnDeliverSm;
+		public event ISmppClient.DeliverSmEventHandler OnDeliverSm;
 		/// <summary>
-		/// Event called when the communicator receives a deliver_sm_resp.
+		/// event ISmppClient.called when the communicator receives a deliver_sm_resp.
 		/// </summary>
-		public event DeliverSmRespEventHandler OnDeliverSmResp;
+		public event ISmppClient.DeliverSmRespEventHandler OnDeliverSmResp;
 		/// <summary>
-		/// Event called when the communicator receives a replace_sm.
+		/// event ISmppClient.called when the communicator receives a replace_sm.
 		/// </summary>
-		public event ReplaceSmEventHandler OnReplaceSm;
+		public event ISmppClient.ReplaceSmEventHandler OnReplaceSm;
 		/// <summary>
-		/// Event called when the communicator receives a replace_sm_resp.
+		/// event ISmppClient.called when the communicator receives a replace_sm_resp.
 		/// </summary>
-		public event ReplaceSmRespEventHandler OnReplaceSmResp;
+		public event ISmppClient.ReplaceSmRespEventHandler OnReplaceSmResp;
 		/// <summary>
-		/// Event called when the communicator receives a submit_multi.
+		/// event ISmppClient.called when the communicator receives a submit_multi.
 		/// </summary>
-		public event SubmitMultiEventHandler OnSubmitMulti;
+		public event ISmppClient.SubmitMultiEventHandler OnSubmitMulti;
 		/// <summary>
-		/// Event called when the communicator receives a submit_multi_resp.
+		/// event ISmppClient.called when the communicator receives a submit_multi_resp.
 		/// </summary>
-		public event SubmitMultiRespEventHandler OnSubmitMultiResp;
+		public event ISmppClient.SubmitMultiRespEventHandler OnSubmitMultiResp;
 		#endregion events
 		
-		#region delegates
-
-		/// <summary>
-		/// Delegate to handle binding responses of the communicator.
-		/// </summary>
-		public delegate void BindRespEventHandler(object source, BindRespEventArgs e);
-		/// <summary>
-		/// Delegate to handle any errors that come up.
-		/// </summary>
-		public delegate void ErrorEventHandler(object source, SmppExceptionEventArgs e);
-		/// <summary>
-		/// Delegate to handle the unbind_resp.
-		/// </summary>
-		public delegate void UnbindRespEventHandler(object source, UnbindRespEventArgs e);
-		/// <summary>
-		/// Delegate to handle closing of the connection.
-		/// </summary>
-		public delegate void ClosingEventHandler(object source, EventArgs e);
-		/// <summary>
-		/// Delegate to handle alert_notification events.
-		/// </summary>
-		public delegate void AlertEventHandler(object source, AlertEventArgs e);
-		/// <summary>
-		/// Delegate to handle a submit_sm_resp
-		/// </summary>
-		public delegate void SubmitSmRespEventHandler(object source, SubmitSmRespEventArgs e);
-		/// <summary>
-		/// Delegate to handle the enquire_link response.
-		/// </summary>
-		public delegate void EnquireLinkRespEventHandler(object source, EnquireLinkRespEventArgs e);
-		/// <summary>
-		/// Delegate to handle the submit_sm.
-		/// </summary>
-		public delegate void SubmitSmEventHandler(object source, SubmitSmEventArgs e);
-		/// <summary>
-		/// Delegate to handle the query_sm.
-		/// </summary>
-		public delegate void QuerySmEventHandler(object source, QuerySmEventArgs e);
-		/// <summary>
-		/// Delegate to handle generic_nack.
-		/// </summary>
-		public delegate void GenericNackEventHandler(object source, GenericNackEventArgs e);
-		/// <summary>
-		/// Delegate to handle the enquire_link.
-		/// </summary>
-		public delegate void EnquireLinkEventHandler(object source, EnquireLinkEventArgs e);
-		/// <summary>
-		/// Delegate to handle the unbind message.
-		/// </summary>
-		public delegate void UnbindEventHandler(object source, UnbindEventArgs e);
-		/// <summary>
-		/// Delegate to handle requests for binding of the communicator.
-		/// </summary>
-		public delegate void BindEventHandler(object source, BindEventArgs e);
-		/// <summary>
-		/// Delegate to handle cancel_sm.
-		/// </summary>
-		public delegate void CancelSmEventHandler(object source, CancelSmEventArgs e);
-		/// <summary>
-		/// Delegate to handle cancel_sm_resp.
-		/// </summary>
-		public delegate void CancelSmRespEventHandler(object source, CancelSmRespEventArgs e);
-		/// <summary>
-		/// Delegate to handle query_sm_resp.
-		/// </summary>
-		public delegate void QuerySmRespEventHandler(object source, QuerySmRespEventArgs e);
-		/// <summary>
-		/// Delegate to handle data_sm.
-		/// </summary>
-		public delegate void DataSmEventHandler(object source, DataSmEventArgs e);
-		/// <summary>
-		/// Delegate to handle data_sm_resp.
-		/// </summary>
-		public delegate void DataSmRespEventHandler(object source, DataSmRespEventArgs e);
-		/// <summary>
-		/// Delegate to handle deliver_sm.
-		/// </summary>
-		public delegate void DeliverSmEventHandler(object source, DeliverSmEventArgs e);
-		/// <summary>
-		/// Delegate to handle deliver_sm_resp.
-		/// </summary>
-		public delegate void DeliverSmRespEventHandler(object source, DeliverSmRespEventArgs e);
-		/// <summary>
-		/// Delegate to handle replace_sm.
-		/// </summary>
-		public delegate void ReplaceSmEventHandler(object source, ReplaceSmEventArgs e);
-		/// <summary>
-		/// Delegate to handle replace_sm_resp.
-		/// </summary>
-		public delegate void ReplaceSmRespEventHandler(object source, ReplaceSmRespEventArgs e);
-		/// <summary>
-		/// Delegate to handle submit_multi.
-		/// </summary>
-		public delegate void SubmitMultiEventHandler(object source, SubmitMultiEventArgs e);
-		/// <summary>
-		/// Delegate to handle submit_multi_resp.
-		/// </summary>
-		public delegate void SubmitMultiRespEventHandler(object source, SubmitMultiRespEventArgs e);
-	
-		#endregion delegates
-
 		#region dispatchers
 		private void DispatchOnError(SmppExceptionEventArgs e)
 		{
@@ -1361,7 +1259,7 @@ namespace AberrantSMPP
 			Password = null;
 			SystemId = null;
 			SystemType = null;
-			EnquireLinkInterval = 0;
+			EnquireLinkInterval = TimeSpan.Zero;
 			ReBindInterval = 10;
 			ResponseTimeout = 2500;
 

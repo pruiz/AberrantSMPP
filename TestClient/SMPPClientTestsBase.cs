@@ -37,21 +37,22 @@ namespace TestClient
             client?.Dispose();
         }
 
-		protected override SMPPClient CreateClient(string name)
+		protected override ISmppClient CreateClient(string name)
 		{
 			return new SMPPClient("smppsim.smsdaemon.test", 12001);
 		}
 
-		protected override void Configure(SMPPClient client)
+		protected override void Configure(ISmppClient client)
 		{
 			client.SystemId = client.SystemId ?? "client";
 			client.Password = client.Password ?? "password";
-			client.ConnectTimeout = TimeSpan.FromSeconds(5);
 			client.EnquireLinkInterval = TimeSpan.FromSeconds(25);
 			client.BindType = SmppBind.BindingType.BindAsTransceiver;
 			client.NpiType = Pdu.NpiType.ISDN;
 			client.TonType = Pdu.TonType.International;
 			client.Version = Pdu.SmppVersionType.Version3_4;
+
+			(client as SMPPClient).ConnectTimeout = TimeSpan.FromSeconds(5);
 
 			client.OnAlert += (s, e) => Log("Alert: " + e.Request);
 			//client.OnBind += (s, e) => Log("OnBind: " + e.Request);
@@ -77,7 +78,8 @@ namespace TestClient
 			client.OnSubmitSmResp += (s, e) => Log("OnSubmitSmResp: " + e.Response);
 			//client.OnUnbind += (s, e) => Log("OnUnbind: " + e.Request);
 			client.OnUnboundResp += (s, e) => Log("OnUnboundResp: " + e.Response);
-			client.OnClientStateChanged += (s, e) => Log("OnClientStateChanged: " + e.OldState + " => " + e.NewState);
+
+			(client as SMPPClient).OnClientStateChanged += (s, e) => Log("OnClientStateChanged: " + e.OldState + " => " + e.NewState);
 		}
 
 		protected void Client_OnEnquireLink(object source, EnquireLinkEventArgs e)

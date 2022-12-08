@@ -87,7 +87,7 @@ namespace TestClient
             Console.WriteLine(message);
         }
 
-		protected override SMPPClient CreateClient(string name)
+		protected override ISmppClient CreateClient(string name)
 		{
             return _enableTls
                 ? new SMPPClient("smppsims.smsdaemon.test", 15004, SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Ssl2)
