@@ -9,12 +9,12 @@ namespace AberrantSMPP
 {
 	public interface ISmppClient : IDisposable
 	{
-		// FIXME: This should expose all that is common to both Smpp client implementations..
+        // FIXME: This should expose all that is common to both Smpp client implementations..
 
-		/// <summary>
-		/// The host to bind this SMPPCommunicator to.
-		/// </summary>
-		string Host { get; }
+        /// <summary>
+        /// The host to bind this ISmppClient to.
+        /// </summary>
+        string Host { get; }
 
 		/// <summary>
 		/// The port on the SMSC to connect to.
@@ -33,7 +33,7 @@ namespace AberrantSMPP
 		string SystemType { get; set; }
 
 		/// <summary>
-		/// The system ID to use when connecting to the SMSC.  This is, 
+		/// The system ID to use when connecting to the SMSC. This is, 
 		/// in essence, a user name.
 		/// </summary>
 		string SystemId { get; set; }
@@ -43,15 +43,15 @@ namespace AberrantSMPP
 		/// </summary>
 		string Password { get; set; }
 
-		/// <summary>
-		/// The number plan indicator that this SMPPCommunicator should use.  
-		/// </summary>
-		Pdu.NpiType NpiType { get; set; }
+        /// <summary>
+        /// The number plan indicator that this ISmppClient should use.  
+        /// </summary>
+        Pdu.NpiType NpiType { get; set; }
 
-		/// <summary>
-		/// The type of number that this SMPPCommunicator should use.  
-		/// </summary>
-		Pdu.TonType TonType { get; set; }
+        /// <summary>
+        /// The type of number that this ISmppClient should use.
+        /// </summary>
+        Pdu.TonType TonType { get; set; }
 
 		/// <summary>
 		/// The SMPP specification version to use.
@@ -72,8 +72,9 @@ namespace AberrantSMPP
 		/// </summary>
 		TimeSpan EnquireLinkInterval { get; set; }
 
-		// FIXME: Add documentation to (config) properties.
-
+		/// <summary>
+		/// Get supported SSL Protocols. Must be set on constructor.
+		/// </summary>
 		SslProtocols SupportedSslProtocols { get; }
 
 		#region events
@@ -292,7 +293,5 @@ namespace AberrantSMPP
 		public delegate void ClientStateChangedEventHandler(object source, ClientStateChangedEventArgs e);
 
 		#endregion delegates
-
 	}
 }
-
