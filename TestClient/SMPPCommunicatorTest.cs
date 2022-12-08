@@ -24,7 +24,32 @@ namespace TestClient
 
 		}
 
-        protected override void Execute(int requestPerClient)
+		private void CreateAndSendSubmitSm(int requestPerClient, int clientId, SMPPCommunicator client, int clientRequestId)
+		{
+			var txt = @"XXXXXXXXXXX de mas de 160 caractereñ.. @€abcdefghijklmnopqrstxyz!!!0987654321-ABCDE";
+			var requestName = clientId.ToString() + "." + clientRequestId.ToString();
+			var request = CreateSubmitSm("#" + requestName + " - " + txt); //< Clone and concat clientRequestId to its message
+			var start = _sw.ElapsedMilliseconds;
+			SmppResponse response;
+			try
+			{
+				response = client.SendRequest(request);
+			}
+			catch (SmppRequestException srex)
+			{
+				response = srex.Response;
+			}
+			var elapsed = _sw.ElapsedMilliseconds - start;
+			var uniqueRequestId = clientId * requestPerClient + clientRequestId;
+			AddSample(clientId, clientRequestId, request, response, elapsed, uniqueRequestId);
+		}
+
+		private void client_OnSubmitSmResp(object source, SubmitSmRespEventArgs e)
+		{
+			Log("OnSubmitSmResp: " + e.Response);
+		}
+
+		protected override void Execute(int requestPerClient)
         {
             foreach (var client in _clients)
             {
@@ -55,46 +80,27 @@ namespace TestClient
             client?.Dispose();
         }
 
-        private void CreateAndSendSubmitSm(int requestPerClient, int clientId, SMPPCommunicator client, int clientRequestId)
-        {
-            var txt = @"XXXXXXXXXXX de mas de 160 caractereñ.. @€abcdefghijklmnopqrstxyz!!!0987654321-ABCDE";
-            var requestName = clientId.ToString() + "." + clientRequestId.ToString();
-            var request = CreateSubmitSm("#" + requestName + " - " + txt); //< Clone and concat clientRequestId to its message
-            var start = _sw.ElapsedMilliseconds;
-            SmppResponse response;
-            try
-            {
-                response = client.SendRequest(request);
-            }
-            catch (SmppRequestException srex)
-            {
-                response = srex.Response;
-            }
-            var elapsed = _sw.ElapsedMilliseconds - start;
-            var uniqueRequestId = clientId * requestPerClient + clientRequestId;
-            AddSample(clientId, clientRequestId, request, response, elapsed, uniqueRequestId);
-        }
-
-        protected override SMPPCommunicator BuildClient(
-            string systemId = "client", 
-            string host = "smppsim.smsdaemon.test", ushort port = 12000, 
-            SslProtocols supportedSslProtocols = SslProtocols.None, 
-            bool disableCheckCertificateRevocation = true)
+		protected override SMPPCommunicator CreateClient(string name)
         {
 			var client = new SMPPCommunicator()
 			{
-				Host = host,
-				Port = port,
-				SystemId = systemId,
+				Host = "smppsim.smsdaemon.test",
+				Port = 12000,
+				SystemId = "client",
 				Password = "password",
 				EnquireLinkInterval = 25, // TimeSpan.FromSeconds(25),
 				NpiType = AberrantSMPP.Packet.Pdu.NpiType.ISDN,
 				TonType = AberrantSMPP.Packet.Pdu.TonType.International,
 				Version = AberrantSMPP.Packet.Pdu.SmppVersionType.Version3_4,
-                SupportedSslProtocols = supportedSslProtocols,
+                SupportedSslProtocols = SslProtocols.None,
                 // DisableCheckCertificateRevocation = disableCheckCertificateRevocation, //FIXME: rebase master
             };
 
+			return client;
+		}
+
+		protected override void Configure(SMPPCommunicator client)
+		{
 			//client.OnAlert += (s, e) => Log("Alert: " + e.Request);
 			//client.OnBind += (s, e) => Log("OnBind: " + e.Request);
 			//client.OnBindResp += (s, e) => Log("OnBindResp: " + e.Response);
@@ -119,18 +125,6 @@ namespace TestClient
 			client.OnSubmitSmResp += client_OnSubmitSmResp;
 			//client.OnUnbind += (s, e) => Log("OnUnbind: " + e.Request);
 			//client.OnUnboundResp += (s, e) => Log("OnUnboundResp: " + e.Response);
-
-            if (StartOnBuildClient)
-			    client.Bind();
-
-			return client;
 		}
-
-        private void client_OnSubmitSmResp(object source, SubmitSmRespEventArgs e)
-        {
-            Log("OnSubmitSmResp: " + e.Response);
-        }
-
-
     }
 }

@@ -38,17 +38,12 @@ namespace TestClient
             RecreateClients();
         }
 
-        protected override SMPPClient BuildClient(string systemId = "client", string host = "smppsim.smsdaemon.test", ushort port = 12000, SslProtocols supportedSslProtocols = SslProtocols.None, bool disableCheckCertificateRevocation = true)
-        {
-            if (_enableTls)
-            {
-                host = "smppsims.smsdaemon.test";
-                port = 15004;
-                supportedSslProtocols = SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Ssl2;
-            }
-
-            return base.BuildClient(systemId, host, port, supportedSslProtocols, true);
-        }
+		protected override SMPPClient CreateClient(string name)
+		{
+            return _enableTls
+                ? new SMPPClient("smppsims.smsdaemon.test", 15004, SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Ssl2)
+                : base.CreateClient(name);
+		}
 
         protected override void PrintResume(int requestPerClient)
         {
@@ -71,7 +66,8 @@ namespace TestClient
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex.ToString());
+                    Console.WriteLine("==> Action Failed!!");
+					Console.WriteLine(ex.ToString());
                 }
                 
             }
@@ -125,7 +121,8 @@ namespace TestClient
 
             public Command(Action action, Func<string> text)
             {
-                Action = action; _text = text;
+                Action = action;
+                _text = text;
             }
 
             public Command(Action action, string text) : this(action, () => text) { }

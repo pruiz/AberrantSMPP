@@ -18,7 +18,9 @@ namespace AberrantSMPP
             public EnquireLinkHandler(SMPPClient owner)
                 : base(false, owner.EnquireLinkInterval, TimeSpan.Zero, TimeSpan.Zero)
             {
-                _client = Guard.Argument(owner, nameof(owner)).NotNull();
+				base.EnsureNotSharable();
+
+				_client = Guard.Argument(owner, nameof(owner)).NotNull();
             }
 
             protected override void ChannelIdle(IChannelHandlerContext context, IdleStateEvent stateEvent)

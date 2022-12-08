@@ -37,24 +37,21 @@ namespace TestClient
             client?.Dispose();
         }
 
-        protected override SMPPClient BuildClient(
-			string systemId = "client", 
-			string host = "smppsim.smsdaemon.test",
-			ushort port = 12000,
-            SslProtocols supportedSslProtocols = SslProtocols.None,
-			bool disableCheckCertificateRevocation = true)
+		protected override SMPPClient CreateClient(string name)
 		{
-			var client = new SMPPClient(
-				host: host, port: port, connectTimeout: TimeSpan.FromSeconds(5),
-				supportedSslProtocols: supportedSslProtocols, 
-				disableCheckCertificateRevocation: disableCheckCertificateRevocation);
-			client.SystemId = "client";
-			client.Password = "password";
+			return new SMPPClient("smppsim.smsdaemon.test", 12001);
+		}
+
+		protected override void Configure(SMPPClient client)
+		{
+			client.SystemId = client.SystemId ?? "client";
+			client.Password = client.Password ?? "password";
+			client.ConnectTimeout = TimeSpan.FromSeconds(5);
 			client.EnquireLinkInterval = TimeSpan.FromSeconds(25);
-			client.BindType = AberrantSMPP.Packet.Request.SmppBind.BindingType.BindAsTransceiver;
-			client.NpiType = AberrantSMPP.Packet.Pdu.NpiType.ISDN;
-			client.TonType = AberrantSMPP.Packet.Pdu.TonType.International;
-			client.Version = AberrantSMPP.Packet.Pdu.SmppVersionType.Version3_4;
+			client.BindType = SmppBind.BindingType.BindAsTransceiver;
+			client.NpiType = Pdu.NpiType.ISDN;
+			client.TonType = Pdu.TonType.International;
+			client.Version = Pdu.SmppVersionType.Version3_4;
 
 			client.OnAlert += (s, e) => Log("Alert: " + e.Request);
 			//client.OnBind += (s, e) => Log("OnBind: " + e.Request);
@@ -81,11 +78,6 @@ namespace TestClient
 			//client.OnUnbind += (s, e) => Log("OnUnbind: " + e.Request);
 			client.OnUnboundResp += (s, e) => Log("OnUnboundResp: " + e.Response);
 			client.OnClientStateChanged += (s, e) => Log("OnClientStateChanged: " + e.OldState + " => " + e.NewState);
-
-			if (StartOnBuildClient)
-				client.Start();
-
-			return client;
 		}
 
 		protected void Client_OnEnquireLink(object source, EnquireLinkEventArgs e)

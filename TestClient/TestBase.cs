@@ -34,44 +34,31 @@ namespace TestClient
             _samples = new ConcurrentDictionary<int, (int? taskId, int threadId, int clientId, int clientRequestId, SmppRequest req, SmppResponse res, long elapsedMs)>();
 		}
 
-        public void Run(int numberOfClients, int requestPerClient)
-        {
-            _numberOfClients = numberOfClients;
-            var totalRequests = numberOfClients * requestPerClient;
+		protected abstract TClient CreateClient(string name);
+		protected abstract void Configure(TClient client);
+		protected abstract void Execute(int requestPerClient);
+		protected abstract void DisposeClients();
+		protected abstract void DisposeClient(TClient client);
 
-            _log.DebugFormat("name:{0}, numberOfClients:{1}, requestPerClient:{2}, totalRequests:{3}",
-                _declaringType.Name, _numberOfClients, requestPerClient, totalRequests);
-
-            RecreateClients();
-
-            if (totalRequests != 0)
-                Execute(requestPerClient);
-
-            PrintResume(requestPerClient);
-
-            DisposeClients();
-        }
-
-        protected void RecreateClients()
+		protected void RecreateClients()
         {
             foreach (var clientId in Enumerable.Range(0, _numberOfClients))
             {
                 if (_clients.TryGetValue(clientId, out var client))
                     DisposeClient(client);
-                _clients[clientId] = BuildClient($"client-{clientId}"); ;
-            }
+
+                client = CreateClient($"client-{clientId}");
+                Configure(client);
+
+                // This is a hack.. but there is no common Start
+                // for old and new communicator/client.
+                if (StartOnBuildClient && client is SMPPClient x) {
+                    x.Start();
+                }
+
+                _clients[clientId] = client;
+		    }
         }
-
-        protected abstract TClient BuildClient(
-            string systemId = "client",
-            string host = "smppsim.smsdaemon.test",
-            ushort port = 12000,
-            SslProtocols supportedSslProtocols = SslProtocols.None,
-            bool disableCheckCertificateRevocation = true);
-
-        protected abstract void Execute(int requestPerClient);
-        protected abstract void DisposeClients();
-        protected abstract void DisposeClient(TClient client);
 
         protected static SmppSubmitSm CreateSubmitSm(string txt)
 		{
@@ -207,5 +194,24 @@ namespace TestClient
 			else
 				Console.WriteLine(text);
 		}
+
+		public void Run(int numberOfClients, int requestPerClient)
+		{
+			_numberOfClients = numberOfClients;
+			var totalRequests = numberOfClients * requestPerClient;
+
+			_log.DebugFormat("name:{0}, numberOfClients:{1}, requestPerClient:{2}, totalRequests:{3}",
+				_declaringType.Name, _numberOfClients, requestPerClient, totalRequests);
+
+			RecreateClients();
+
+			if (totalRequests != 0)
+				Execute(requestPerClient);
+
+			PrintResume(requestPerClient);
+
+			DisposeClients();
+		}
+
 	}
 }

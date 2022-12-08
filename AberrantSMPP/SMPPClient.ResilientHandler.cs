@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-
+using AberrantSMPP.Utility;
 using Dawn;
 
 using DotNetty.Transport.Channels;
@@ -30,19 +30,47 @@ namespace AberrantSMPP
 
             public ResilientHandler(SMPPClient owner)
             {
-                _client = Guard.Argument(owner, nameof(owner)).NotNull();
+				base.EnsureNotSharable();
+
+				_client = Guard.Argument(owner, nameof(owner)).NotNull();
             }
 
-            //public override void ChannelActive(IChannelHandlerContext context)
-            //{
-            //    base.ChannelActive(context);
-            //}
+			public TimeSpan GetNextRestablishInterval()
+			{
+                return TimeSpan.FromSeconds(5); //< FIXME: Use BackoffWaiter..
+			}
 
-            public override void ChannelInactive(IChannelHandlerContext context)
+			public override void ChannelActive(IChannelHandlerContext context)
+			{
+				GuardEx.Against(_client.State != States.Connected, $"Hit ChannelActive for a channel not yet connected?!");
+
+				if (!_client._started)
+				{
+					_Log.DebugFormat("Reconnect scheduling disabled on ChannelActive, ignoring..");
+					return;
+				}
+
+				base.ChannelActive(context);
+                context.WriteAndFlushAsync(_client.CreateBind());
+
+                // FIXME: Setup a timmer for re-bind periodically?
+			}
+
+			public override void ChannelUnregistered(IChannelHandlerContext context)
             {
-                base.ChannelInactive(context);
-                _client.ScheduleReconnect();
-            }
-        }
+                base.ChannelUnregistered(context);
+
+                if (!_client._started)
+                {
+                    _Log.DebugFormat("Reconnect scheduling disabled on ChannelUnregistered, ignoring..");
+                    return;
+                }
+
+				var interval = GetNextRestablishInterval();
+				_Log.InfoFormat("Scheduling reconnect of session after {0}...", interval);
+
+                _client._eventLoopGroup.Schedule(() => _client.ConnectDetached(), interval);
+			}
+		}
     }
 }
