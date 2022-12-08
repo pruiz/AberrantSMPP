@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using DotNetty.Transport.Channels;
@@ -319,7 +320,8 @@ namespace AberrantSMPP
             {
                 _Log.InfoFormat("Channel [{0}] registered..", context.Channel.Id);
 
-				// XXX: Order matters, first update state, then let it flow to base.
+                // XXX: Order matters, first update state, then let it flow to base.
+                _client.SetChannel(context.Channel);
 				_client.SetNewState(States.Connecting);
                 base.ChannelRegistered(context);
             }
@@ -331,11 +333,12 @@ namespace AberrantSMPP
                 // XXX: Order matters, first let it flow to base, then update state.
                 base.ChannelUnregistered(context);
 				_client.SetNewState(States.Inactive);
-            }
+				_client.ReleaseChannel();
+			}
 
 			public override void ChannelActive(IChannelHandlerContext context)
 			{
-				_Log.DebugFormat("Channel [{0}] activated.", context.Channel.Id);
+				_Log.DebugFormat("Channel [{0}] activated..", context.Channel.Id);
 
 				// XXX: Order matters, first update state, then let it flow to base.
 				_client.SetNewState(States.Connected);
@@ -344,7 +347,7 @@ namespace AberrantSMPP
 
 			public override void ChannelInactive(IChannelHandlerContext context)
 			{
-				_Log.WarnFormat("Channel [{0}] de-activated.", context.Channel.Id);
+				_Log.DebugFormat("Channel [{0}] de-activated..", context.Channel.Id);
 
 				// XXX: Order matters, first let it flow to base, then update state.
 				base.ChannelInactive(context);

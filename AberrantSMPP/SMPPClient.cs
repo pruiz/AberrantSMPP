@@ -28,6 +28,9 @@ using System.Runtime.CompilerServices;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using System.Runtime.Remoting.Contexts;
+using System.Reflection;
+
 using DotNetty.Buffers;
 using DotNetty.Codecs;
 using DotNetty.Handlers.Logging;
@@ -46,8 +49,6 @@ using AberrantSMPP.Exceptions;
 using AberrantSMPP.EventObjects;
 using AberrantSMPP.Utility;
 using Dawn;
-using System.Runtime.Remoting.Contexts;
-using System.Reflection;
 
 namespace AberrantSMPP 
 {
@@ -58,35 +59,33 @@ namespace AberrantSMPP
 	/// sent.  For example: there is a default deliver_sm_resp implemented.  If you "listen" to 
 	/// the deliver_sm event, it is your responsibility to then send the deliver_sm_resp packet.
 	/// </summary>
-	public partial class SMPPClient : IDisposable
+	public partial class SMPPClient : ISmppClient
 	{
 		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
 		private static readonly uint CHANNEL_BUFFER_SIZE = 10240;
 
-		private readonly CancellationTokenSource _disposeCancellator = new CancellationTokenSource();
-
+		private readonly CancellationTokenSource _cancellator = new CancellationTokenSource();
+		private readonly Random _random = new Random();
 		private readonly object _lock = new object();
 		private readonly IEventLoopGroup _eventLoopGroup;
 		private Bootstrap _channelFactory;
 		private IChannel _channel;
 		private volatile States _state;
-		private volatile uint _enquireLinkIntervalMilliseconds; //ASK: disabled by default. set default to 30 seconds?  = (uint)TimeSpan.FromSeconds(30).TotalMilliseconds
-		private Random _random = new Random();
-		private TimeSpan[] _reverseRestablishIntervals = { TimeSpan.FromSeconds(10) };
-		private int _reverseRestablishIntervalsIndex = 0;
+		private bool _started = false; //< Signals when we are using automatic connection handling (ie. Start/Stop)
+		private Task _connecting = null;
 
 		#region properties
 
 		/// <summary>
 		/// The host to bind this SMPPCommunicator to.
 		/// </summary>
-		public string Host { get; private set; } = "127.0.0.1"; //ASK: readonly (only getter and setted in .ctor)
+		public string Host { get; private set; } = "127.0.0.1";
 
 		/// <summary>
 		/// The port on the SMSC to connect to.
 		/// </summary>
-		public UInt16 Port { get; private set; } = 2775; //ASK: readonly (only getter and setted in .ctor)
+		public UInt16 Port { get; private set; } = 2775;
 
 		/// <summary>
 		/// The binding type(receiver, transmitter, or transceiver)to use 
@@ -134,7 +133,7 @@ namespace AberrantSMPP
 		/// Gets or sets the connect timeout (in miliseconds)
 		/// </summary>
 		/// <value>The response timeout.</value>
-		public TimeSpan ConnectTimeout { get; private set; } = TimeSpan.FromSeconds(30); //ASK: readonly (only getter and setted in .ctor)
+		public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
 		/// <summary>
 		/// Gets or sets the disconnect timeout (in miliseconds)
@@ -143,66 +142,41 @@ namespace AberrantSMPP
 		public TimeSpan DisconnectTimeout { get; set; } = TimeSpan.FromMilliseconds(500);
 
 		/// <summary>
+		/// Gets or sets the socket timeout for network I/O operations.
+		/// </summary>
+		public TimeSpan SocketTimeout { get; set; } = TimeSpan.FromMilliseconds(30);
+
+		/// <summary>
 		/// Gets or sets the request timeout (in miliseconds)
 		/// </summary>
 		/// <value>The response timeout.</value>
-		public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(5);
+		public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(5); //< FIXME: Review if we are using this
 		
 		/// <summary>
 		/// Gets or sets the response timeout (in miliseconds)
 		/// </summary>
 		/// <value>The response timeout.</value>
-		public TimeSpan ResponseTimeout { get; set; } = TimeSpan.FromSeconds(10);
+		public TimeSpan ResponseTimeout { get; set; } = TimeSpan.FromSeconds(10);  //< FIXME: Review if we are using this
 
 		/// <summary>
 		/// Set to the interval that should elapse in between enquire_link packets.
 		/// Setting this to anything other than 0 will enable the timer, setting 
-		/// it to 0 will disable the timer.  Note that the timer is only started/stopped 
-		/// during a bind/unbind.
+		/// it to 0 will disable the timer. Timer is started after next connection.
 		/// Also, EnquireLink packets are only sent when no other traffic went on between
 		/// state interval.
 		/// </summary>
-		public TimeSpan EnquireLinkInterval
-		{
-			get => TimeSpan.FromMilliseconds(_enquireLinkIntervalMilliseconds);
-			set => _enquireLinkIntervalMilliseconds = (uint)value.TotalMilliseconds;
-		}
+		public TimeSpan EnquireLinkInterval { get; set; } = TimeSpan.FromSeconds(0);
 
 		/// <summary>
 		/// Sets intervals the system will wait before trying to rebind after a total network failure(due to cable problems, etc).
 		/// </summary>
-		public TimeSpan[] RestablishIntervals 
-		{
-			get => _reverseRestablishIntervals.Reverse().ToArray();
-			set
-			{
-				var intervals = value ?? Enumerable.Empty<TimeSpan>();
-				_reverseRestablishIntervals = intervals.Reverse().ToArray();
-				ResetRestablishIntervalIndex();
-			}
-		}
+		public TimeSpan[] RestablishIntervals { get; set; } = new[] { TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(60) };
 
-		private bool _restablishEnabled;
+		// FIXME: Add documentation to public (config) properties.
 
-		private bool RestablishEnabled 
-		{
-			get => _restablishEnabled;
-
-			set
-			{
-				if (value == _restablishEnabled)
-					return;
-				var linea = new string('-', 80);
-				Func<bool, string> b = (x) => x ? "enabled" : "disabled";
-				_Log.DebugFormat("\n\n{0}\nRestablishEnabled:{1} => {2}\n{0}\n\n", linea, b(_restablishEnabled), b(value));
-				_restablishEnabled = value;
-			}
-
-		}
+		public bool DisableCheckCertificateRevocation { get; set; }
 
 		public SslProtocols SupportedSslProtocols { get; private set; }
-
-		public bool DisableCheckCertificateRevocation { get; private set; }
 
 		public bool ThrowWhenAddExistingSequence { get; private set; } = false;
 
@@ -211,10 +185,11 @@ namespace AberrantSMPP
 		// FIXME: Optimize this.. and verify if locking maybe needed..
 		public States State => _state;
 
+		public bool Started => _started;
+
 		#endregion
 		
 		#region delegates
-
 		/// <summary>
 		/// Delegate to handle binding responses of the communicator.
 		/// </summary>
@@ -430,27 +405,6 @@ namespace AberrantSMPP
 		#endregion events
 
 		#region constructors
-
-		public class OptionsMonitor<T> : Microsoft.Extensions.Options.IOptionsMonitor<T>
-		{
-			private readonly T options;
-
-			public OptionsMonitor(T options)
-			{
-				this.options = options;
-			}
-
-			public T CurrentValue => options;
-
-			public T Get(string name) => options;
-
-			public IDisposable OnChange(Action<T, string> listener) => new NullDisposable();
-
-			private class NullDisposable : IDisposable
-			{
-				public void Dispose() { }
-			}
-		}
 		
 		static SMPPClient()
 		{
@@ -469,170 +423,260 @@ namespace AberrantSMPP
 		/// and address range, password, system type and system ID set to null 
 		///(no value).
 		/// </summary>
-		public SMPPClient(string host, ushort port, TimeSpan connectTimeout, 
-			SslProtocols supportedSslProtocols = SslProtocols.None, bool disableCheckCertificateRevocation = false)
-			//< FIXME: No longer a component, so: pass parameters via .ctor
-			//ASK if resolved FIXME
+		public SMPPClient(string host, ushort port, SslProtocols ssl = SslProtocols.None)
 		{
 			Host = host;
 			Port = port;
-			ConnectTimeout = connectTimeout;
-			SupportedSslProtocols = supportedSslProtocols;
-			DisableCheckCertificateRevocation = disableCheckCertificateRevocation;
+			SupportedSslProtocols = ssl;
 
-			_eventLoopGroup = new MultithreadEventLoopGroup();
+			_eventLoopGroup = new SingleThreadEventLoop();
+			//_eventLoopGroup = new MultithreadEventLoopGroup();
 		}
 		#endregion constructors
 
-		// Starts SMPP client w/ background reconnecting / re-binding as needed.
-		/// <returns>
-		/// True if bind was successfull or false if connection/bind failed 
-		/// (and will be retried later upon retryInterval)
-		/// </returns>
-		public Task Start()
-		{
-			_disposeCancellator.Token.ThrowIfCancellationRequested();
+		#region private methods
 
-			Guard.Operation(State is States.Inactive, $"Can't connect a client w/ state {State}, already connected?");
+		/// <summary>
+		/// Gets a random byte.
+		/// </summary>
+		/// <returns></returns>
+		private byte GetRandomByte()
+		{
+			lock (_random)
+			{
+				return Convert.ToByte(_random.Next(254));
+			}
+		}
+
+		private void Setup(IChannelPipeline pipeline)
+		{
+			if (SupportedSslProtocols != SslProtocols.None)
+			{
+				ClientTlsSettings tlsSettings = new ClientTlsSettings(
+					SupportedSslProtocols, !DisableCheckCertificateRevocation,
+					new List<X509Certificate>(), Host);
+				pipeline.AddLast("tls", new TlsHandler(tlsSettings));
+			}
+
+			pipeline
+				.AddLast(new LoggingHandler())
+				.AddLast("framing-dec",
+					new LengthFieldBasedFrameDecoder(ByteOrder.BigEndian, Int32.MaxValue, 0, 4, -4, 0, false))
+				.AddLast("pdu-codec", new PduCodec())
+				.AddLast("enquire-link", new EnquireLinkHandler(this))
+				.AddLast("channel-handler", new ChannelHandler(this))
+				.AddLast("resilient-handler", new ResilientHandler(this))
+				;
+		}
+
+		private Bootstrap CreateChannelFactory()
+		{
+			return new Bootstrap()
+				.Group(_eventLoopGroup)
+				.Channel<TcpSocketChannel>()
+				.Option(ChannelOption.TcpNodelay, true)
+				//.Option(ChannelOption.SoKeepalive, true)
+				.Option(ChannelOption.SoLinger, 0)
+				.Option(ChannelOption.SoRcvbuf, (int)CHANNEL_BUFFER_SIZE)
+				.Option(ChannelOption.SoSndbuf, (int)CHANNEL_BUFFER_SIZE)
+				.Option(ChannelOption.ConnectTimeout, ConnectTimeout)
+				.Option(ChannelOption.SoTimeout, (int)SocketTimeout.TotalMilliseconds)
+				.RemoteAddress(Host, Port)
+				.Handler(new ActionChannelInitializer<ISocketChannel>(channel => Setup(channel.Pipeline)))
+				.Validate();
+		}
+
+		private Bootstrap GetOrCreateChannelFactory()
+		{
+			// XXX: We need to delay creation of channel factory
+			//		so user can set additional config properties
+			//		not received via .ctor before calling Start or Connect.
+
+			if (_channelFactory == null)
+			{
+				_channelFactory = CreateChannelFactory();
+			}
+
+			return _channelFactory;
+		}
+
+		private void SetChannel(IChannel channel)
+		{
+			lock (_lock)
+			{
+				Guard.Argument(channel).NotNull(nameof(channel));
+				Guard.Operation(_channel == null, "A channel was already set while setting a new one?!");
+				Guard.Operation(State is States.Inactive, $"Setting a channel on a client w/ state {State}?!");
+
+				_channel = channel;
+			}
+		}
+
+		private void ReleaseChannel()
+		{
+			lock (_lock)
+			{
+				Guard.Operation(_channel != null, "A channel was not present while trying to release it?!");
+				_channel.Unsafe.CloseForcibly();
+				_channel = null;
+			}
+		}
+
+		private void SetNewState(States newState)
+		{
+			var oldState = _state;
+			_state = newState;
+			if (oldState != newState)
+				OnClientStateChanged?.Invoke(this, new ClientStateChangedEventArgs(oldState, newState));
+		}
+
+		private SmppBind CreateBind()
+		{
+			return new SmppBind()
+			{
+				SystemId = SystemId,
+				Password = Password,
+				SystemType = SystemType,
+				InterfaceVersion = Version,
+				AddressTon = TonType,
+				AddressNpi = NpiType,
+				AddressRange = AddressRange,
+				BindType = BindType,
+			};
+		}
+
+		private void ConnectDetached()
+		{
+			_cancellator.Token.ThrowIfCancellationRequested();
+
+			_Log.DebugFormat(" ==> ConnectDetached begin..");
+
+			if (!_started) //< TODO: Find a way to pass this as context attached to actual re-connection cycle..
+			{
+				_Log.DebugFormat("Ignoring ConnectDetached call when not started anymore..");
+				return;
+			}
+
+			lock (_lock)
+			{
+				Guard.Operation(State is States.Inactive, $"Can't connect a client w/ state {State}, already connected?!");
+				Guard.Operation(_channel == null, $"Trying to connect while a channel still exists?!");
+				Guard.Operation(_connecting == null, $"Trying to connect while already connecting?!");
+
+				_connecting = GetOrCreateChannelFactory()
+					.ConnectAsync()
+					.ContinueWith(x =>
+					{
+						_Log.DebugFormat(" ==> ConnectDetached finished..");
+						_connecting = null;
+
+						if (x.Exception != null)
+						{
+							try
+							{
+								this.OnError?.Invoke(this, new SmppExceptionEventArgs(x.Exception));
+							}
+							catch { }
+						}
+					}); //< XXX: Not awaited on purpose..
+			}
+		}
+
+		#endregion private methods
+
+		/// <summary>
+		/// Starts SMPP client w/ background reconnecting / re-binding as needed.
+		/// </summary>
+		/// <returns></returns>
+		public void Start()
+		{
+			_cancellator.Token.ThrowIfCancellationRequested();
 
 			try
 			{
-				RestablishEnabled = true;
-				Connect();
-				Bind();
-				ResetRestablishIntervalIndex();
+				_Log.DebugFormat("Starting client for {0}:{1}...", Host, Port);
+
+				lock (_lock)
+				{
+					Guard.Operation(!Started, "Invalid call 'Start()' on a client already 'Started'?!");
+					Guard.Operation(State is States.Inactive, $"Can't start a client w/ state {State}, already connected?!");
+
+					_started = true; //< Enable auto connection handling..
+					_eventLoopGroup.Execute(() => ConnectDetached());
+				}
 			}
 			catch (Exception ex)
 			{
-				Exception flat = (ex as AggregateException)?.Flatten() ?? ex;
-				_Log.ErrorFormat("Error connecting to {0}:{1}.", flat, Host, Port);
-				ScheduleReconnect();
-				ExceptionCaught(null, ex);
+				ex = (ex as AggregateException)?.Flatten() ?? ex;
+				_Log.ErrorFormat("Error connecting to {0}:{1}.", ex, Host, Port);
+				throw; //< XXX: At this point we _should_ throw, other wise caller wont notice client was not started.
 			}
-			return Task.CompletedTask;
 		}
 
-		public TimeSpan GetNextRestablishInterval()
+		public void Stop()
 		{
-			var index = _reverseRestablishIntervalsIndex;
+			_cancellator.Token.ThrowIfCancellationRequested();
 
-			if (index > 0)
-				_reverseRestablishIntervalsIndex = index - 1;
+			_Log.DebugFormat("Stopping client for {0}:{1}...", Host, Port);
 
-			return _reverseRestablishIntervals[index % _reverseRestablishIntervals.Length];
-		}
+			lock (_lock)
+			{
+				Guard.Operation(Started, "Invalid call to 'Stop()' on a client not 'Started'?!");
 
-		private void ResetRestablishIntervalIndex()
-		{
-			_reverseRestablishIntervalsIndex = _reverseRestablishIntervals.Length - 1;
-		}
+				_started = false; //< Disable auto connection handling..
 
-		public Task Stop()
-		{
-			Unbind();
-			if (State >= States.Connected)
-				Disconnect();
-			return Task.CompletedTask;
+				if (State == States.Bound)
+				{
+					Unbind(); //< FIXME: Do we really need/want to be so polite?
+				}
+
+				if (_channel != null)
+				{
+					_channel.CloseAsync().GetAwaiter().GetResult();
+				}
+			}
 		}
 
 		public void Connect()
 		{
-			_disposeCancellator.Token.ThrowIfCancellationRequested();
+			_cancellator.Token.ThrowIfCancellationRequested();
 
-			lock (_lock)
+			_Log.DebugFormat("Connecting client for {0}:{1}...", Host, Port);
+
+			lock (_lock) //< We need to lock due to manipulating _channel..
 			{
-				Guard.Operation(State is States.Inactive, $"Can't connect a client w/ state {State}, already connected?");
+				Guard.Operation(_started == false, "Calling Connect/Disconnect with auto connection handling enabled not supported.");
+				Guard.Operation(State is States.Inactive, $"Can't connect a client w/ state {State}, already connected?!");
+				Guard.Operation(_channel == null, $"Trying to connect while a channel still exists?!");
 
-				if (_channelFactory == null)
-					_channelFactory = CreateChannelFactory();
+				GetOrCreateChannelFactory().ConnectAsync().GetAwaiter().GetResult();
 
-				_channel = null;
-				_channel = ConnectAsync()
-					.GetAwaiter().GetResult();
+				Guard.Operation(_channel != null, $"No channel establish after connecting?!");
 			}
-		}
-
-		public void ScheduleReconnect()
-		{
-			if (!RestablishEnabled)
-				_Log.InfoFormat("Reconnect scheduling disabled");
-
-			var interval = GetNextRestablishInterval();
-			_Log.InfoFormat("Scheduling reconnect of session after {0}...", interval);
-			_eventLoopGroup.ScheduleAsync(() => ReconnectAsync(), interval, _disposeCancellator.Token);
-		}
-
-		private Task ReconnectAsync()
-		{
-			_disposeCancellator.Token.ThrowIfCancellationRequested();
-
-			_Log.InfoFormat("Reconnecting to {0}:{1}...", Host, Port);
-
-			try
-			{
-				lock (_lock)
-				{
-					_channel = null;
-					//< Does not await to ConnectAsync because is called inside eventLoop, and it can cause dead-lock with
-					//  event dispached and hangs connection.
-					return ConnectAsync()
-						.ContinueWith(t =>
-						{
-							if (t.IsFaulted)
-							{
-								_Log.ErrorFormat("Error reconnecting to {0}:{1}.", t.Exception.Flatten(), Host, Port);
-								ScheduleReconnect();
-                                ExceptionCaught(null, t.Exception);
-                                throw t.Exception;
-							}
-							_channel = t.Result;
-							Bind();
-							ResetRestablishIntervalIndex();
-						}, _disposeCancellator.Token);
-				}
-			}
-			catch(Exception ex)
-			{
-				//< Ensure never throw an exception to caller (EventLoop)
-				var flat = (ex as AggregateException)?.Flatten() ?? ex;
-				_Log.ErrorFormat("Error reconnecting to {0}:{1}.", flat, Host, Port);
-				ScheduleReconnect();
-				ExceptionCaught(null, ex);
-			}
-			return Task.CompletedTask;
-		}
-
-		private Task<IChannel> ConnectAsync()
-		{
-			_Log.DebugFormat("Connecting to {0}:{1}...", Host, Port);
-			return _channelFactory.ConnectAsync()
-				.WithCancellation(_disposeCancellator.Token);
 		}
 
 		public void Disconnect()
 		{
-			_disposeCancellator.Token.ThrowIfCancellationRequested();
+			_cancellator.Token.ThrowIfCancellationRequested();
+
+			_Log.DebugFormat("Disconnecting client for {0}:{1}...", Host, Port);
 
 			lock (_lock)
 			{
+				Guard.Operation(_started == false, "Calling Connect/Disconnect with auto connection handling enabled not supported.");
 				Guard.Operation(State >= States.Connected, $"Can't disconnect an a client w/ state {State}, not connected yet?");
-
-				RestablishEnabled = false;
+				Guard.Operation(_channel != null, $"Trying to connect while no channel present?!");
 
 				using (var disconnectCancellator = new CancellationTokenSource(DisconnectTimeout))
-				using (var linkedCancellators = CancellationTokenSource.CreateLinkedTokenSource(_disposeCancellator.Token, disconnectCancellator.Token))
+				using (var linkedCancellators = CancellationTokenSource.CreateLinkedTokenSource(_cancellator.Token, disconnectCancellator.Token))
 				{
 					_channel.DisconnectAsync()
 						.WithCancellation(linkedCancellators.Token)
 						.GetAwaiter().GetResult();
-					_channel = null;
 				}
-			}
-		}
 
-		protected void ExceptionCaught(IChannelHandlerContext context, Exception exception)
-		{
-			OnError?.Invoke(this, new SmppExceptionEventArgs(exception));
+				Guard.Operation(_channel == null, $"Channel still present after disconnecting?!");
+			}
 		}
 
 		/// <summary>
@@ -644,24 +688,15 @@ namespace AberrantSMPP
 		/// </summary>
 		public void Bind()
 		{
-			_disposeCancellator.Token.ThrowIfCancellationRequested();
+			_cancellator.Token.ThrowIfCancellationRequested();
+
 			GuardEx.Against(_channel == null, "Can't bind non-connected client, call ConnectAsync() first.");
 			GuardEx.Against(State == States.Bound, "Already bound to remote party, unbind session first.");
 			GuardEx.Against(State != States.Connected, "Can't bind non-connected session, call ConnectAsync() first.");
 
 			_Log.InfoFormat("Binding to {0}:{1}..", Host, Port);
 			
-			SendAndWait(new SmppBind()
-			{
-				SystemId = SystemId,
-				Password = Password,
-				SystemType = SystemType,
-				InterfaceVersion = Version,
-				AddressTon = TonType,
-				AddressNpi = NpiType,
-				AddressRange = AddressRange,
-				BindType = BindType,
-			});
+			SendAndWait(CreateBind());
 			
 			_Log.InfoFormat("Bound to {0}:{1}.", Host, Port);
 		}
@@ -673,14 +708,13 @@ namespace AberrantSMPP
 		/// </summary>
 		public void Unbind()
 		{
-			_disposeCancellator.Token.ThrowIfCancellationRequested();
+			_cancellator.Token.ThrowIfCancellationRequested();
+
 			GuardEx.Against(_channel == null, "Can't unbind non-connected client.");
 			Guard.Operation(State == States.Bound, $"Can't unbind a session w/ state {State}, try binding first.");
 
-			RestablishEnabled = false;
-
 			_Log.InfoFormat("Unbinding from {0}:{1}..", Host, Port);
-			
+
 			SendAndWait(new SmppUnbind());
 			
 			_Log.InfoFormat("Unbound from {0}:{1}.", Host, Port);
@@ -694,7 +728,7 @@ namespace AberrantSMPP
 		/// <returns>The sequence number of the sent PDU, or null if failed.</returns>
 		public uint SendPdu(Pdu packet)
 		{
-			_disposeCancellator.Token.ThrowIfCancellationRequested();
+			_cancellator.Token.ThrowIfCancellationRequested();
 
 			try
 			{
@@ -707,7 +741,7 @@ namespace AberrantSMPP
 				GuardEx.Against(packet is not SmppBind && State != States.Bound, "Session not bound to remote party.");
 
 				var timeout = (int)RequestTimeout.TotalMilliseconds;
-				_channel!.WriteAndFlushAsync(packet).Wait(timeout, _disposeCancellator.Token);
+				_channel!.WriteAndFlushAsync(packet).Wait(timeout, _cancellator.Token);
 				return packet.SequenceNumber;
 			}
 			catch (Exception ex)
@@ -732,7 +766,7 @@ namespace AberrantSMPP
 			
 			SendPdu(request);
 			
-			if (promise.Wait((int)ResponseTimeout.TotalMilliseconds, _disposeCancellator.Token))
+			if (promise.Wait((int)ResponseTimeout.TotalMilliseconds, _cancellator.Token))
 			{
 				var response = promise.Result;
 
@@ -760,7 +794,7 @@ namespace AberrantSMPP
 				SendPdu(request);
 			}
 
-			if (!Task.WaitAll(tasks, (int)ResponseTimeout.TotalMilliseconds, _disposeCancellator.Token))
+			if (!Task.WaitAll(tasks, (int)ResponseTimeout.TotalMilliseconds, _cancellator.Token))
 			{
 				throw new SmppTimeoutException(string.Format(
 					"Timeout while waiting for a responses from remote side. (Missing: {0}/{1})",
@@ -819,139 +853,27 @@ namespace AberrantSMPP
 				.ToDictionary(x => (SmppSubmitSm)x.Request, x => x.Response);
 		}
 		
-#region private methods
-
-		/// <summary>
-		/// Gets a random byte.
-		/// </summary>
-		/// <returns></returns>
-		private byte GetRandomByte()
-		{
-			lock (_random)
-			{
-				return Convert.ToByte(_random.Next(254));
-			}
-		}
-		
-		private Bootstrap CreateChannelFactory()
-		{
-			return new Bootstrap()
-				.Group(_eventLoopGroup)
-				.Channel<TcpSocketChannel>()
-				.Option(ChannelOption.TcpNodelay, true)
-				//.Option(ChannelOption.SoKeepalive, true)
-				.Option(ChannelOption.SoLinger, 0)
-				.Option(ChannelOption.SoRcvbuf, (int)CHANNEL_BUFFER_SIZE)
-				.Option(ChannelOption.SoSndbuf, (int)CHANNEL_BUFFER_SIZE)
-				.Option(ChannelOption.ConnectTimeout, ConnectTimeout)
-				.RemoteAddress(Host, Port)
-				.Handler(new ActionChannelInitializer<ISocketChannel>(channel => Setup(channel.Pipeline)));
-		}
-
-		private void Setup(IChannelPipeline pipeline)
-		{
-			if (SupportedSslProtocols != SslProtocols.None)
-			{
-				ClientTlsSettings tlsSettings = new ClientTlsSettings(
-					SupportedSslProtocols, !DisableCheckCertificateRevocation,
-					new List<X509Certificate>(), Host);
-				pipeline.AddLast("tls", new TlsHandler(tlsSettings));
-			}
-
-			pipeline
-				.AddLast(new LoggingHandler())
-				.AddLast("framing-dec",
-					new LengthFieldBasedFrameDecoder(ByteOrder.BigEndian, Int32.MaxValue, 0, 4, -4, 0, false))
-				.AddLast("pdu-codec", new PduCodec())
-				.AddLast("enquire-link", new EnquireLinkHandler(this))
-				.AddLast("resilient-handler", new ResilientHandler(this))
-				.AddLast("channel-handler", new ChannelHandler(this));
-		}
-
-		private void SetNewState(States newState)
-		{
-			var oldState = _state;
-			_state = newState;
-			if (oldState != newState)
-				OnClientStateChanged?.Invoke(this, new ClientStateChangedEventArgs(oldState, newState));
-		}
-
-		//private void Shutdown()
-		//{
-		//	_channel?.Flush();
-		//	//_channel?.DisconnectAsync().GetAwaiter().GetResult();
-		//	//(_channel as IDisposable)?.Dispose();
-		//	//_channel = null;
-
-		//	//(_channelFactory as IDisposable)?.Dispose();
-		//	//_channelFactory = null;
-		//}
-
-#if false
-		/// <summary>
-		/// Performs a re-bind if current connection was lost.
-		/// </summary>
-		/// <param name="sender">The sender.</param>
-		/// <param name="ea">The <see cref="System.Timers.ElapsedEventArgs"/> instance containing the event data.</param>
-		private void ReBindTimerElapsed(object sender, ElapsedEventArgs ea)
-		{
-			var locked = false;
-
-			try
-			{
-				locked = _stateLock.TryEnterUpgradeableReadLock(0);
-
-				Guard.Operation(_state is States.Invalid, $"Invalid State={_state} while trying to rebind.");
-				
-				if (!locked || _state is States.Binding or States.Bound)
-					return;
-				
-				_Log.Info("Session not bound, trying to re-establish session..");
-
-				try
-				{
-					Unbind();
-				}
-				catch
-				{
-				}
-				
-				if (_state is States.Inactive)
-				{
-					Connect();
-				}
-				
-				Bind();
-			}
-			catch (Exception ex)
-			{
-				_Log.Warn("Unexpected error while trying to rebind.", ex);
-				DispatchOnError(new CommonErrorEventArgs(ex));
-			}
-			finally
-			{
-				if (locked) _stateLock.ExitUpgradeableReadLock();
-			}
-		}
-
-#endif
-		#endregion private methods
-
 		/// <summary>
 		/// Disposes of this component.  Called by the framework; do not call it 
 		/// directly.
 		/// </summary>
 		public void Dispose()
 		{
+			if (_eventLoopGroup.IsShuttingDown || _eventLoopGroup.IsShutdown)
+			{
+				_Log.WarnFormat("Ignoring repeated call to Dispose() on client for {0}:{1}..", Host, Port);
+				return;
+			}
+
 			_Log.DebugFormat("Disposing session for {0}:{1}", Host, Port);
 
-			RestablishEnabled = false;
-
-			_disposeCancellator.Cancel();
+			_cancellator.Cancel();
 			//Helper.ShallowExceptions(() => { _channel?.CloseAsync().Wait(500); });
 			Helper.ShallowExceptions(() => { _channel?.DisconnectAsync().Wait(DisconnectTimeout); });
 			Helper.ShallowExceptions(() => { _eventLoopGroup?.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500)).Wait(); });
-			
+
+			_channel = null;
+
 			_Log.DebugFormat("Disposed session for {0}:{1}", Host, Port);
 		}
 	}

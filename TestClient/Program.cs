@@ -3,26 +3,43 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Text;
-
-using AberrantSMPP;
-using AberrantSMPP.Packet;
-using AberrantSMPP.Packet.Request;
-using AberrantSMPP.Packet.Response;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Diagnostics;
+
+using AberrantSMPP;
+using AberrantSMPP.Packet;
+using AberrantSMPP.Packet.Request;
+using AberrantSMPP.Packet.Response;
 using AberrantSMPP.Exceptions;
 
 namespace TestClient
 {
 	class Program
 	{
+		#region InnerTypes
+		enum RunType
+		{
+			Interactive,
+			Single,
+			Multi,
+			Legacy
+		}
+		#endregion
+
 		static ConcurrentBag<string> SentMessages = new ConcurrentBag<string>();
 
 		private static readonly global::Common.Logging.ILog _log = null;
 		private static readonly Stopwatch _sw;
+
+		static Program()
+		{
+			SetupLogging();
+			_log = global::Common.Logging.LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+			_sw = System.Diagnostics.Stopwatch.StartNew();
+		}
 
 		private static void SetupLogging()
 		{
@@ -41,11 +58,12 @@ namespace TestClient
 					});
 		}
 
-		static Program()
+		private static void Log(string text, bool logToFile = true)
 		{
-			SetupLogging();
-			_log = global::Common.Logging.LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-			_sw = System.Diagnostics.Stopwatch.StartNew();
+			if (logToFile)
+				_log.Debug(text);
+			else
+				Console.WriteLine(text);
 		}
 
 		static T GetArg<T>(string[] args, int index, T defaultValue, Func<string, object> converter = null) where T : IConvertible
@@ -60,15 +78,6 @@ namespace TestClient
 				return defaultValue;
 			}
 		}
-
-		enum RunType
-		{
-			Interactive,
-			Single,
-			Multi,
-			Legacy
-		}
-
 
 		static void Main(string[] args)
 		{
@@ -94,14 +103,6 @@ namespace TestClient
 				default:
 					break;
 			}
-		}
-
-        private static void Log(string text, bool logToFile = true)
-		{
-			if (logToFile)
-				_log.Debug(text);
-			else
-				Console.WriteLine(text);
 		}
 	}
 }

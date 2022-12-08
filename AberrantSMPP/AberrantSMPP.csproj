@@ -141,7 +141,6 @@
     <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
     </Reference>
-    <Reference Include="System.Runtime" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=7.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.7.0.0-preview.2.22152.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
@@ -273,6 +272,8 @@
     <Compile Include="Utility\TlvTable.cs" />
     <Compile Include="Utility\UnsignedNumConverter.cs" />
     <Compile Include="Utility\UnsuccessAddress.cs" />
+    <Compile Include="Utility\OptionsMonitor.cs" />
+    <Compile Include="ISmppClient.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="AberrantSMPP.nuspec" />

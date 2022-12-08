@@ -44,7 +44,7 @@ namespace AberrantSMPP
 	/// sent.  For example: there is a default deliver_sm_resp implemented.  If you "listen" to 
 	/// the deliver_sm event, it is your responsibility to then send the deliver_sm_resp packet.
 	/// </summary>
-	public class SMPPCommunicator : Component, IDisposable
+	public class SMPPCommunicator : Component, ISmppClient
 	{
 		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
