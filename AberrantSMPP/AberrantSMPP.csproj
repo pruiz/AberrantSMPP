@@ -274,11 +274,19 @@
     <Compile Include="Utility\UnsuccessAddress.cs" />
     <Compile Include="Utility\OptionsMonitor.cs" />
     <Compile Include="ISmppClient.cs" />
+    <Compile Include="Facilities\Common.Logging.MicrosoftLogging\MicrosoftLoggingProvider.cs" />
+    <Compile Include="Facilities\Common.Logging.MicrosoftLogging\CommonLoggingExtensions.cs" />
+    <Compile Include="Facilities\Common.Logging.MicrosoftLogging\CommonLoggingLogger.cs" />
+    <Compile Include="Facilities\Common.Logging.MicrosoftLogging\CommonLoggingProviderOptions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="AberrantSMPP.nuspec" />
     <None Include="AberrantSMPP.snk" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Facilities\" />
+    <Folder Include="Facilities\Common.Logging.MicrosoftLogging\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

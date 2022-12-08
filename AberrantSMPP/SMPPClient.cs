@@ -150,13 +150,13 @@ namespace AberrantSMPP
 		/// Gets or sets the request timeout (in miliseconds)
 		/// </summary>
 		/// <value>The response timeout.</value>
-		public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(5); //< FIXME: Review if we are using this
+		public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(5);
 		
 		/// <summary>
 		/// Gets or sets the response timeout (in miliseconds)
 		/// </summary>
 		/// <value>The response timeout.</value>
-		public TimeSpan ResponseTimeout { get; set; } = TimeSpan.FromSeconds(10);  //< FIXME: Review if we are using this
+		public TimeSpan ResponseTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
 		/// <summary>
 		/// Set to the interval that should elapse in between enquire_link packets.
@@ -182,7 +182,6 @@ namespace AberrantSMPP
 
 		public int RequestQueueMemoryLimitMegabytes { get; private set; } = 32;
 
-		// FIXME: Optimize this.. and verify if locking maybe needed..
 		public States State => _state;
 
 		public bool Started => _started;
@@ -408,11 +407,9 @@ namespace AberrantSMPP
 		
 		static SMPPClient()
 		{
-			// FIXME: Adapt internal DotNetty logging to Common.Logging..
-			// FIXME: Add a new InternalLogging property in order to enable / disable logging of DotNetty code.
-			// We may want to use: https://github.com/hippasus/Common.Logging.MicrosoftLogging/tree/main/src/Common.Logging.MicrosoftLogging
-			var options = new Microsoft.Extensions.Logging.Console.ConsoleLoggerOptions();
-			InternalLoggerFactory.DefaultFactory.AddProvider(new Microsoft.Extensions.Logging.Console.ConsoleLoggerProvider(new OptionsMonitor<Microsoft.Extensions.Logging.Console.ConsoleLoggerOptions>(options)));
+			//var options = new Microsoft.Extensions.Logging.Console.ConsoleLoggerOptions();
+			//InternalLoggerFactory.DefaultFactory.AddProvider(new Microsoft.Extensions.Logging.Console.ConsoleLoggerProvider(new OptionsMonitor<Microsoft.Extensions.Logging.Console.ConsoleLoggerOptions>(options)));
+			InternalLoggerFactory.DefaultFactory.AddProvider(new Common.Logging.MicrosoftLogging.CommonLoggingProvider());
 		}
 
 		/// <summary>
@@ -526,8 +523,12 @@ namespace AberrantSMPP
 		{
 			var oldState = _state;
 			_state = newState;
+
 			if (oldState != newState)
+			{
+				// TODO: We may want to hold _lock while firing this event?
 				OnClientStateChanged?.Invoke(this, new ClientStateChangedEventArgs(oldState, newState));
+			}
 		}
 
 		private SmppBind CreateBind()
