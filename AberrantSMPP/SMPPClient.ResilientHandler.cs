@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using AberrantSMPP.EventObjects;
 using AberrantSMPP.Utility;
 using Dawn;
 
@@ -39,7 +40,6 @@ namespace AberrantSMPP
 
 			private static TimeSpan GetDelayForStep(uint step, TimeSpan[] delays)
 			{
-				Guard.Argument(step).NotZero("step == 0?!");
 				Guard.Argument(delays).NotNull(nameof(delays));
 				Guard.Argument(delays).NotEmpty(x => "delays empty?!");
                 return delays[Math.Min(step, delays.Length - 1)];
@@ -52,6 +52,7 @@ namespace AberrantSMPP
 				if (!_client._started)
 				{
 					_Log.DebugFormat("Reconnect scheduling disabled on ChannelActive, ignoring..");
+					base.ChannelActive(context);
 					return;
 				}
 
@@ -60,6 +61,32 @@ namespace AberrantSMPP
                 context.WriteAndFlushAsync(_client.CreateBind());
 
                 // FIXME: Setup a timmer for re-bind periodically?
+			}
+
+			public override void UserEventTriggered(IChannelHandlerContext context, object evt)
+			{
+                if (evt is BindRespEventArgs e)
+                {
+                    if (!_client._started)
+                    {
+                        _Log.DebugFormat("Ignoring BindResp as automatic connection handling not enabled..");
+						base.UserEventTriggered(context, evt);
+                        return;
+					}
+                    else if (e.Response.CommandStatus != Packet.CommandStatus.ESME_ROK)
+                    {
+                        // Is SMC does not disconnect us automatically, we should keep trying to bind..
+						var interval = GetDelayForStep(_step++, _client.ReconnectIntervals);
+						_Log.InfoFormat("Scheduling new bind attempts after {0}...", interval);
+						context.Channel.EventLoop.Schedule(() => context.WriteAndFlushAsync(_client.CreateBind()), interval);
+                    }
+                    else
+                    {
+                        _step = 0; //< Everything went smooth.. reset steps.
+                    }
+				}
+
+				base.UserEventTriggered(context, evt);
 			}
 
 			public override void ChannelUnregistered(IChannelHandlerContext context)
