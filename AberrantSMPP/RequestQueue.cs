@@ -42,8 +42,8 @@ namespace AberrantSMPP
 
 		public bool Add(uint sequence, SmppRequest request)
         {
-            if (_throwAddExistingSequence) //< FIXME: This is not throwing.. ¿¿??
-                return _cache.AddOrGetExisting(BuildKey(sequence), request, _cachePolicy) != null;
+            if (_throwAddExistingSequence && _cache.Contains(BuildKey(sequence)))
+                throw new ArgumentException("A request with the same sequence has already been added.");
 
             _cache.Set(BuildKey(sequence), request, _cachePolicy);
             return true;
