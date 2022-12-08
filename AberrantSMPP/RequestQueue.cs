@@ -4,7 +4,10 @@ using System.Threading;
 using System.Runtime.Caching;
 using System.Runtime.Caching.Configuration;
 
+
+
 using AberrantSMPP.Packet.Request;
+using AberrantSMPP.Packet.Response;
 
 namespace AberrantSMPP
 {
@@ -59,6 +62,11 @@ namespace AberrantSMPP
         {
             var @new = new MemoryCache(_name, _cacheConfig, true);
 			var old = Interlocked.Exchange(ref _cache, @new);
+            foreach( var cacheItemKvp in old)
+            {
+                var request = cacheItemKvp.Value as SmppRequest;
+                request?.CancelResponse();
+            }
 			old.Dispose();
         }
     }
