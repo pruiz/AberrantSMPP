@@ -168,9 +168,9 @@ namespace AberrantSMPP
 		public TimeSpan EnquireLinkInterval { get; set; } = TimeSpan.FromSeconds(0);
 
 		/// <summary>
-		/// Sets intervals the system will wait before trying to rebind after a total network failure(due to cable problems, etc).
+		/// Sets intervals the system will wait before trying to reconnect/rebind after a total network failure (due to cable problems, etc).
 		/// </summary>
-		public TimeSpan[] RestablishIntervals { get; set; } = new[] { TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(60) };
+		public TimeSpan[] ReconnectIntervals { get; set; } = new[] { TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(60) };
 
 		// FIXME: Add documentation to public (config) properties.
 

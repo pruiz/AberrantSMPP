@@ -47,7 +47,7 @@ namespace TestClient
 
         protected override void PrintResume(int requestPerClient)
         {
-            Client.RestablishIntervals = new[] { TimeSpan.FromSeconds(5) };
+            Client.ReconnectIntervals = new[] { TimeSpan.FromSeconds(5) };
             Client.ResponseTimeout = TimeSpan.FromMinutes(2);
             //Client.EnquireLinkInterval = TimeSpan.FromSeconds(5);
 

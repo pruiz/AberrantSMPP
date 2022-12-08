@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using AberrantSMPP.Utility;
@@ -27,6 +28,7 @@ namespace AberrantSMPP
         public class ResilientHandler : ChannelHandlerAdapter
         {
             private readonly SMPPClient _client;
+            private uint _step = 0;
 
             public ResilientHandler(SMPPClient owner)
             {
@@ -35,9 +37,12 @@ namespace AberrantSMPP
 				_client = Guard.Argument(owner, nameof(owner)).NotNull();
             }
 
-			public TimeSpan GetNextRestablishInterval()
+			private static TimeSpan GetDelayForStep(uint step, TimeSpan[] delays)
 			{
-                return TimeSpan.FromSeconds(5); //< FIXME: Use BackoffWaiter..
+				Guard.Argument(step).NotZero("step == 0?!");
+				Guard.Argument(delays).NotNull(nameof(delays));
+				Guard.Argument(delays).NotEmpty(x => "delays empty?!");
+                return delays[Math.Min(step, delays.Length - 1)];
 			}
 
 			public override void ChannelActive(IChannelHandlerContext context)
@@ -50,6 +55,7 @@ namespace AberrantSMPP
 					return;
 				}
 
+                _step = 0;
 				base.ChannelActive(context);
                 context.WriteAndFlushAsync(_client.CreateBind());
 
@@ -66,9 +72,8 @@ namespace AberrantSMPP
                     return;
                 }
 
-				var interval = GetNextRestablishInterval();
+                var interval = GetDelayForStep(_step++, _client.ReconnectIntervals);
 				_Log.InfoFormat("Scheduling reconnect of session after {0}...", interval);
-
                 _client._eventLoopGroup.Schedule(() => _client.ConnectDetached(), interval);
 			}
 		}
