@@ -11,10 +11,30 @@ namespace TestClient
 {
     internal class SMPPClientInteractive : SMPPClientTestsBase
     {
-        private readonly Dictionary<ConsoleKey, Command> _commands = new Dictionary<ConsoleKey, Command>();
+		#region Inner Types
+		private class Command
+		{
+			private readonly Func<string> _text;
+
+			public Action Action { get; }
+			public string Text => _text();
+
+			public Command(Action action, Func<string> text)
+			{
+				Action = action;
+				_text = text;
+			}
+
+			public Command(Action action, string text) : this(action, () => text) { }
+		}
+		#endregion
+
+		private readonly Dictionary<ConsoleKey, Command> _commands = new Dictionary<ConsoleKey, Command>();
         private bool _mustQuit;
         private bool _logToFile;
         private bool _enableTls;
+
+        private SMPPClient Client => _clients.FirstOrDefault().Value;
 
         public SMPPClientInteractive() : base(typeof(SMPPClientInteractive))
         {
@@ -32,10 +52,39 @@ namespace TestClient
             StartOnBuildClient = false;
         }
 
+        private static string GetKeyName(ConsoleKey key)
+        {
+            if (key >= ConsoleKey.D0 && key <= ConsoleKey.D9)
+                return key.ToString().Substring(1);
+            if (key >= ConsoleKey.NumPad0 && key <= ConsoleKey.NumPad9)
+                return "Numpad " + key.ToString().Substring(6);
+            return key.ToString();
+        }
+
         private void ToggleTls()
         {
             _enableTls = !_enableTls;
             RecreateClients();
+        }
+
+        private ConsoleKey PrintMenuAndAskCommand()
+        {
+            CLog(new string('-', 80));
+            CLog($"Client->State:{Client.State}");
+            CLog(new string('-', 80));
+            foreach( var commandKvp in _commands)
+            {
+                CLog($" {GetKeyName(commandKvp.Key)} => {commandKvp.Value.Text}.");
+            }
+
+            var key = Console.ReadKey().Key;
+            CLog(new string('-', 80) + Environment.NewLine);
+            return key;
+        }
+
+        private void CLog(string message)
+        {
+            Console.WriteLine(message);
         }
 
 		protected override SMPPClient CreateClient(string name)
@@ -76,56 +125,9 @@ namespace TestClient
         protected override void Execute(int requestPerClient) =>
             throw new NotImplementedException();
 
-        private ConsoleKey PrintMenuAndAskCommand()
-        {
-            CLog(new string('-', 80));
-            CLog($"Client->State:{Client.State}");
-            CLog(new string('-', 80));
-            foreach( var commandKvp in _commands)
-            {
-                CLog($" {GetKeyName(commandKvp.Key)} => {commandKvp.Value.Text}.");
-            }
-
-            var key = Console.ReadKey().Key;
-            CLog(new string('-', 80) + Environment.NewLine);
-            return key;
-        }
-
-        private static string GetKeyName(ConsoleKey key)
-        {
-            if (key >= ConsoleKey.D0 && key <= ConsoleKey.D9)
-                return key.ToString().Substring(1);
-            if (key >= ConsoleKey.NumPad0 && key <= ConsoleKey.NumPad9)
-                return "Numpad " + key.ToString().Substring(6);
-            return key.ToString();
-        }
-
-        private SMPPClient Client => _clients.FirstOrDefault().Value;
-
-        private void CLog(string message)
-        {
-            Console.WriteLine(message);
-        }
-
         public void SendShortMessage()
         {
             CreateAndSendSubmitSm(1, 1, Client, 1);
-        }
-
-        private class Command
-        {
-            private readonly Func<string> _text;
-
-            public Action Action { get; }
-            public string Text => _text();
-
-            public Command(Action action, Func<string> text)
-            {
-                Action = action;
-                _text = text;
-            }
-
-            public Command(Action action, string text) : this(action, () => text) { }
         }
     }
 }

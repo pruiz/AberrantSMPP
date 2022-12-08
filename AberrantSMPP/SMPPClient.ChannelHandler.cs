@@ -232,7 +232,11 @@ namespace AberrantSMPP
                 {
                     case SmppBindResp bind:
                         GuardEx.Against(State != States.Binding, $"Received bind response while on state {State}?!");
-                        _client.SetNewState(States.Bound);
+                        if (bind.CommandStatus == CommandStatus.ESME_ROK)
+                        {
+                            _client.SetNewState(States.Bound);
+                        }
+                        ctx.FireUserEventTriggered(new BindRespEventArgs(bind));
                         _client.OnBindResp?.Invoke(_client, new BindRespEventArgs(bind));
                         break;
                     case SmppUnbindResp unbind:
