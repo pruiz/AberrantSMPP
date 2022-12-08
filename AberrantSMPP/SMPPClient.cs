@@ -78,7 +78,7 @@ namespace AberrantSMPP
 		#region properties
 
 		/// <summary>
-		/// The host to bind this SMPPCommunicator to.
+		/// The host to bind this SMPPClient to.
 		/// </summary>
 		public string Host { get; private set; } = "127.0.0.1";
 
@@ -110,12 +110,12 @@ namespace AberrantSMPP
 		public string Password { get; set; }
 
 		/// <summary>
-		/// The number plan indicator that this SMPPCommunicator should use.  
+		/// The number plan indicator that this SMPPClient should use.  
 		/// </summary>
 		public Pdu.NpiType NpiType { get; set; } = Pdu.NpiType.ISDN;
 
 		/// <summary>
-		/// The type of number that this SMPPCommunicator should use.  
+		/// The type of number that this SMPPClient should use.  
 		/// </summary>
 		public Pdu.TonType TonType { get; set; } = Pdu.TonType.International;
 
@@ -125,18 +125,18 @@ namespace AberrantSMPP
 		public SmppBind.SmppVersionType Version { get; set; } = Pdu.SmppVersionType.Version3_4;
 		
 		/// <summary>
-		/// The address range of this SMPPCommunicator.
+		/// The address range of this SMPPClient.
 		/// </summary>
 		public string AddressRange  { get; set; }
 
 		/// <summary>
-		/// Gets or sets the connect timeout (in miliseconds)
+		/// Gets or sets the connect timeout.
 		/// </summary>
 		/// <value>The response timeout.</value>
 		public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
 		/// <summary>
-		/// Gets or sets the disconnect timeout (in miliseconds)
+		/// Gets or sets the disconnect timeout.
 		/// </summary>
 		/// <value>The response timeout.</value>
 		public TimeSpan DisconnectTimeout { get; set; } = TimeSpan.FromMilliseconds(500);
@@ -147,7 +147,7 @@ namespace AberrantSMPP
 		public TimeSpan SocketTimeout { get; set; } = TimeSpan.FromMilliseconds(30);
 
 		/// <summary>
-		/// Gets or sets the request timeout (in miliseconds)
+		/// Gets or sets the request timeout.
 		/// </summary>
 		/// <value>The response timeout.</value>
 		public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(5);
@@ -174,16 +174,34 @@ namespace AberrantSMPP
 
 		// FIXME: Add documentation to public (config) properties.
 
+		/// <summary>
+		/// Gets or sets if must not check the certificate revocation.
+		/// </summary>
 		public bool DisableCheckCertificateRevocation { get; set; }
 
+		/// <summary>
+		/// Get supported SSL Protocols. Must be set on constructor.
+		/// </summary>
 		public SslProtocols SupportedSslProtocols { get; private set; }
 
-		public bool ThrowWhenAddExistingSequence { get; private set; } = false;
+		/// <summary>
+		/// Gets or sets if we need to throw an exception when adding a request with a duplicate sequence id
+		/// </summary>
+		public bool ThrowWhenAddExistingSequence { get; set; } = false;
 
-		public int RequestQueueMemoryLimitMegabytes { get; private set; } = 32;
+		/// <summary>
+		/// Gets or sets the memory limit in megabytes for the queue with the requests pending of response.
+		/// </summary>
+		public int RequestQueueMemoryLimitMegabytes { get; set; } = 32;
 
+		/// <summary>
+		/// Gets the connection state.
+		/// </summary>
 		public States State => _state;
 
+		/// <summary>
+		/// Gets if the connection is established by Start API
+		/// </summary>
 		public bool Started => _started;
 
 		#endregion
