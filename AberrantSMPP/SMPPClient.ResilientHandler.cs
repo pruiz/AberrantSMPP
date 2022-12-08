@@ -59,8 +59,6 @@ namespace AberrantSMPP
                 _step = 0;
 				base.ChannelActive(context);
                 context.WriteAndFlushAsync(_client.CreateBind());
-
-                // FIXME: Setup a timmer for re-bind periodically?
 			}
 
 			public override void UserEventTriggered(IChannelHandlerContext context, object evt)
