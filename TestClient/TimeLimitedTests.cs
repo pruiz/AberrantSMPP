@@ -27,6 +27,8 @@ namespace TestClient
 			var totalThreads = _clients.Count * workers;
 			var totalRequests = totalThreads * requests;
 
+			var startFlag = new ManualResetEvent(false);
+
 			var threads = new List<Thread>(totalThreads);
 			var threadStartList = new List<Action>(totalThreads);
 			foreach (var client in _clients.Values.ToArray())
@@ -35,25 +37,18 @@ namespace TestClient
 				{
 					var thread = new Thread(TimedBulkSendThreadProc);
 					threads.Add(thread);
-					threadStartList.Add(() => thread.Start(client));
+					thread.Start((client, startFlag));
 				}
 			}
 
 			// Start
 			var start = _sw.ElapsedMilliseconds;
-			foreach (var threadStart in threadStartList)
-			{
-				threadStart();
-			}
+			startFlag.Set();
 			var estimatedEnd = start + _timeLimit.TotalMilliseconds;
-
 			while (_sw.ElapsedMilliseconds < estimatedEnd)
 			{
-				int requestCount = _stats.Count;
-				double ellapsedSeconds = TimeSpan.FromMilliseconds(_sw.ElapsedMilliseconds - start).TotalSeconds;
-				int requestPerSecond = ellapsedSeconds <= 0 ? 0 : (int)(requestCount / ellapsedSeconds);
-				_log.InfoFormat("Executing ... {0} request sent in {1} seconds ({2} req/sec).",
-					requestCount, ellapsedSeconds, requestPerSecond);
+				var ellapsed = _sw.ElapsedMilliseconds - start;
+				LogProgress(ellapsed);
 				Thread.Sleep((int)Math.Min(1000, estimatedEnd - _sw.ElapsedMilliseconds));
 			}
 
@@ -62,14 +57,25 @@ namespace TestClient
 			{
 				thread.Abort();
 			}
-			var stop = _sw.ElapsedMilliseconds;
-
+			var totalElapsed = _sw.ElapsedMilliseconds - start;
+			LogProgress(totalElapsed);
 			PrintResume(workers, requests);
+		}
+
+		private void LogProgress(long ellapsed)
+		{
+			int requestCount = _stats.Count;
+			double ellapsedSeconds = TimeSpan.FromMilliseconds(ellapsed).TotalSeconds;
+			int requestPerSecond = ellapsedSeconds <= 0 ? 0 : (int)(requestCount / ellapsedSeconds);
+			_log.InfoFormat("Executing ... {0} request sent in {1} seconds ({2} req/sec).",
+				requestCount, ellapsedSeconds, requestPerSecond);
 		}
 
 		private void TimedBulkSendThreadProc(object state)
 		{
-			var client = (ISmppClientAdapter)state;
+			(ISmppClientAdapter client, ManualResetEvent startFlag) = ((ISmppClientAdapter client, ManualResetEvent startFlag))state;
+
+			startFlag.WaitOne();
 			foreach (var id in Enumerable.Range(0, int.MaxValue))
 				CreateAndSendSubmitSm(client, id);
 		}

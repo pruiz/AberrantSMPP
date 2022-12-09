@@ -121,14 +121,14 @@ namespace TestClient
 				foreach (var workerId in Enumerable.Range(0, workers))
 				{
 					var thread = new Thread(BulkSendThreadProc);
-					var waiter = new ManualResetEventSlim(false);
+					thread.IsBackground = true;
+
 					_threads.Add(thread);
-					_waiters.Add(waiter);
-					thread.Start((client, requests, waiter));
+					thread.Start((client, requests));
 				}
 			}
 
-			while (!_waiters.All(w => w.IsSet))
+			while (!_threads.All(t => !t.IsAlive))
 			{
 				_log.InfoFormat("Executing ... {0} request sent of {1}.", _stats.Count, totalRequests);
 				Thread.Sleep(1000);
@@ -137,19 +137,18 @@ namespace TestClient
 			PrintResume(workers, requests);
 		}
 
+		private string BuildTitle(int clients, int workers, int requests)
+		{
+			var reqtotal = clients * workers * requests;
+			return string.Format("name:{0}, clients:{1}, workers:{2}, requests:{3} total:{4}",
+				_typeName, clients, workers, requests, reqtotal);
+		}
+
 		private void BulkSendThreadProc(object state)
 		{
-			(ISmppClientAdapter client, int requests, ManualResetEventSlim waiter) =
-				((ISmppClientAdapter, int, ManualResetEventSlim))state;
-			try
-			{
-				foreach (var id in Enumerable.Range(0, requests))
-					CreateAndSendSubmitSm(client, id);
-			}
-			finally
-			{
-				waiter?.Set();
-			}
+			(ISmppClientAdapter client, int requests) = ((ISmppClientAdapter, int))state;
+			foreach (var id in Enumerable.Range(0, requests))
+				CreateAndSendSubmitSm(client, id);
 		}
 
 		private void Client_OnEnquireLink(object source, EnquireLinkEventArgs e)
@@ -162,18 +161,6 @@ namespace TestClient
 		{
 			_log.Debug("OnDeliverSm: " + e.Request);
 			(source as ISmppClientAdapter).SendPdu(new SmppDeliverSmResp() { SequenceNumber = e.Request.SequenceNumber, CommandStatus = CommandStatus.ESME_ROK });
-		}
-
-		private void DisposeClients()
-		{
-			_log.Debug("==> Disposing..");
-			foreach (var client in _clients.Values)
-				DisposeClient(client);
-		}
-
-		private void DisposeClient(ISmppClient client)
-		{
-			(client as IDisposable)?.Dispose();
 		}
 
 		protected void CreateAndSendSubmitSm(ISmppClientAdapter client, int uid)
@@ -199,6 +186,48 @@ namespace TestClient
 			}
 			var elapsed = _sw.ElapsedMilliseconds - start;
 			_stats.AddSample(client, request, response, elapsed, uid);
+		}
+
+		private static SmppSubmitSm CreateSubmitSm(string txt)
+		{
+			var req = new SmppSubmitSm()
+			{
+				//var req = new SmppDataSm() {
+				AlertOnMsgDelivery = 0x1,
+				DataCoding = DataCoding.UCS2,
+				SourceAddress = "WOP",
+				DestinationAddress = "+34667484721",
+				//DestinationAddress = "+34692471323",
+				//DestinationAddress = "+34915550000",
+				ValidityPeriod = "000000235959000R", // R == Time Relative to SMSC's time.
+													 //EsmClass = ...
+				LanguageIndicator = LanguageIndicator.Unspecified,
+				//PayloadType = Pdu.PayloadTypeType.WDPMessage,
+				MessagePayload = new byte[] { 0x0A, 0x0A },
+				ShortMessage = txt,
+
+				//MsValidity = Pdu.MsValidityType.StoreIndefinitely,
+				//NumberOfMessages
+				PriorityFlag = Pdu.PriorityType.Highest,
+				//PrivacyIndicator = Pdu.PrivacyType.Nonrestricted
+				RegisteredDelivery = //Pdu.RegisteredDeliveryType.OnSuccessOrFailure,
+					(Pdu.RegisteredDeliveryType)0x1e,
+			};
+
+			return req;
+		}
+
+
+		private void DisposeClients()
+		{
+			_log.Debug("==> Disposing..");
+			foreach (var client in _clients.Values)
+				DisposeClient(client);
+		}
+
+		private void DisposeClient(ISmppClient client)
+		{
+			(client as IDisposable)?.Dispose();
 		}
 
 		protected void PrintResume(int workers, int requests)
@@ -262,35 +291,6 @@ namespace TestClient
 			}
 		}
 
-		private static SmppSubmitSm CreateSubmitSm(string txt)
-		{
-			var req = new SmppSubmitSm()
-			{
-				//var req = new SmppDataSm() {
-				AlertOnMsgDelivery = 0x1,
-				DataCoding = DataCoding.UCS2,
-				SourceAddress = "WOP",
-				DestinationAddress = "+34667484721",
-				//DestinationAddress = "+34692471323",
-				//DestinationAddress = "+34915550000",
-				ValidityPeriod = "000000235959000R", // R == Time Relative to SMSC's time.
-													 //EsmClass = ...
-				LanguageIndicator = LanguageIndicator.Unspecified,
-				//PayloadType = Pdu.PayloadTypeType.WDPMessage,
-				MessagePayload = new byte[] { 0x0A, 0x0A },
-				ShortMessage = txt,
-
-				//MsValidity = Pdu.MsValidityType.StoreIndefinitely,
-				//NumberOfMessages
-				PriorityFlag = Pdu.PriorityType.Highest,
-				//PrivacyIndicator = Pdu.PrivacyType.Nonrestricted
-				RegisteredDelivery = //Pdu.RegisteredDeliveryType.OnSuccessOrFailure,
-					(Pdu.RegisteredDeliveryType)0x1e,
-			};
-
-			return req;
-		}
-
 		public void Run(int clients, int workers, int requests)
 		{
 			_testTitle = BuildTitle(clients, workers, requests);
@@ -299,13 +299,6 @@ namespace TestClient
 			RecreateClients(clients);
 			Execute(workers, requests);
 			DisposeClients();
-		}
-
-		private string BuildTitle(int clients, int workers, int requests)
-		{
-			var reqtotal = clients * workers * requests;
-			return string.Format("name:{0}, clients:{1}, workers:{2}, requests:{3} total:{4}",
-				_typeName, clients, workers, requests, reqtotal);
 		}
 	}
 }
