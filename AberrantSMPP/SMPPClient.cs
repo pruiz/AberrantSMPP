@@ -538,10 +538,6 @@ namespace AberrantSMPP
 
 				_started = false; //< Disable auto connection handling..
 
-				if (State == States.Bound)
-				{
-					Unbind(); //< FIXME: Do we really need/want to be so polite?
-				}
 
 				if (_channel != null)
 				{
