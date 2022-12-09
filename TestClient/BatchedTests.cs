@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 using AberrantSMPP;
 using AberrantSMPP.EventObjects;
@@ -12,38 +12,59 @@ using AberrantSMPP.Packet;
 using AberrantSMPP.Packet.Request;
 using AberrantSMPP.Packet.Response;
 
+using TestClient.Facilities;
+
 namespace TestClient
 {
-	internal abstract class TestBase<TClient>
-		where TClient : class, ISmppClient
+	internal class BatchedTests
 	{
-		private readonly Type _declaringType;
-		private readonly TestStatistics _stats;
+		private readonly string _typeName;
 		private readonly bool _startClientOnCreate;
-		private readonly Stopwatch _sw = Stopwatch.StartNew();
-		protected readonly global::Common.Logging.ILog _log = null;
-		protected readonly IDictionary<int, TClient> _clients = new Dictionary<int, TClient>();
-
-		protected TestBase(Type declaringType, bool startClientOnCreate)
+		private readonly ISmppClientFactory _clientFactory;
+		private readonly string[] _texts =
 		{
-			_declaringType = declaringType;
-			_log = global::Common.Logging.LogManager.GetLogger(declaringType);
-			_stats = new TestStatistics(declaringType.Name);
-			_startClientOnCreate = startClientOnCreate;
+			"XXXXXXXXXXX de 80 caractereñ.. @€abcdefghijklmnopqrstxyz!!!0987654321-ABCDEFGHIJ",
+			"XXXXXXXXXXX de 160 caractereñ.. @€abcdefghijklmnopqrstxyz!!!0987654321-ABCDEFGHIJKLMNOPQRSTUVWXYZ " +
+				"XXXXXXXXXXX de 160 caractereñ.. @€abcdefghijklmnopqrstxyz!!!09",
+			"XXXXXXXXXXX de 240 caractereñ.. @€abcdefghijklmnopqrstxyz!!!0987654321-ABCDEFGHIJKLMNOPQRSTUVWXYZ " +
+				"XXXXXXXXXXX de 240 caractereñ.. @€abcdefghijklmnopqrstxyz!!!0987654321-ABCDEFGHIJKLMNOPQRSTUVWXYZ " +
+				"XXXXXXXXXXX de 240 caractereñ.. @€abcdefghij",
+			"YYYYYYYYYYY de 80 caractereñ.. @€abcdefghijklmnopqrstxyz!!!0987654321-ABCDEFGHIJ",
+			"YYYYYYYYYYY de 160 caractereñ.. @€abcdefghijklmnopqrstxyz!!!0987654321-ABCDEFGHIJKLMNOPQRSTUVWXYZ " +
+				"YYYYYYYYYYY de 160 caractereñ.. @€abcdefghijklmnopqrstxyz!!!09",
+			"ZZZZZZZZZZZ de 60 caractereñ.. @€abcdefghijklmnopqrstxyz!!!0987654321-",
+			"ZZZZZZZZZZZ de 80 caractereñ.. @€abcdefghijklmnopqrstxyz!!!0987654321-ABCDEFGHIJ",
+			"ZZZZZZZZZZZ de 160 caractereñ.. @€abcdefghijklmnopqrstxyz!!!0987654321-ABCDEFGHIJKLMNOPQRSTUVWXYZ " +
+				"ZZZZZZZZZZZ de 160 caractereñ.. @€abcdefghijklmnopqrstxyz!!!09",
+		};
+		protected readonly global::Common.Logging.ILog _log = null;
+		protected readonly IDictionary<int, ISmppClientAdapter> _clients = new Dictionary<int, ISmppClientAdapter>();
+		protected readonly Stopwatch _sw = Stopwatch.StartNew();
+		protected readonly TestStatistics _stats;
+
+		private int _textId;
+		private string _testTitle = string.Empty;
+		private List<Thread> _threads = new List<Thread>();
+
+		public BatchedTests(ISmppClientFactory clientFactory)
+			: this(typeof(BatchedTests), true, clientFactory)
+		{
 		}
 
-		protected abstract ISmppClient CreateClient(string name);
-		protected abstract SmppResponse SendAndWait(TClient client, SmppRequest request);
-		protected abstract uint SendPdu(TClient client, Pdu packet);
-		protected abstract void StartClient(TClient client);
+		protected BatchedTests(Type declaringType, bool startClientOnCreate, ISmppClientFactory clientFactory)
+		{
+			_typeName = declaringType.FullName + "+" + clientFactory.GetType().Name;
+			_log = global::Common.Logging.LogManager.GetLogger(declaringType);
+			_stats = new TestStatistics(_typeName);
+			_startClientOnCreate = startClientOnCreate;
+			_clientFactory = clientFactory;
+		}
 
-		protected virtual bool IsClientReady(TClient client) => true;
-
-		protected virtual void Configure(TClient client)
+		protected virtual void Configure(ISmppClientAdapter client)
 		{
 			client.SystemId = client.SystemId ?? "client";
 			client.Password = client.Password ?? "password";
-			//client.EnquireLinkInterval = TimeSpan.FromSeconds(25);
+			client.EnquireLinkInterval = TimeSpan.FromSeconds(25);
 			client.BindType = SmppBind.BindingType.BindAsTransceiver;
 			client.NpiType = Pdu.NpiType.ISDN;
 			client.TonType = Pdu.TonType.International;
@@ -73,34 +94,74 @@ namespace TestClient
 			client.OnSubmitSmResp += (s, e) => _log.Debug("OnSubmitSmResp: " + e.Response);
 			//client.OnUnbind += (s, e) => _log.Debug("OnUnbind: " + e.Request);
 			client.OnUnboundResp += (s, e) => _log.Debug("OnUnboundResp: " + e.Response);
+
+			client.Configure();
+		}
+
+		protected virtual ISmppClient CreateClient(string name)
+		{
+			return _clientFactory.CreateClient(name);
 		}
 
 		protected virtual void Execute(int workers, int requests)
 		{
-			var requestPerClient = workers * requests;
-			foreach (var client in _clients)
+			var totalThreads = _clients.Count * workers;
+			var totalRequests = totalThreads * requests;
+			// Kill previous threads
+			foreach (var thread in _threads)
 			{
-				Task.Factory.StartNew(() => {
-					Parallel.ForEach(Enumerable.Range(0, workers), (_) => {
-						foreach (var id in Enumerable.Range(0, requests))
-						{
-							CreateAndSendSubmitSm(client.Value, id);
-						}
-					});
-				});
+				thread.Abort();
+			}
+
+			_threads = new List<Thread>(totalThreads);
+			var _waiters = new List<ManualResetEventSlim>();
+
+			foreach (var client in _clients.Values.ToArray())
+			{
+				foreach (var workerId in Enumerable.Range(0, workers))
+				{
+					var thread = new Thread(BulkSendThreadProc);
+					var waiter = new ManualResetEventSlim(false);
+					_threads.Add(thread);
+					_waiters.Add(waiter);
+					thread.Start((client, requests, waiter));
+				}
+			}
+
+			while (!_waiters.All(w => w.IsSet))
+			{
+				_log.InfoFormat("Executing ... {0} request sent of {1}.", _stats.Count, totalRequests);
+				Thread.Sleep(1000);
+			}
+
+			PrintResume(workers, requests);
+		}
+
+		private void BulkSendThreadProc(object state)
+		{
+			(ISmppClientAdapter client, int requests, ManualResetEventSlim waiter) =
+				((ISmppClientAdapter, int, ManualResetEventSlim))state;
+			try
+			{
+				foreach (var id in Enumerable.Range(0, requests))
+					CreateAndSendSubmitSm(client, id);
+			}
+			finally
+			{
+				waiter?.Set();
 			}
 		}
 
 		private void Client_OnEnquireLink(object source, EnquireLinkEventArgs e)
 		{
 			_log.Debug("OnEnquireLink: " + e.Request);
-			SendPdu(source as TClient, new SmppEnquireLinkResp() { SequenceNumber = e.Request.SequenceNumber });
+			(source as ISmppClientAdapter).SendPdu(new SmppEnquireLinkResp() { SequenceNumber = e.Request.SequenceNumber });
 		}
 
 		private void Client_OnDeliverSm(object source, DeliverSmEventArgs e)
 		{
 			_log.Debug("OnDeliverSm: " + e.Request);
-			SendPdu(source as TClient, new SmppDeliverSmResp() { SequenceNumber = e.Request.SequenceNumber });
+			(source as ISmppClientAdapter).SendPdu(new SmppDeliverSmResp() { SequenceNumber = e.Request.SequenceNumber, CommandStatus = CommandStatus.ESME_ROK });
 		}
 
 		private void DisposeClients()
@@ -115,16 +176,22 @@ namespace TestClient
 			(client as IDisposable)?.Dispose();
 		}
 
-		protected void CreateAndSendSubmitSm(TClient client, int uid)
+		protected void CreateAndSendSubmitSm(ISmppClientAdapter client, int uid)
 		{
 			var txt = @"XXXXXXXXXXX de mas de 160 caractereñ.. @€abcdefghijklmnopqrstxyz!!!0987654321-ABCDE";
+
+			//txt = _texts[_textId];
+			//_textId = ++_textId % _texts.Length;
+			txt = _texts[0];
+			_textId = ++_textId % _texts.Length;
+
 			var requestName = $"{client.SystemId}.{uid:0000000000}";
 			var request = CreateSubmitSm("#" + requestName + " - " + txt); //< Clone and concat clientRequestId to its message
 			var start = _sw.ElapsedMilliseconds;
 			SmppResponse response;
 			try
 			{
-				response = SendAndWait(client, request);
+				response = client.SendAndWait(request);
 			}
 			catch (SmppRequestException srex)
 			{
@@ -134,17 +201,21 @@ namespace TestClient
 			_stats.AddSample(client, request, response, elapsed, uid);
 		}
 
-		private void PrintResume(int workers, int requests)
+		protected void PrintResume(int workers, int requests)
 		{
 			while (true)
 			{
-				_log.Debug("Press Q to quit.");
-				_log.Debug($"Press A to show all request. Count:{_stats.Count}");
-				_log.Debug($"Press R to re-run. clients:{_clients.Count}, workers:{workers}, requests:{requests}");
-				_log.Debug("Press any other key to Resume.");
+				StringBuilder sb = new StringBuilder(256);
+				sb.AppendLine();
+				sb.AppendLine(_testTitle);
+				sb.AppendLine("Press X to quit.");
+				sb.AppendFormat("Press A to show all request samples. Count:{0}", _stats.Count).AppendLine();
+				sb.AppendFormat("Press R to re-run. clients:{0}, workers:{1}, requests:{2}", _clients.Count, workers, requests).AppendLine();
+				sb.AppendLine("Press any other key to Resume.");
+				_log.Info(sb.ToString());
 
 				var key = Console.ReadKey().Key;
-				if (key == ConsoleKey.Q)
+				if (key == ConsoleKey.Q || key == ConsoleKey.X)
 					break;
 
 				if (key == ConsoleKey.R)
@@ -167,14 +238,14 @@ namespace TestClient
 				if (_clients.TryGetValue(clientId, out var client))
 					DisposeClient(client);
 
-				client = CreateClient($"client-{clientId}") as TClient;
+				client = _clientFactory.CreateClient($"client-{clientId}");
 				Configure(client);
 
 				// This is a hack.. but there is no common Start
 				// for old and new communicator/client.
 				if (_startClientOnCreate)
 				{
-					StartClient(client);
+					client.Start();
 				}
 
 				_clients[clientId] = client;
@@ -182,14 +253,12 @@ namespace TestClient
 
 			if (_startClientOnCreate)
 			{
-				_log.Info("Waiting for clients to be ready..");
-
-				var clients = _clients.Values.Cast<TClient>().ToArray();
-				while (!clients.All(IsClientReady))
+				var clients = _clients.Values.Cast<ISmppClientAdapter>().ToArray();
+				do
 				{
 					_log.Info("Waiting for clients to be ready...");
 					Thread.Sleep(1000);
-				}
+				} while (!clients.All(x => x.IsClientReady()));
 			}
 		}
 
@@ -224,14 +293,19 @@ namespace TestClient
 
 		public void Run(int clients, int workers, int requests)
 		{
-			var reqtotal = clients * workers * requests;
-
-			_log.DebugFormat("name:{0}, clients:{1}, workers:{2}, requests:{3} total:{4}",
-				_declaringType.Name, clients, workers, requests, reqtotal);
+			_testTitle = BuildTitle(clients, workers, requests);
+			_log.Info(_testTitle);
 
 			RecreateClients(clients);
 			Execute(workers, requests);
 			DisposeClients();
+		}
+
+		private string BuildTitle(int clients, int workers, int requests)
+		{
+			var reqtotal = clients * workers * requests;
+			return string.Format("name:{0}, clients:{1}, workers:{2}, requests:{3} total:{4}",
+				_typeName, clients, workers, requests, reqtotal);
 		}
 	}
 }
