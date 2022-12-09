@@ -1,20 +1,20 @@
 ﻿using System;
+using System.Security.Authentication;
+
+using AberrantSMPP.EventObjects;
 using AberrantSMPP.Packet;
 using AberrantSMPP.Packet.Request;
-using System.Security.Authentication;
-using static AberrantSMPP.SMPPClient;
-using AberrantSMPP.EventObjects;
 
 namespace AberrantSMPP
 {
 	public interface ISmppClient : IDisposable
 	{
-        // FIXME: This should expose all that is common to both Smpp client implementations..
+		// FIXME: This should expose all that is common to both Smpp client implementations..
 
-        /// <summary>
-        /// The host to bind this ISmppClient to.
-        /// </summary>
-        string Host { get; }
+		/// <summary>
+		/// The host to bind this ISmppClient to.
+		/// </summary>
+		string Host { get; }
 
 		/// <summary>
 		/// The port on the SMSC to connect to.
@@ -43,15 +43,15 @@ namespace AberrantSMPP
 		/// </summary>
 		string Password { get; set; }
 
-        /// <summary>
-        /// The number plan indicator that this ISmppClient should use.  
-        /// </summary>
-        Pdu.NpiType NpiType { get; set; }
+		/// <summary>
+		/// The number plan indicator that this ISmppClient should use.  
+		/// </summary>
+		Pdu.NpiType NpiType { get; set; }
 
-        /// <summary>
-        /// The type of number that this ISmppClient should use.
-        /// </summary>
-        Pdu.TonType TonType { get; set; }
+		/// <summary>
+		/// The type of number that this ISmppClient should use.
+		/// </summary>
+		Pdu.TonType TonType { get; set; }
 
 		/// <summary>
 		/// The SMPP specification version to use.

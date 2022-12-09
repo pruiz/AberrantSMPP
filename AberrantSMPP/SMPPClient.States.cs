@@ -1,33 +1,31 @@
-﻿using System;
-
-namespace AberrantSMPP
+﻿namespace AberrantSMPP
 {
-    public partial class SMPPClient
-    {
-        public enum States
-        {
-            Invalid = -1,
-            Inactive = 0,
-            Connecting,
-            Connected,
-            Binding,
-            Bound,
-            Unbinding
-        }
-        
-        public class StateChangedEvent
-        {
-            public States OldState { get; }
-            public States NewState { get; }
+	public partial class SMPPClient
+	{
+		public enum States
+		{
+			Invalid = -1,
+			Inactive = 0,
+			Connecting,
+			Connected,
+			Binding,
+			Bound,
+			Unbinding
+		}
 
-            /// <summary>
-            /// Sets up the SmppEventArgs.
-            /// </summary>
-            public StateChangedEvent(States oldState, States newState)
-            {
-                OldState = oldState;
-                NewState = newState;
-            }
-        }
-    }
+		public class StateChangedEvent
+		{
+			public States OldState { get; }
+			public States NewState { get; }
+
+			/// <summary>
+			/// Sets up the SmppEventArgs.
+			/// </summary>
+			public StateChangedEvent(States oldState, States newState)
+			{
+				OldState = oldState;
+				NewState = newState;
+			}
+		}
+	}
 }

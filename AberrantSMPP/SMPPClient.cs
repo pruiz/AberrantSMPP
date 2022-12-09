@@ -17,40 +17,32 @@
 	* along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
 	*/
 using System;
-using System.IO;
-using System.Linq;
-using System.Collections;
 using System.Collections.Generic;
-using System.Threading;
-using System.Timers;
-using System.Net.Security;
-using System.Runtime.CompilerServices;
+using System.Linq;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
-using System.Runtime.Remoting.Contexts;
-using System.Reflection;
+
+using AberrantSMPP.EventObjects;
+using AberrantSMPP.Exceptions;
+using AberrantSMPP.Packet;
+using AberrantSMPP.Packet.Request;
+using AberrantSMPP.Packet.Response;
+using AberrantSMPP.Utility;
+
+using Dawn;
 
 using DotNetty.Buffers;
 using DotNetty.Codecs;
+using DotNetty.Common.Internal.Logging;
 using DotNetty.Handlers.Logging;
 using DotNetty.Handlers.Tls;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
-using DotNetty.Common.Internal.Logging;
 
-using Microsoft.Extensions.Logging;
-
-using AberrantSMPP.Packet;
-using AberrantSMPP.Packet.Request;
-using AberrantSMPP.Packet.Response;
-using AberrantSMPP.Exceptions;
-using AberrantSMPP.EventObjects;
-using AberrantSMPP.Utility;
-using Dawn;
-
-namespace AberrantSMPP 
+namespace AberrantSMPP
 {
 	/// <summary>
 	/// Wrapper class to provide asynchronous I/O for the RoaminSMPP library.  Note that most 
@@ -74,6 +66,7 @@ namespace AberrantSMPP
 		private volatile States _state;
 		private bool _started = false; //< Signals when we are using automatic connection handling (ie. Start/Stop)
 		private Task _connecting = null;
+		private TaskCompletionSource<bool> _releaser = null;
 
 		#region properties
 
@@ -97,13 +90,13 @@ namespace AberrantSMPP
 		/// The system type to use when connecting to the SMSC.
 		/// </summary>
 		public string SystemType { get; set; }
-		
+
 		/// <summary>
 		/// The system ID to use when connecting to the SMSC.  This is, 
 		/// in essence, a user name.
 		/// </summary>
 		public string SystemId { get; set; }
-		
+
 		/// <summary>
 		/// The password to use when connecting to an SMSC.
 		/// </summary>
@@ -123,11 +116,11 @@ namespace AberrantSMPP
 		/// The SMPP specification version to use.
 		/// </summary>
 		public SmppBind.SmppVersionType Version { get; set; } = Pdu.SmppVersionType.Version3_4;
-		
+
 		/// <summary>
 		/// The address range of this SMPPClient.
 		/// </summary>
-		public string AddressRange  { get; set; }
+		public string AddressRange { get; set; }
 
 		/// <summary>
 		/// Gets or sets the connect timeout.
@@ -151,7 +144,7 @@ namespace AberrantSMPP
 		/// </summary>
 		/// <value>The response timeout.</value>
 		public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(5);
-		
+
 		/// <summary>
 		/// Gets or sets the response timeout (in miliseconds)
 		/// </summary>
@@ -205,7 +198,7 @@ namespace AberrantSMPP
 		public bool Started => _started;
 
 		#endregion
-		
+
 		#region events
 		/// <summary>
 		/// Event called when the client receives a bind response.
@@ -315,7 +308,7 @@ namespace AberrantSMPP
 		#endregion events
 
 		#region constructors
-		
+
 		static SMPPClient()
 		{
 			//var options = new Microsoft.Extensions.Logging.Console.ConsoleLoggerOptions();
@@ -416,6 +409,7 @@ namespace AberrantSMPP
 				Guard.Operation(State is States.Inactive, $"Setting a channel on a client w/ state {State}?!");
 
 				_channel = channel;
+				_releaser = new TaskCompletionSource<bool>();
 			}
 		}
 
@@ -426,6 +420,8 @@ namespace AberrantSMPP
 				Guard.Operation(_channel != null, "A channel was not present while trying to release it?!");
 				_channel.Unsafe.CloseForcibly();
 				_channel = null;
+				_releaser.SetResult(true);
+				_releaser = null;
 			}
 		}
 
@@ -483,8 +479,7 @@ namespace AberrantSMPP
 
 				_connecting = GetOrCreateChannelFactory()
 					.ConnectAsync()
-					.ContinueWith(x =>
-					{
+					.ContinueWith(x => {
 						_Log.DebugFormat(" ==> ConnectDetached finished..");
 						_connecting = null;
 
@@ -561,16 +556,21 @@ namespace AberrantSMPP
 
 			_Log.DebugFormat("Connecting client for {0}:{1}...", Host, Port);
 
+			Task task = null;
+
 			lock (_lock) //< We need to lock due to manipulating _channel..
 			{
 				Guard.Operation(_started == false, "Calling Connect/Disconnect with auto connection handling enabled not supported.");
 				Guard.Operation(State is States.Inactive, $"Can't connect a client w/ state {State}, already connected?!");
 				Guard.Operation(_channel == null, $"Trying to connect while a channel still exists?!");
 
-				GetOrCreateChannelFactory().ConnectAsync().GetAwaiter().GetResult();
-
-				Guard.Operation(_channel != null, $"No channel establish after connecting?!");
+				var factory = GetOrCreateChannelFactory();
+				task = factory.ConnectAsync();
 			}
+
+			task.GetAwaiter().GetResult();
+
+			Guard.Operation(_channel != null, $"No channel establish after connecting?!");
 		}
 
 		public void Disconnect()
@@ -579,22 +579,40 @@ namespace AberrantSMPP
 
 			_Log.DebugFormat("Disconnecting client for {0}:{1}...", Host, Port);
 
-			lock (_lock)
+			var locked = true;
+
+			try
 			{
+				Monitor.Enter(_lock);
+
 				Guard.Operation(_started == false, "Calling Connect/Disconnect with auto connection handling enabled not supported.");
 				Guard.Operation(State >= States.Connected, $"Can't disconnect an a client w/ state {State}, not connected yet?");
 				Guard.Operation(_channel != null, $"Trying to connect while no channel present?!");
+				Guard.Operation(_releaser != null, $"Trying to connect while no channel release promise present?!");
 
-				using (var disconnectCancellator = new CancellationTokenSource(DisconnectTimeout))
-				using (var linkedCancellators = CancellationTokenSource.CreateLinkedTokenSource(_cancellator.Token, disconnectCancellator.Token))
+				using (var timeouter = new CancellationTokenSource(DisconnectTimeout))
+				using (var cancellator = CancellationTokenSource.CreateLinkedTokenSource(_cancellator.Token, timeouter.Token))
 				{
-					_channel.DisconnectAsync()
-						.WithCancellation(linkedCancellators.Token)
-						.GetAwaiter().GetResult();
-				}
+					var promise = _releaser;
+					_channel.DisconnectAsync();
+					Monitor.Exit(_lock);
+					locked = false;
 
-				Guard.Operation(_channel == null, $"Channel still present after disconnecting?!");
+					//waiter.Wait(_cancellator.Token);
+					Task.WaitAll(new[] { promise.Task }, cancellationToken: _cancellator.Token);
+				}
 			}
+			catch (Exception ex)
+			{
+				if (locked) Monitor.Exit(_lock);
+				_Log.WarnFormat("Unexpected exception while disconnectin?!", ex);
+			}
+			finally
+			{
+				if (_channel != null) ReleaseChannel();
+			}
+
+			Guard.Operation(_channel == null, $"Channel still present after disconnecting?!");
 		}
 
 		/// <summary>
@@ -613,9 +631,9 @@ namespace AberrantSMPP
 			GuardEx.Against(State != States.Connected, "Can't bind non-connected session, call ConnectAsync() first.");
 
 			_Log.InfoFormat("Binding to {0}:{1}..", Host, Port);
-			
+
 			SendAndWait(CreateBind());
-			
+
 			_Log.InfoFormat("Bound to {0}:{1}.", Host, Port);
 		}
 
@@ -634,7 +652,7 @@ namespace AberrantSMPP
 			_Log.InfoFormat("Unbinding from {0}:{1}..", Host, Port);
 
 			SendAndWait(new SmppUnbind());
-			
+
 			_Log.InfoFormat("Unbound from {0}:{1}.", Host, Port);
 		}
 
@@ -651,7 +669,7 @@ namespace AberrantSMPP
 			try
 			{
 				_Log.DebugFormat("Sending PDU: {0}", packet);
-				
+
 				GuardEx.Against(_channel == null, "Channel has not been initialized?!");
 				Guard.Operation(_channel?.Active == true, "Channel is not active?!.");
 				GuardEx.Against(State < States.Connected, "Session is not connected.");
@@ -681,9 +699,9 @@ namespace AberrantSMPP
 		{
 
 			var promise = request.EnableResponseTracking();
-			
+
 			SendPdu(request);
-			
+
 			if (promise.Wait((int)ResponseTimeout.TotalMilliseconds, _cancellator.Token))
 			{
 				var response = promise.Result;
@@ -697,7 +715,7 @@ namespace AberrantSMPP
 				return response.CommandStatus == CommandStatus.ESME_ROK ? response
 					: throw new SmppRequestException($"{request.GetType().Name} failed.", request, response);
 			}
-			
+
 			throw new SmppTimeoutException("Timeout while waiting for a response from remote side.");
 		}
 
@@ -746,10 +764,10 @@ namespace AberrantSMPP
 		{
 			var requests = SmppUtil.SplitLongMessage(pdu, method, GetRandomByte()).Cast<SmppRequest>();
 			var responses = SendAndWait(requests);
-			
+
 			return responses.OfType<SmppSubmitSmResp>().Select(x => x.MessageId).ToArray();
 		}
-		
+
 		/// <summary>
 		/// Sends an SMS message synchronouslly, possibly splitting it on multiple PDUs 
 		/// using the specified segmentation & reassembly method.
@@ -761,7 +779,7 @@ namespace AberrantSMPP
 		{
 			var requests = SmppUtil.SplitLongMessage(pdu, method, GetRandomByte()).Cast<SmppRequest>();
 			var responses = SendAndWait(requests);
-			
+
 			return responses.OfType<SmppSubmitSmResp>()
 				.Select(x => new
 				{
@@ -770,7 +788,7 @@ namespace AberrantSMPP
 				})
 				.ToDictionary(x => (SmppSubmitSm)x.Request, x => x.Response);
 		}
-		
+
 		/// <summary>
 		/// Disposes of this component.  Called by the framework; do not call it 
 		/// directly.
