@@ -1,67 +1,199 @@
-﻿using AberrantSMPP.Packet.Request;
-using AberrantSMPP.Packet;
-using System;
-using System.Reflection;
-using System.Diagnostics;
-using System.Collections.Concurrent;
+﻿using System;
 using System.Collections.Generic;
-using AberrantSMPP.Packet.Response;
-using AberrantSMPP;
-using System.Threading.Tasks;
-using System.Threading;
+using System.Diagnostics;
 using System.Linq;
-using System.Security.Authentication;
+using System.Threading;
+using System.Threading.Tasks;
+
+using AberrantSMPP;
+using AberrantSMPP.EventObjects;
+using AberrantSMPP.Exceptions;
+using AberrantSMPP.Packet;
+using AberrantSMPP.Packet.Request;
+using AberrantSMPP.Packet.Response;
 
 namespace TestClient
 {
 	internal abstract class TestBase<TClient>
-        where TClient : class, ISmppClient
+		where TClient : class, ISmppClient
 	{
-        private readonly Type _declaringType;
-        protected readonly global::Common.Logging.ILog _log = null;
-		protected readonly Stopwatch _sw;
-        protected readonly Dictionary<int, TClient> _clients;
-        private readonly ConcurrentDictionary<int, (int? taskId, int threadId, int clientId, int clientRequestId, SmppRequest req, SmppResponse res, long elapsedMs)> _samples;
-        private int _numberOfClients;
+		private readonly Type _declaringType;
+		private readonly TestStatistics _stats;
+		private readonly bool _startClientOnCreate;
+		private readonly Stopwatch _sw = Stopwatch.StartNew();
+		protected readonly global::Common.Logging.ILog _log = null;
+		protected readonly IDictionary<int, TClient> _clients = new Dictionary<int, TClient>();
 
-        public bool StartOnBuildClient { get; protected set; } = true;
-
-        protected TestBase(Type declaringType)
+		protected TestBase(Type declaringType, bool startClientOnCreate)
 		{
-            _declaringType = declaringType;
-            _log = global::Common.Logging.LogManager.GetLogger(declaringType);
-			_sw = Stopwatch.StartNew();
-            _clients = new Dictionary<int, TClient>();
-            _samples = new ConcurrentDictionary<int, (int? taskId, int threadId, int clientId, int clientRequestId, SmppRequest req, SmppResponse res, long elapsedMs)>();
+			_declaringType = declaringType;
+			_log = global::Common.Logging.LogManager.GetLogger(declaringType);
+			_stats = new TestStatistics(declaringType.Name);
+			_startClientOnCreate = startClientOnCreate;
 		}
 
 		protected abstract ISmppClient CreateClient(string name);
-		protected abstract void Configure(ISmppClient client);
-		protected abstract void Execute(int requestPerClient);
-		protected abstract void DisposeClients();
-		protected abstract void DisposeClient(TClient client);
+		protected abstract SmppResponse SendAndWait(TClient client, SmppRequest request);
+		protected abstract uint SendPdu(TClient client, Pdu packet);
+		protected abstract void StartClient(TClient client);
 
-		protected void RecreateClients()
-        {
-            foreach (var clientId in Enumerable.Range(0, _numberOfClients))
-            {
-                if (_clients.TryGetValue(clientId, out var client))
-                    DisposeClient(client);
+		protected virtual bool IsClientReady(TClient client) => true;
 
-                client = CreateClient($"client-{clientId}") as TClient;
-                Configure(client);
+		protected virtual void Configure(TClient client)
+		{
+			client.SystemId = client.SystemId ?? "client";
+			client.Password = client.Password ?? "password";
+			//client.EnquireLinkInterval = TimeSpan.FromSeconds(25);
+			client.BindType = SmppBind.BindingType.BindAsTransceiver;
+			client.NpiType = Pdu.NpiType.ISDN;
+			client.TonType = Pdu.TonType.International;
+			client.Version = Pdu.SmppVersionType.Version3_4;
 
-                // This is a hack.. but there is no common Start
-                // for old and new communicator/client.
-                if (StartOnBuildClient && client is SMPPClient x) {
-                    x.Start();
-                }
+			client.OnAlert += (s, e) => _log.Debug("Alert: " + e.Request);
+			//client.OnBind += (s, e) => _log.Debug("OnBind: " + e.Request);
+			client.OnBindResp += (s, e) => _log.Debug("OnBindResp: " + e.Response);
+			//client.OnCancelSm += (s, e) => _log.Debug("OnCancelSm: " + e.Request);
+			client.OnCancelSmResp += (s, e) => _log.Debug("OnCancelResp: " + e.Response);
+			client.OnClose += (s, e) => _log.Debug("OnClose: " + e.GetType());
+			//client.OnDataSm += (s, e) => _log.Debug("OnDataSm: " + e.Request);
+			client.OnDataSmResp += (s, e) => _log.Debug("OnDataResp: " + e.Response);
+			client.OnDeliverSm += Client_OnDeliverSm;
+			client.OnDeliverSmResp += (s, e) => _log.Debug("OnDeliverSmResp: " + e.Response);
+			client.OnEnquireLink += Client_OnEnquireLink;
+			client.OnEnquireLinkResp += (s, e) => _log.Debug("OnEnquireLinkResp: " + e.Response);
+			client.OnError += (s, e) => _log.Debug("OnError: " + e.ThrownException?.ToString());
+			client.OnGenericNack += (s, e) => _log.Debug("OnGenericNack: " + e.Request);
+			//client.OnQuerySm += (s, e) => _log.Debug("OnQuerySm: " + e.Request);
+			client.OnQuerySmResp += (s, e) => _log.Debug("OnQuerySmResp: " + e.Response);
+			//client.OnReplaceSm += (s, e) => _log.Debug("OnReplaceSm: " + e.Request);
+			client.OnReplaceSmResp += (s, e) => _log.Debug("OnReplaceSmResp: " + e.Response);
+			//client.OnSubmitMulti += (s, e) => _log.Debug("OnSubmitMulti: " + e.Request);
+			client.OnSubmitMultiResp += (s, e) => _log.Debug("OnSubmitMultiResp: " + e.Response);
+			//client.OnSubmitSm += (s, e) => _log.Debug("OnSubmitSm: " + e.Request);
+			client.OnSubmitSmResp += (s, e) => _log.Debug("OnSubmitSmResp: " + e.Response);
+			//client.OnUnbind += (s, e) => _log.Debug("OnUnbind: " + e.Request);
+			client.OnUnboundResp += (s, e) => _log.Debug("OnUnboundResp: " + e.Response);
+		}
 
-                _clients[clientId] = client;
-		    }
-        }
+		protected virtual void Execute(int workers, int requests)
+		{
+			var requestPerClient = workers * requests;
+			foreach (var client in _clients)
+			{
+				Task.Factory.StartNew(() => {
+					Parallel.ForEach(Enumerable.Range(0, workers), (_) => {
+						foreach (var id in Enumerable.Range(0, requests))
+						{
+							CreateAndSendSubmitSm(client.Value, id);
+						}
+					});
+				});
+			}
+		}
 
-        protected static SmppSubmitSm CreateSubmitSm(string txt)
+		private void Client_OnEnquireLink(object source, EnquireLinkEventArgs e)
+		{
+			_log.Debug("OnEnquireLink: " + e.Request);
+			SendPdu(source as TClient, new SmppEnquireLinkResp() { SequenceNumber = e.Request.SequenceNumber });
+		}
+
+		private void Client_OnDeliverSm(object source, DeliverSmEventArgs e)
+		{
+			_log.Debug("OnDeliverSm: " + e.Request);
+			SendPdu(source as TClient, new SmppDeliverSmResp() { SequenceNumber = e.Request.SequenceNumber });
+		}
+
+		private void DisposeClients()
+		{
+			_log.Debug("==> Disposing..");
+			foreach (var client in _clients.Values)
+				DisposeClient(client);
+		}
+
+		private void DisposeClient(ISmppClient client)
+		{
+			(client as IDisposable)?.Dispose();
+		}
+
+		protected void CreateAndSendSubmitSm(TClient client, int uid)
+		{
+			var txt = @"XXXXXXXXXXX de mas de 160 caractereñ.. @€abcdefghijklmnopqrstxyz!!!0987654321-ABCDE";
+			var requestName = $"{client.SystemId}.{uid:0000000000}";
+			var request = CreateSubmitSm("#" + requestName + " - " + txt); //< Clone and concat clientRequestId to its message
+			var start = _sw.ElapsedMilliseconds;
+			SmppResponse response;
+			try
+			{
+				response = SendAndWait(client, request);
+			}
+			catch (SmppRequestException srex)
+			{
+				response = srex.Response;
+			}
+			var elapsed = _sw.ElapsedMilliseconds - start;
+			_stats.AddSample(client, request, response, elapsed, uid);
+		}
+
+		private void PrintResume(int workers, int requests)
+		{
+			while (true)
+			{
+				_log.Debug("Press Q to quit.");
+				_log.Debug($"Press A to show all request. Count:{_stats.Count}");
+				_log.Debug($"Press R to re-run. clients:{_clients.Count}, workers:{workers}, requests:{requests}");
+				_log.Debug("Press any other key to Resume.");
+
+				var key = Console.ReadKey().Key;
+				if (key == ConsoleKey.Q)
+					break;
+
+				if (key == ConsoleKey.R)
+				{
+					_stats.Reset();
+					Execute(workers, requests);
+					continue;
+				}
+
+				bool printSamples = (key == ConsoleKey.A);
+
+				_stats.Print(printSamples);
+			}
+		}
+
+		protected void RecreateClients(int numberOfClients)
+		{
+			foreach (var clientId in Enumerable.Range(0, numberOfClients))
+			{
+				if (_clients.TryGetValue(clientId, out var client))
+					DisposeClient(client);
+
+				client = CreateClient($"client-{clientId}") as TClient;
+				Configure(client);
+
+				// This is a hack.. but there is no common Start
+				// for old and new communicator/client.
+				if (_startClientOnCreate)
+				{
+					StartClient(client);
+				}
+
+				_clients[clientId] = client;
+			}
+
+			if (_startClientOnCreate)
+			{
+				_log.Info("Waiting for clients to be ready..");
+
+				var clients = _clients.Values.Cast<TClient>().ToArray();
+				while (!clients.All(IsClientReady))
+				{
+					_log.Info("Waiting for clients to be ready...");
+					Thread.Sleep(1000);
+				}
+			}
+		}
+
+		private static SmppSubmitSm CreateSubmitSm(string txt)
 		{
 			var req = new SmppSubmitSm()
 			{
@@ -90,129 +222,16 @@ namespace TestClient
 			return req;
 		}
 
-        protected void AddSample(int clientId, int clientRequestId, SmppSubmitSm request, SmppResponse response, long elapsed, int uniqueRequestId)
-        {
-            _log.DebugFormat("Sending request {0} to client {1} => {2} (elapsed {3} ms)", clientRequestId, clientId, uniqueRequestId, elapsed);
-            _samples.TryAdd(uniqueRequestId, (Task.CurrentId, Thread.CurrentThread.ManagedThreadId, clientId, clientRequestId, request, response, elapsed));
-        }
-
-        protected virtual void PrintResume(int requestPerClient)
-        {
-            bool logToFile = false;
-            while (true)
-            {
-                Log("Press Q to quit.", logToFile);
-                Log($"Press A to show all request. Count:{_samples.Count}", logToFile);
-                Log($"Press R to re-run. numberOfClients:{_clients.Count}, requestPerClient:{requestPerClient}", logToFile);
-                Log($"Press L to toggle log to file. LogToFile {(logToFile ? "enabled" : "disabled")}", logToFile);
-                Log("Press any other key to Resume.", logToFile);
-
-                var key = Console.ReadKey().Key;
-                if (key == ConsoleKey.Q)
-                    break;
-
-                if (key == ConsoleKey.L)
-                {
-                    logToFile = !logToFile;
-                    continue;
-                }
-
-                if (key == ConsoleKey.R)
-                {
-                    _samples.Clear();
-                    Execute(requestPerClient: requestPerClient);
-                    continue;
-                }
-
-                bool printList = false;
-
-                if (key == ConsoleKey.A)
-                    printList = true;
-
-                var statuses = new Dictionary<CommandStatus, int>();
-
-                long okElapsed = 0;
-                long okCount = 0;
-                long errorElapsed = 0;
-                long errorCount = 0;
-                long totalElapsed = 0;
-                long totalCount = 0;
-                foreach (var kvp in _samples)
-                {
-                    var tuple = kvp.Value;
-                    if (printList)
-                        Log(string.Format(
-                            "#{0,6:D8}, Elapsed:{1,8} ms, ClientId:{2,4}, ClientRequestId:{3,5}, " +
-                            "Task:{4,4}, ThreadId:{5,3}, Request->SequenceNumber:{6,4}, Response->CommandStatus:{7}",
-                            kvp.Key, tuple.elapsedMs, tuple.clientId, tuple.clientRequestId,
-                            tuple.taskId.GetValueOrDefault(), tuple.threadId, tuple.req.SequenceNumber, tuple.res.CommandStatus)
-                            , logToFile);
-                    totalElapsed += tuple.elapsedMs;
-
-                    statuses.TryGetValue(tuple.res.CommandStatus, out int statusCount);
-                    statuses[tuple.res.CommandStatus] = statusCount + 1;
-                    ++totalCount;
-
-                    if (tuple.res.CommandStatus == CommandStatus.ESME_ROK)
-                    {
-                        okElapsed += tuple.elapsedMs;
-                        okCount += 1;
-                    }
-                    else
-                    {
-                        errorElapsed += tuple.elapsedMs;
-                        errorCount += 1;
-                    }
-                }
-
-                Log(new string('#', 80), logToFile);
-                Log(_declaringType.FullName, logToFile);
-                Log(new string('#', 80), logToFile);
-                Log(string.Format("Total Statuses : {0,12} items", statuses.Count), logToFile);
-                foreach (var status in statuses)
-                {
-                    Log(string.Format("Status {0,20} :  {1,4} times", status.Key, status.Value), logToFile);
-                }
-                statuses.Clear();
-
-                Log(new string('#', 80), logToFile);
-                Log(string.Format("All Elapsed Total   : {0,12} ms", totalElapsed), logToFile);
-                Log(string.Format("All Requests Count  : {0,12} items", totalCount), logToFile);
-                Log(string.Format("All Elapsed Media   : {0,12} ms", totalCount == 0 ? 0 : totalElapsed / totalCount), logToFile);
-                Log(string.Format("Ok Elapsed Total    : {0,12} ms", okElapsed), logToFile);
-                Log(string.Format("Ok Requests         : {0,12} items", okCount), logToFile);
-                Log(string.Format("Ok Elapsed Media    : {0,12} items", okCount == 0 ? 0 : okElapsed / okCount), logToFile);
-                Log(string.Format("Error Elapsed Total : {0,12} ms", errorElapsed), logToFile);
-                Log(string.Format("Error Requests      : {0,12} items", errorCount), logToFile);
-                Log(string.Format("Error Elapsed Media : {0,12} ms", errorCount == 0 ? 0 : errorElapsed / errorCount), logToFile);
-            }
-        }
-
-        protected void Log(string text, bool logToFile = true)
+		public void Run(int clients, int workers, int requests)
 		{
-			if (logToFile)
-				_log.Debug(text);
-			else
-				Console.WriteLine(text);
-		}
+			var reqtotal = clients * workers * requests;
 
-		public void Run(int numberOfClients, int requestPerClient)
-		{
-			_numberOfClients = numberOfClients;
-			var totalRequests = numberOfClients * requestPerClient;
+			_log.DebugFormat("name:{0}, clients:{1}, workers:{2}, requests:{3} total:{4}",
+				_declaringType.Name, clients, workers, requests, reqtotal);
 
-			_log.DebugFormat("name:{0}, numberOfClients:{1}, requestPerClient:{2}, totalRequests:{3}",
-				_declaringType.Name, _numberOfClients, requestPerClient, totalRequests);
-
-			RecreateClients();
-
-			if (totalRequests != 0)
-				Execute(requestPerClient);
-
-			PrintResume(requestPerClient);
-
+			RecreateClients(clients);
+			Execute(workers, requests);
 			DisposeClients();
 		}
-
 	}
 }

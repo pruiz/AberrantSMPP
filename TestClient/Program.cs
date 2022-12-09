@@ -1,19 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Linq;
-using System.Text;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Threading.Tasks;
-using System.Threading;
-using System.Diagnostics;
-
-using AberrantSMPP;
-using AberrantSMPP.Packet;
-using AberrantSMPP.Packet.Request;
-using AberrantSMPP.Packet.Response;
-using AberrantSMPP.Exceptions;
 
 namespace TestClient
 {
@@ -23,8 +12,7 @@ namespace TestClient
 		enum RunType
 		{
 			Interactive,
-			Single,
-			Multi,
+			Batched,
 			Legacy
 		}
 		#endregion
@@ -84,21 +72,19 @@ namespace TestClient
 			var action = GetArg(args, index: 0, defaultValue: RunType.Interactive, (arg) => Enum.Parse(typeof(RunType), arg, true));
 
 			int numberOfClients = GetArg(args, index: 1, defaultValue: 1);
-			int requestPerClient = GetArg(args, index: 2, defaultValue: 100);
+			int requestsPerWorker = GetArg(args, index: 2, defaultValue: 100);
+			int workersPerClient = GetArg(args, index: 3, defaultValue: 1);
 
 			switch (action)
 			{
 				case RunType.Interactive:
-					new SMPPClientInteractive().Run(numberOfClients: 1, requestPerClient: 0);
+					new SMPPClientInteractiveTest().Run(clients: 1, requests: 0, workers: 1);
 					break;
-				case RunType.Single:
-					new SMPPClientMultiTaskPerClientTest().Run(numberOfClients: numberOfClients, requestPerClient: requestPerClient);
-					break;
-				case RunType.Multi:
-					new SMPPClientSingleTaskPerClientTest().Run(numberOfClients: numberOfClients, requestPerClient: requestPerClient);
+				case RunType.Batched:
+					new SMPPClientBatchedTests().Run(numberOfClients, requestsPerWorker, workersPerClient);
 					break;
 				case RunType.Legacy:
-					new SMPPCommunicatorTest().Run(numberOfClients: numberOfClients, requestPerClient: requestPerClient);
+					new SMPPCommunicatorBatchedTest().Run(numberOfClients, requestsPerWorker, workersPerClient);
 					break;
 				default:
 					break;

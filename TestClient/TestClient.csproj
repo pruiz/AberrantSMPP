@@ -64,12 +64,11 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SMPPClientInteractive.cs" />
-    <Compile Include="SMPPClientMultiTaskPerClientTest.cs" />
-    <Compile Include="SMPPClientSingleTaskPerClientTest.cs" />
-    <Compile Include="SMPPClientTestsBase.cs" />
-    <Compile Include="SMPPCommunicatorTest.cs" />
+    <Compile Include="SMPPClientInteractiveTest.cs" />
+    <Compile Include="SMPPClientBatchedTests.cs" />
+    <Compile Include="SMPPCommunicatorBatchedTest.cs" />
     <Compile Include="TestBase.cs" />
+    <Compile Include="TestStatistics.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
