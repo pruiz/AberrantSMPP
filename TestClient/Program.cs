@@ -4,16 +4,26 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 
+using TestClient.Facilities;
+
 namespace TestClient
 {
 	class Program
 	{
 		#region InnerTypes
-		enum RunType
+		enum RunTypes
 		{
+			Unknown,
 			Interactive,
 			Batched,
-			Legacy
+			TimeLimited
+		}
+
+		enum ClientTypes
+		{
+			Unknown,
+			Client,
+			Communicator
 		}
 		#endregion
 
@@ -46,14 +56,6 @@ namespace TestClient
 					});
 		}
 
-		private static void Log(string text, bool logToFile = true)
-		{
-			if (logToFile)
-				_log.Debug(text);
-			else
-				Console.WriteLine(text);
-		}
-
 		static T GetArg<T>(string[] args, int index, T defaultValue, Func<string, object> converter = null) where T : IConvertible
 		{
 			converter = converter ?? new Func<string, object>((string arg) => Convert.ChangeType(arg, typeof(T)));
@@ -69,22 +71,26 @@ namespace TestClient
 
 		static void Main(string[] args)
 		{
-			var action = GetArg(args, index: 0, defaultValue: RunType.Interactive, (arg) => Enum.Parse(typeof(RunType), arg, true));
+			var action = GetArg(args, index: 0, defaultValue: RunTypes.Interactive, (arg) => Enum.Parse(typeof(RunTypes), arg, true));
+			var clientType = GetArg(args, index: 1, defaultValue: ClientTypes.Client, (arg) => Enum.Parse(typeof(ClientTypes), arg, true));
 
-			int numberOfClients = GetArg(args, index: 1, defaultValue: 1);
-			int requestsPerWorker = GetArg(args, index: 2, defaultValue: 100);
-			int workersPerClient = GetArg(args, index: 3, defaultValue: 1);
+			int clients = GetArg(args, index: 2, defaultValue: 1);
+			int workers = GetArg(args, index: 3, defaultValue: 1);
+			int requests = GetArg(args, index: 4, defaultValue: 500);
+			int timeLimitSeconds = GetArg(args, index: 4, defaultValue: 10);
+
+			ISmppClientFactory factory = clientType == ClientTypes.Communicator ? new SMPPCommunicatorFactory() : new SMPPClientFactory();
 
 			switch (action)
 			{
-				case RunType.Interactive:
-					new SMPPClientInteractiveTest().Run(clients: 1, requests: 0, workers: 1);
+				case RunTypes.Interactive:
+					new InteractiveTest(factory).Run(clients: 1, requests: 0, workers: 1);
 					break;
-				case RunType.Batched:
-					new SMPPClientBatchedTests().Run(numberOfClients, requestsPerWorker, workersPerClient);
+				case RunTypes.Batched:
+					new BatchedTests(factory).Run(clients, workers, requests);
 					break;
-				case RunType.Legacy:
-					new SMPPCommunicatorBatchedTest().Run(numberOfClients, requestsPerWorker, workersPerClient);
+				case RunTypes.TimeLimited:
+					new TimeLimitedTests(factory).TimeLimitedRun(clients, workers, TimeSpan.FromSeconds(timeLimitSeconds));
 					break;
 				default:
 					break;

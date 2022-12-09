@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,9 +23,10 @@ namespace TestClient
 		{
 			_testName = testName;
 		}
+
 		public void AddSample(ISmppClient client, SmppSubmitSm request, SmppResponse response, long elapsed, int uniqueRequestId)
 		{
-			_log.DebugFormat("Sending request {0} to client {1} => {2} (elapsed {3} ms)", request.SequenceNumber, client.SystemId, uniqueRequestId, elapsed);
+			_log.TraceFormat("Sending request {0} to client {1} => {2} (elapsed {3} ms)", request.SequenceNumber, client.SystemId, uniqueRequestId, elapsed);
 			_samples.Push((Task.CurrentId, Thread.CurrentThread.ManagedThreadId, client.SystemId, request.SequenceNumber, request, response, elapsed));
 		}
 
@@ -35,6 +34,7 @@ namespace TestClient
 
 		public void Print(bool printSamples)
 		{
+			var threads = new Dictionary<int, int>();
 			var statuses = new Dictionary<CommandStatus, int>();
 
 			long okElapsed = 0, okCount = 0;
@@ -45,7 +45,7 @@ namespace TestClient
 				if (printSamples)
 				{
 					var rowid = $"{tuple.clientId}:{tuple.uid}";
-					_log.Debug(string.Format(
+					_log.Info(string.Format(
 						"#{0}, Elapsed:{1,8} ms, ClientId:{2,4}, ClientRequestId:{3,5}, " +
 						"Task:{4,4}, ThreadId:{5,3}, Request->SequenceNumber:{6,4}, Response->CommandStatus:{7}",
 						rowid, tuple.elapsedMs, tuple.clientId, tuple.uid,
@@ -56,6 +56,9 @@ namespace TestClient
 				statuses.TryGetValue(tuple.res.CommandStatus, out int statusCount);
 				statuses[tuple.res.CommandStatus] = statusCount + 1;
 				++totalCount;
+
+				int threadId = tuple.threadId;
+				threads[threadId] = !threads.TryGetValue(threadId, out int requestPerThread) ? 1 : ++requestPerThread;
 
 				if (tuple.res.CommandStatus == CommandStatus.ESME_ROK)
 				{
@@ -70,6 +73,7 @@ namespace TestClient
 			}
 
 			var sb = new StringBuilder(string.Empty, 2000);
+			sb.AppendLine(string.Empty);
 			sb.AppendLine(_spacer);
 			sb.AppendLine(_testName);
 			sb.AppendLine(_spacer);
@@ -79,17 +83,30 @@ namespace TestClient
 				sb.Append("Status ")
 					.AppendFormat("{0,20}", status.Key)
 					.Append(" :  ")
-					.AppendFormat("{1,4}", status.Value)
+					.AppendFormat("{0,4}", status.Value)
 					.AppendLine(" times.");
 			}
 			statuses.Clear();
+
+			sb.AppendLine(_spacer);
+			sb.Append("Total Threads : ").AppendFormat("{0,2}", threads.Count).AppendLine(" threads.");
+			sb.AppendLine(_spacer);
+			foreach (var thread in threads)
+			{
+				sb.Append("Thread ")
+					.AppendFormat("{0,4}", thread.Key)
+					.Append(" :  ")
+					.AppendFormat("{0,4}", thread.Value)
+					.AppendLine(" requests.");
+			}
+			sb.AppendLine(_spacer);
 
 			sb.AppendLine(_spacer);
 			AppendStats(sb, "All", totalElapsed, totalCount);
 			AppendStats(sb, "Ok", okElapsed, okCount);
 			AppendStats(sb, "Error", errorElapsed, errorCount);
 			sb.AppendLine(_spacer);
-			_log.Debug(sb.ToString());
+			_log.Info(sb.ToString());
 		}
 
 		private static void AppendStats(StringBuilder sb, string group, long elapsed, long count)
