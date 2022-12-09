@@ -580,6 +580,7 @@ namespace AberrantSMPP
 			_Log.DebugFormat("Disconnecting client for {0}:{1}...", Host, Port);
 
 			var locked = true;
+			var canDisconnect = false;
 
 			try
 			{
@@ -590,6 +591,7 @@ namespace AberrantSMPP
 				Guard.Operation(_channel != null, $"Trying to connect while no channel present?!");
 				Guard.Operation(_releaser != null, $"Trying to connect while no channel release promise present?!");
 
+				canDisconnect = true;
 				using (var timeouter = new CancellationTokenSource(DisconnectTimeout))
 				using (var cancellator = CancellationTokenSource.CreateLinkedTokenSource(_cancellator.Token, timeouter.Token))
 				{
@@ -609,7 +611,7 @@ namespace AberrantSMPP
 			}
 			finally
 			{
-				if (_channel != null) ReleaseChannel();
+				if (_channel != null && canDisconnect) ReleaseChannel();
 			}
 
 			Guard.Operation(_channel == null, $"Channel still present after disconnecting?!");
