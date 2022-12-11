@@ -19,7 +19,4 @@
       <dependency id="Common.Logging" version="2.0.0" />
     </dependencies>
   </metadata>
-  <files>
-    <file src="**\*.cs" target="src" />
-  </files>
 </package>
