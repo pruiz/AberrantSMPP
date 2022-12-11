@@ -15,15 +15,16 @@ before_build:
       setlocal enabledelayedexpansion
       setlocal EnableExtensions
       
-      set NUGET=Tools\\NuGet.exe
+      set NUGET=Tools\NuGet.exe
       %NUGET% restore AberrantSMPP.sln
       
       REM Set version attributes..
-      FOR /R %%F IN (*AssemblyInfo.cs *.nuspec) DO (Tools\\UnixUtils\\sed.exe -i -e "s|0\\.0\\.0\\.0|%APPVEYOR_BUILD_VERSION%|g" %%F)
-      FOR /R %%F IN (*AssemblyInfo.cs *.nuspec) DO (Tools\\UnixUtils\\sed.exe -i -e "s|GIT_COMMIT|%APPVEYOR_REPO_COMMIT%|g" %%F)
-      
-      md AberrantSMPP\\bin\\v3.5-Client\\Release
-      md AberrantSMPP\\bin\\v4.0-Client\\Release
+      FOR /R %%F IN (*AssemblyInfo.cs *.nuspec) DO (Tools\UnixUtils\sed.exe -i -e "s|0\\.0\\.0\\.0|%APPVEYOR_BUILD_VERSION%|g" %%F)
+      FOR /R %%F IN (*AssemblyInfo.cs *.nuspec) DO (Tools\UnixUtils\sed.exe -i -e "s|GIT_COMMIT|%APPVEYOR_REPO_COMMIT%|g" %%F)
+      Tools\UnixUtils\sed.exe -i -e "s|0\.0\.0\.0|%APPVEYOR_BUILD_VERSION%|g" .msbuild\custom.targets
+      Tools\UnixUtils\sed.exe -i -e "s|GIT_COMMIT|%APPVEYOR_REPO_COMMIT%|g" .msbuild\custom.targets
+      Tools\UnixUtils\sed.exe -i -e "s|VERSION_STRING|%APPVEYOR_REPO_BRANCH%:%APPVEYOR_REPO_COMMIT%|g" .msbuild\custom.targets
+
 build:
   publish_nuget: true
   publish_nuget_symbols: true

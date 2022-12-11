@@ -1,0 +1,36 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Product>AberrantSMPP Library</Product>
+    <Company>Pablo Ruiz</Company>
+    <Copyright>Copyright © Pablo Ruiz García 2010-2022</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Version Condition=" '$(Version)' == '' ">0.0.0.0</Version>
+    <FileVersion Condition=" '$(FileVersion)' == '' ">0.0.0.0</FileVersion>
+    <AssemblyVersion Condition=" '$(AssemblyVersion)' == '' ">0.0.0.0</AssemblyVersion>
+    <InformationalVersion Condition=" '$(InformationalVersion)' == '' ">VERSION_STRING</InformationalVersion>
+    <PackageProjectUrl>https://github.com/pruiz/AberrantSMPP</PackageProjectUrl>
+    <PackageReleaseNotes>See changes for this revision at: https://github.com/pruiz/AberrantSMPP/commit/GIT_COMMIT</PackageReleaseNotes>
+    <RepositoryUrl>https://github.com/pruiz/AberrantSMPP</RepositoryUrl>
+    <RepositoryCommit>GIT_COMMIT</RepositoryCommit>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DefineConstants>$(DefineConstants);DEBUG;TRACE</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DefineConstants>$(DefineConstants)</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DebugType>portable</DebugType>
+    <EmbedAllSources>true</EmbedAllSources>
+  </PropertyGroup>
+
+</Project>
+<!--
+     vim: sts=2 ts=2 sw=2 et ai
+-->
