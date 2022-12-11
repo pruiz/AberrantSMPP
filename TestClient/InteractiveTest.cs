@@ -70,6 +70,11 @@ namespace TestClient
 		private void ToggleTls()
 		{
 			_enableTls = !_enableTls;
+			Host = _enableTls ? "smppsims.smsdaemon.test" : "smppsim.smsdaemon.test";
+			Port = _enableTls ? (ushort)15004 : (ushort)12000;
+			SslSupportedProtocols = _enableTls ? SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Ssl2 : SslProtocols.None;
+			DisableSslRevocationChecking = true;
+
 			RecreateClients(_clients.Count);
 		}
 
@@ -118,13 +123,6 @@ namespace TestClient
 			var key = Console.ReadKey().Key;
 			_log.Info(Environment.NewLine + Environment.NewLine + _spacer);
 			return key;
-		}
-
-		protected override ISmppClient CreateClient(string name)
-		{
-			return _enableTls
-				? new SMPPClient("smppsims.smsdaemon.test", 15004, SslProtocols.Default | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Ssl2)
-				: base.CreateClient(name);
 		}
 
 		protected override void Configure(ISmppClientAdapter client)

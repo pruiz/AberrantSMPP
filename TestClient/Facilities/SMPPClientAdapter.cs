@@ -10,7 +10,12 @@ namespace TestClient.Facilities
 	{
 		private static readonly global::Common.Logging.ILog _log = global::Common.Logging.LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-		public SMPPClientAdapter(string host, ushort port, SslProtocols ssl = SslProtocols.None) : base(host, port, ssl) { }
+		public SMPPClientAdapter(string name, string password, string host, ushort port, SslProtocols supportedSslProtocols, bool disableSslRevocationChecking)
+			: base(host, port, supportedSslProtocols, disableSslRevocationChecking)
+		{
+			SystemId = name;
+			Password = password;
+		}
 
 		public void Configure()
 		{

@@ -77,6 +77,11 @@ namespace AberrantSMPP
 		/// </summary>
 		SslProtocols SupportedSslProtocols { get; }
 
+		/// <summary>
+		/// Gets or sets if must not check the certificate revocation.
+		/// </summary>
+		bool DisableSslRevocationChecking { get; }
+
 		#region events
 		/// <summary>
 		/// Event called when the client receives a bind response.

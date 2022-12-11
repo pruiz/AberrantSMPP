@@ -165,12 +165,10 @@ namespace AberrantSMPP
 		/// </summary>
 		public TimeSpan[] ReconnectIntervals { get; set; } = new[] { TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(60) };
 
-		// FIXME: Add documentation to public (config) properties.
-
 		/// <summary>
 		/// Gets or sets if must not check the certificate revocation.
 		/// </summary>
-		public bool DisableCheckCertificateRevocation { get; set; }
+		public bool DisableSslRevocationChecking { get; private set; }
 
 		/// <summary>
 		/// Get supported SSL Protocols. Must be set on constructor.
@@ -324,14 +322,14 @@ namespace AberrantSMPP
 		/// and address range, password, system type and system ID set to null 
 		///(no value).
 		/// </summary>
-		public SMPPClient(string host, ushort port, SslProtocols ssl = SslProtocols.None)
+		public SMPPClient(string host, ushort port, SslProtocols supportedSslProtocols = SslProtocols.None, bool disableSslRevocationChecking = false)
 		{
 			Host = host;
 			Port = port;
-			SupportedSslProtocols = ssl;
+			SupportedSslProtocols = supportedSslProtocols;
+			DisableSslRevocationChecking = disableSslRevocationChecking;
 
 			_eventLoopGroup = new SingleThreadEventLoop();
-			//_eventLoopGroup = new MultithreadEventLoopGroup();
 		}
 		#endregion constructors
 
@@ -354,7 +352,7 @@ namespace AberrantSMPP
 			if (SupportedSslProtocols != SslProtocols.None)
 			{
 				ClientTlsSettings tlsSettings = new ClientTlsSettings(
-					SupportedSslProtocols, !DisableCheckCertificateRevocation,
+					SupportedSslProtocols, !DisableSslRevocationChecking,
 					new List<X509Certificate>(), Host);
 				pipeline.AddLast("tls", new TlsHandler(tlsSettings));
 			}

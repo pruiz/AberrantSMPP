@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Authentication;
 using System.Text;
 using System.Threading;
 
@@ -46,6 +47,11 @@ namespace TestClient
 		private string _testTitle = string.Empty;
 		private List<Thread> _threads = new List<Thread>();
 
+		public string Host { get; protected set; } = "smppsim.smsdaemon.test";
+		public ushort Port { get; protected set; } = 12000;
+		public SslProtocols SslSupportedProtocols { get; protected set; } = SslProtocols.None;
+		public bool DisableSslRevocationChecking{ get; protected set; } = false;
+
 		public BatchedTests(ISmppClientFactory clientFactory)
 			: this(typeof(BatchedTests), true, clientFactory)
 		{
@@ -62,8 +68,6 @@ namespace TestClient
 
 		protected virtual void Configure(ISmppClientAdapter client)
 		{
-			client.SystemId = client.SystemId ?? "client";
-			client.Password = client.Password ?? "password";
 			client.EnquireLinkInterval = TimeSpan.FromSeconds(25);
 			client.BindType = SmppBind.BindingType.BindAsTransceiver;
 			client.NpiType = Pdu.NpiType.ISDN;
@@ -96,11 +100,6 @@ namespace TestClient
 			client.OnUnboundResp += (s, e) => _log.Debug("OnUnboundResp: " + e.Response);
 
 			client.Configure();
-		}
-
-		protected virtual ISmppClient CreateClient(string name)
-		{
-			return _clientFactory.CreateClient(name);
 		}
 
 		protected virtual void Execute(int workers, int requests)
@@ -267,8 +266,7 @@ namespace TestClient
 				if (_clients.TryGetValue(clientId, out var client))
 					DisposeClient(client);
 
-				client = _clientFactory.CreateClient($"client-{clientId}");
-				Configure(client);
+				client = CreateClient(clientId);
 
 				// This is a hack.. but there is no common Start
 				// for old and new communicator/client.
@@ -289,6 +287,14 @@ namespace TestClient
 					Thread.Sleep(1000);
 				} while (!clients.All(x => x.IsClientReady()));
 			}
+		}
+
+		private ISmppClientAdapter CreateClient(int clientId)
+		{
+			var client = _clientFactory.CreateClient(
+				clientId == 0 ? "client" : $"client-{clientId}", "password", Host, Port, SslSupportedProtocols, DisableSslRevocationChecking);
+			Configure(client);
+			return client;
 		}
 
 		public void Run(int clients, int workers, int requests)
