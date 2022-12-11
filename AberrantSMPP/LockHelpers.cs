@@ -80,7 +80,7 @@ namespace AberrantSMPP
 		}
 	}
 
-	// FIXME: Implement overloads accepting Cancellator..
+	// TODO: Implement overloads accepting Cancellator..
 	
 	public static class ReadWriterSlimLockExtensions
 	{
