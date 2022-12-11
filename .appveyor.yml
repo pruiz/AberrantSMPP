@@ -1,0 +1,46 @@
+version: 1.0.{build}.0
+skip_tags: true
+image: Visual Studio 2022
+configuration: Release
+assembly_info:
+  patch: true
+  file: '**\AssemblyInfo.*'
+  assembly_version: '{version}'
+  assembly_file_version: '{version}'
+  assembly_informational_version: $(APPVEYOR_REPO_BRANCH):$(APPVEYOR_REPO_COMMIT)
+nuget:
+  disable_publish_on_pr: true
+before_build:
+  - cmd: |
+      setlocal enabledelayedexpansion
+      setlocal EnableExtensions
+      
+      set NUGET=Tools\\NuGet.exe
+      %NUGET% restore AberrantSMPP.sln
+      
+      REM Set version attributes..
+      FOR /R %%F IN (*AssemblyInfo.cs *.nuspec) DO (Tools\\UnixUtils\\sed.exe -i -e \"s|0\\.0\\.0\\.0|%APPVEYOR_BUILD_VERSION%|g\" %%F)
+      FOR /R %%F IN (*AssemblyInfo.cs *.nuspec) DO (Tools\\UnixUtils\\sed.exe -i -e \"s|GIT_COMMIT|%APPVEYOR_REPO_COMMIT%|g\" %%F)
+      
+      md AberrantSMPP\\bin\\v3.5-Client\\Release
+      md AberrantSMPP\\bin\\v4.0-Client\\Release
+build:
+  publish_nuget: true
+  publish_nuget_symbols: true
+  use_snupkg_format: true
+  verbosity: normal
+artifacts:
+  - path: Outputs\
+deploy:
+  - provider: NuGet
+    api_key:
+      secure: tJ6Y4j6Vd4cZByMZA0v4r3yZacLYD2XjPrEb9xrzuHU9lPdYUyoSVF6pXn+s0zlj
+    on:
+      branch: master
+notifications:
+  - provider: Email
+    to:
+      - '{{commitAuthorEmail}}'
+    on_build_success: true
+    on_build_failure: true
+    on_build_status_changed: true
