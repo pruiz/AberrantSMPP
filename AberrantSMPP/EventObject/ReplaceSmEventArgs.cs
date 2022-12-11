@@ -1,6 +1,6 @@
 /* AberrantSMPP: SMPP communication library
  * Copyright (C) 2004, 2005 Christopher M. Bouzek
- * Copyright (C) 2010, 2011 Pablo Ruiz García <pruiz@crt0.net>
+ * Copyright (C) 2010, 2011 Pablo Ruiz GarcÃ­a <pruiz@crt0.net>
  *
  * This file is part of RoaminSMPP.
  *
@@ -28,28 +28,15 @@ namespace AberrantSMPP.EventObjects
 	/// <summary>
 	/// Class that defines a replace_sm event.  
 	/// </summary>
-	public class ReplaceSmEventArgs : SmppEventArgs 
+	public class ReplaceSmEventArgs : SmppPacketRequestEventArgs<SmppReplaceSm>
 	{
-		private SmppReplaceSm _response;
-
-		/// <summary>
-		/// Allows access to the underlying Pdu.
-		/// </summary>
-		public SmppReplaceSm ReplaceSmPdu
-		{
-			get
-			{
-				return _response;
-			}
-		}
-		
 		/// <summary>
 		/// Creates a ReplaceSmEventArgs.
 		/// </summary>
 		/// <param name="packet">The PDU that was received.</param>
-		internal ReplaceSmEventArgs(SmppReplaceSm packet): base(packet)
+		internal ReplaceSmEventArgs(SmppReplaceSm packet)
+			: base(packet)
 		{
-			_response = packet;
 		}
 	}
 }

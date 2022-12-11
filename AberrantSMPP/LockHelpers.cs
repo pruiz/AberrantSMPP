@@ -10,14 +10,12 @@ namespace AberrantSMPP
 {
 	internal abstract class BaseLock : IDisposable
 	{
-		protected ReaderWriterLockSlim _Locks;
+		protected ReaderWriterLockSlim @Lock;
 
-
-		public BaseLock(ReaderWriterLockSlim locks)
+		public BaseLock(ReaderWriterLockSlim @lock)
 		{
-			_Locks = locks;
+			Lock = @lock;
 		}
-
 
 		public abstract void Dispose();
 	}
@@ -27,18 +25,18 @@ namespace AberrantSMPP
 	{
 		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-		public ReadLock(ReaderWriterLockSlim locks)
-			: base(locks)
+		public ReadLock(ReaderWriterLockSlim @lock)
+			: base(@lock)
 		{
 			//if (_Log.IsDebugEnabled) _Log.DebugFormat("Entering.. ({0})", _Locks.GetHashCode());
-			_Locks.EnterUpgradeableReadLock();
+			Lock.EnterUpgradeableReadLock();
 		}
 
 
 		public override void Dispose()
 		{
 			//if (_Log.IsDebugEnabled) _Log.DebugFormat("Exiting.. ({0})", _Locks.GetHashCode());
-			_Locks.ExitUpgradeableReadLock();
+			Lock.ExitUpgradeableReadLock();
 		}
 	}
 
@@ -47,18 +45,18 @@ namespace AberrantSMPP
 	{
 		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-		public ReadOnlyLock(ReaderWriterLockSlim locks)
-			: base(locks)
+		public ReadOnlyLock(ReaderWriterLockSlim @lock)
+			: base(@lock)
 		{
 			//if (_Log.IsDebugEnabled) _Log.DebugFormat("Entering.. ({0})", _Locks.GetHashCode());
-			_Locks.EnterReadLock();
+			Lock.EnterReadLock();
 		}
 
 
 		public override void Dispose()
 		{
 			//if (_Log.IsDebugEnabled) _Log.DebugFormat("Exiting.. ({0})", _Locks.GetHashCode());
-			_Locks.ExitReadLock();
+			Lock.ExitReadLock();
 		}
 	}
 
@@ -67,18 +65,38 @@ namespace AberrantSMPP
 	{
 		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-		public WriteLock(ReaderWriterLockSlim locks)
-			: base(locks)
+		public WriteLock(ReaderWriterLockSlim @lock)
+			: base(@lock)
 		{
 			//if (_Log.IsDebugEnabled) _Log.DebugFormat("Entering.. ({0})", _Locks.GetHashCode());
-			_Locks.EnterWriteLock();
+			Lock.EnterWriteLock();
 		}
 
 
 		public override void Dispose()
 		{
 			//if (_Log.IsDebugEnabled) _Log.DebugFormat("Exiting.. ({0})", _Locks.GetHashCode());
-			_Locks.ExitWriteLock();
+			Lock.ExitWriteLock();
+		}
+	}
+
+	// TODO: Implement overloads accepting Cancellator..
+	
+	public static class ReadWriterSlimLockExtensions
+	{
+		public static IDisposable ForRead(this @ReaderWriterLockSlim @this)
+		{
+			return new ReadLock(@this);
+		}
+		
+		public static IDisposable ForReadOnly(this @ReaderWriterLockSlim @this)
+		{
+			return new ReadOnlyLock(@this);
+		}
+		
+		public static IDisposable ForWrite(this @ReaderWriterLockSlim @this)
+		{
+			return new WriteLock(@this);
 		}
 	}
 }

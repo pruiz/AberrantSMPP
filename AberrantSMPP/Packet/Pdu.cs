@@ -1,6 +1,6 @@
 /* AberrantSMPP: SMPP communication library
  * Copyright (C) 2004, 2005 Christopher M. Bouzek
- * Copyright (C) 2010, 2011 Pablo Ruiz García <pruiz@crt0.net>
+ * Copyright (C) 2010, 2011 Pablo Ruiz GarcÃ­a <pruiz@crt0.net>
  *
  * This file is part of RoaminSMPP.
  *
@@ -17,12 +17,16 @@
  * along with RoaminSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
 using System;
-using System.Linq;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
-using AberrantSMPP.Utility;
 using System.Text;
+using System.Collections;
+using System.Diagnostics;
+
+using AberrantSMPP.Packet.Request;
+using AberrantSMPP.Packet.Response;
+using AberrantSMPP.Utility;
+
+using Dawn;
+using DotNetty.Buffers;
 
 namespace AberrantSMPP.Packet
 {
@@ -160,24 +164,86 @@ namespace AberrantSMPP.Packet
 		/// <param name="incomingBytes">The incoming bytes to translate to a Pdu.</param>
 		protected Pdu(byte[] incomingBytes)
 		{
-			_PacketBytes = incomingBytes;
+			_PacketBytes = Guard.Argument(incomingBytes, nameof(incomingBytes)).NotNull().MinCount(16);
 			_CommandLength = DecodeCommandLength(_PacketBytes);
-
-			if (_CommandLength != _PacketBytes.Length)
-				throw new ArgumentException(string.Format("{0} ({1}) differ from {2} length ({3})!", nameof(_CommandLength), _CommandLength, nameof(_PacketBytes), _PacketBytes.Length));
-
 			_CommandID = DecodeCommandId(_PacketBytes);
 			_CommandStatus = (CommandStatus)UnsignedNumConverter.SwapByteOrdering(BitConverter.ToUInt32(_PacketBytes, 8));
 			_SequenceNumber = UnsignedNumConverter.SwapByteOrdering(BitConverter.ToUInt32(_PacketBytes, 12));
+
+			Guard.Argument(incomingBytes).Require(x => x.Length == _CommandLength, x => "PDU Length mismatch?!");
 			
 			//set the other Pdu-specific fields
 			DecodeSmscResponse();
 		}
 		
+		/// <summary>
+		/// Gets a single PDU based on the response bytes.
+		/// </summary>
+		/// <param name="response">The SMSC response.</param>
+		/// <returns>The PDU corresponding to the bytes.</returns>
+		public static Pdu Parse(byte[] response)
+		{
+			var commandID = DecodeCommandId(response);
+
+			Pdu packet;
+			switch(commandID)
+			{
+				case CommandId.alert_notification:
+					packet = new SmppAlertNotification(response);
+					break;
+				case CommandId.bind_receiver_resp:
+				case CommandId.bind_transceiver_resp:
+				case CommandId.bind_transmitter_resp:
+					packet = new SmppBindResp(response);
+					break;
+				case CommandId.cancel_sm_resp:
+					packet = new SmppCancelSmResp(response);
+					break;
+				case CommandId.data_sm_resp:
+					packet = new SmppDataSmResp(response);
+					break;
+				case CommandId.deliver_sm:
+					packet = new SmppDeliverSm(response);
+					break;
+				case CommandId.enquire_link:
+					packet = new SmppEnquireLink(response);
+					break;
+				case CommandId.enquire_link_resp:
+					packet = new SmppEnquireLinkResp(response);
+					break;
+				case CommandId.outbind:
+					packet = new SmppOutbind(response);
+					break;
+				case CommandId.query_sm_resp:
+					packet = new SmppQuerySmResp(response);
+					break;
+				case CommandId.replace_sm_resp:
+					packet = new SmppReplaceSmResp(response);
+					break;
+				case CommandId.submit_multi_resp:
+					packet = new SmppSubmitMultiResp(response);
+					break;
+				case CommandId.submit_sm_resp:
+					packet = new SmppSubmitSmResp(response);
+					break;
+				case CommandId.unbind_resp:
+					packet = new SmppUnbindResp(response);
+					break;
+				case CommandId.generic_nack:
+					packet = new SmppGenericNack(response);
+					break;
+				default:
+					packet = null;
+					break;
+			}
+
+			return packet;
+		}
+
 		#endregion constructors
 		
 		#region overridable methods
-				
+
 		///<summary>
 		/// Gets the hex encoding(big-endian)of this Pdu.
 		///</summary>
@@ -1002,53 +1068,7 @@ namespace AberrantSMPP.Packet
 		#endregion enumerations
 		
 		#region utility methods
-		
-		/// <summary>
-		/// Trims the trailing zeroes off of the response Pdu.  Useful for
-		/// tracing and other purposes.  This uses the command length to
-		/// actually trim it down, so TLVs and strings are not lost.  If the
-		/// response actually is the same length as the command length, this
-		/// method performs a pass-through.
-		/// </summary>
-		/// <returns>The trimmed Pdu(byte array).</returns>
-		public static byte[] TrimResponsePdu(Queue<byte> response)
-		{
-			if (response.Count <= 4)
-			{
-				return new Byte[0];
-			}
 
-			// 'Peek' the initial 4 bytes..
-			//		as we can't access to the value without iterate throught the FIFO queue.
-			var header = new byte[]
-			{
-				response.ElementAt(0),
-				response.ElementAt(1),
-				response.ElementAt(2),
-				response.ElementAt(3)
-			};
-
-			uint commLength = DecodeCommandLength(header);
-
-			if(commLength > response.Count)
-			{
-				return new Byte[0]; // Not enough data..
-			}
-			//trap any weird data coming in
-			if(commLength >= Int32.MaxValue || commLength > response.Count)
-			{
-				return new Byte[0];
-			}
-			
-			byte[] trimmed = new Byte[commLength];
-			for(int i = 0; i < trimmed.Length; i++)
-			{
-				trimmed[i] = response.Dequeue();
-			}
-			
-			return trimmed;
-		}
-		
 		/// <summary>
 		/// Utility method to allow the Pdu factory to decode the command
 		/// ID without knowing about packet structure.  Some SMSCs combine

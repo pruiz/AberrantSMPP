@@ -1,6 +1,6 @@
 /* AberrantSMPP: SMPP communication library
  * Copyright (C) 2004, 2005 Christopher M. Bouzek
- * Copyright (C) 2010, 2011 Pablo Ruiz García <pruiz@crt0.net>
+ * Copyright (C) 2010, 2011 Pablo Ruiz GarcÃ­a <pruiz@crt0.net>
  *
  * This file is part of RoaminSMPP.
  *
@@ -28,28 +28,15 @@ namespace AberrantSMPP.EventObjects
 	/// <summary>
 	/// Class that defines the unbind event.
 	/// </summary>
-	public class UnbindEventArgs : SmppEventArgs 
+	public class UnbindEventArgs : SmppPacketRequestEventArgs<SmppUnbind>
 	{
-		SmppUnbind _response;
-
-		/// <summary>
-		/// Allows access to the underlying Pdu.
-		/// </summary>
-		public SmppUnbind UnbindPdu
-		{
-			get
-			{
-				return _response;
-			}
-		}
-
 		/// <summary>
 		/// Sets up the UnbindEventArgs.
 		/// </summary>
-		/// <param name="response">The SmppUnbind.</param>
-		internal UnbindEventArgs(SmppUnbind response): base(response)
+		/// <param name="unbind">The SmppUnbind.</param>
+		internal UnbindEventArgs(SmppUnbind unbind)
+			: base(unbind)
 		{
-			_response = response;
 		}
 	}
 }

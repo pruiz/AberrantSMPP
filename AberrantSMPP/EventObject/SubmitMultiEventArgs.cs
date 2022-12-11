@@ -1,6 +1,6 @@
 /* AberrantSMPP: SMPP communication library
  * Copyright (C) 2004, 2005 Christopher M. Bouzek
- * Copyright (C) 2010, 2011 Pablo Ruiz García <pruiz@crt0.net>
+ * Copyright (C) 2010, 2011 Pablo Ruiz GarcÃ­a <pruiz@crt0.net>
  *
  * This file is part of RoaminSMPP.
  *
@@ -28,28 +28,15 @@ namespace AberrantSMPP.EventObjects
 	/// <summary>
 	/// Class that defines a submit_multi event.  
 	/// </summary>
-	public class SubmitMultiEventArgs : SmppEventArgs 
+	public class SubmitMultiEventArgs : SmppPacketRequestEventArgs<SmppSubmitMulti>
 	{
-		private SmppSubmitMulti _response;
-
-		/// <summary>
-		/// Allows access to the underlying Pdu.
-		/// </summary>
-		public SmppSubmitMulti SubmitMultiPdu
-		{
-			get
-			{
-				return _response;
-			}
-		}
-		
 		/// <summary>
 		/// Creates a SubmitMultiEventArgs.
 		/// </summary>
 		/// <param name="packet">The PDU that was received.</param>
-		internal SubmitMultiEventArgs(SmppSubmitMulti packet): base(packet)
+		internal SubmitMultiEventArgs(SmppSubmitMulti packet)
+			: base(packet)
 		{
-			_response = packet;
 		}
 	}
 }

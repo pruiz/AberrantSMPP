@@ -1,6 +1,6 @@
 /* AberrantSMPP: SMPP communication library
  * Copyright (C) 2004, 2005 Christopher M. Bouzek
- * Copyright (C) 2010, 2011 Pablo Ruiz García <pruiz@crt0.net>
+ * Copyright (C) 2010, 2011 Pablo Ruiz GarcÃ­a <pruiz@crt0.net>
  *
  * This file is part of RoaminSMPP.
  *
@@ -22,34 +22,20 @@ using System;
 using AberrantSMPP.Packet;
 using AberrantSMPP.Packet.Request;
 
-
 namespace AberrantSMPP.EventObjects 
 {
 	/// <summary>
 	/// Class that defines a cancel_sm event.
 	/// </summary>
-	public class CancelSmEventArgs : SmppEventArgs 
+	public class CancelSmEventArgs : SmppPacketRequestEventArgs<SmppCancelSm>
 	{
-		private SmppCancelSm _response;
-
-		/// <summary>
-		/// Allows access to the underlying Pdu.
-		/// </summary>
-		public SmppCancelSm CancelSmPdu
-		{
-			get
-			{
-				return _response;
-			}
-		}
-		
 		/// <summary>
 		/// Creates a CancelSmEventArgs.
 		/// </summary>
 		/// <param name="packet">The PDU that was received.</param>
-		internal CancelSmEventArgs(SmppCancelSm packet): base(packet)
+		internal CancelSmEventArgs(SmppCancelSm packet)
+			: base(packet)
 		{
-			_response = packet;
 		}
 	}
 }

@@ -1,0 +1,6 @@
+TODO
+====
+
+ - Add a .editorconfig so we can unify editing criteria.
+ - Unify source file's encoding to UTF8 (w/ BOM).
+ - Update source files headers with a common version reflecting AberrantSMPP 'brand'

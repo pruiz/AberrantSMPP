@@ -1,6 +1,6 @@
 /* AberrantSMPP: SMPP communication library
  * Copyright (C) 2004, 2005 Christopher M. Bouzek
- * Copyright (C) 2010, 2011 Pablo Ruiz García <pruiz@crt0.net>
+ * Copyright (C) 2010, 2011 Pablo Ruiz GarcÃ­a <pruiz@crt0.net>
  *
  * This file is part of RoaminSMPP.
  *
@@ -28,28 +28,15 @@ namespace AberrantSMPP.EventObjects
 	/// <summary>
 	/// Class that defines the enquire_link event.
 	/// </summary>
-	public class EnquireLinkEventArgs : SmppEventArgs 
+	public class EnquireLinkEventArgs : SmppPacketRequestEventArgs<SmppEnquireLink>
 	{
-		private SmppEnquireLink _response;
-
-		/// <summary>
-		/// Allows access to the underlying Pdu.
-		/// </summary>
-		public SmppEnquireLink EnquireLinkPdu
-		{
-			get
-			{
-				return _response;
-			}
-		}
-
 		/// <summary>
 		/// Sets up the EnquireLinkEventArgs.
 		/// </summary>
 		/// <param name="response">The PDU from the ESME.</param>
-		internal EnquireLinkEventArgs(SmppEnquireLink response): base(response)
+		internal EnquireLinkEventArgs(SmppEnquireLink response)
+			: base(response)
 		{
-			_response = response;
 		}
 	}
 }
