@@ -27,7 +27,7 @@ before_build:
       %NUGET% restore AberrantSMPP.sln
       
       REM Set version attributes..
-      FOR /R %%F IN (*AssemblyInfo.cs *.nuspec) DO (Tools\UnixUtils\sed.exe -i -e "s|0\\.0\\.0\\.0|%APPVEYOR_BUILD_VERSION%|g" %%F)
+      FOR /R %%F IN (*AssemblyInfo.cs *.nuspec) DO (Tools\UnixUtils\sed.exe -i -e "s|0\.0\.0\.0|%APPVEYOR_BUILD_VERSION%|g" %%F)
       FOR /R %%F IN (*AssemblyInfo.cs *.nuspec) DO (Tools\UnixUtils\sed.exe -i -e "s|GIT_COMMIT|%APPVEYOR_REPO_COMMIT%|g" %%F)
       Tools\UnixUtils\sed.exe -i -e "s|0\.0\.0\.0|%APPVEYOR_BUILD_VERSION%|g" .msbuild\custom.targets
       Tools\UnixUtils\sed.exe -i -e "s|GIT_COMMIT|%APPVEYOR_REPO_COMMIT%|g" .msbuild\custom.targets
