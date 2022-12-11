@@ -16,7 +16,6 @@ dotnet_csproj:
   file_version: '{version}'
   package_version: '{version}'
   informational_version: $(APPVEYOR_REPO_BRANCH):$(APPVEYOR_REPO_COMMIT)
-before_build:
 nuget:
   disable_publish_on_pr: true
 before_build:
