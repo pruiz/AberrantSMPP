@@ -50,7 +50,7 @@ namespace AberrantSMPP
 				},
 			};
 			_cacheConfig = new NameValueCollection(StringComparer.OrdinalIgnoreCase) {
-				{ nameof(MemoryCacheElement.CacheMemoryLimitMegabytes), cacheMemoryLimitMegabytes.ToString() }
+				{ "CacheMemoryLimitMegabytes", cacheMemoryLimitMegabytes.ToString() }
 			};
 			_cache = new MemoryCache(_name, _cacheConfig, true);
 		}
