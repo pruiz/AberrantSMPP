@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 #if NET5_0_OR_GREATER
@@ -10,7 +10,7 @@ namespace DotNetty.Handlers.Tls
     using System.Threading;
     using System.Threading.Tasks;
 
-    partial class TlsHandler
+    partial class MonoTlsHandler
     {
         sealed class MediationStreamNet : MediationStreamBase
         {
@@ -19,7 +19,7 @@ namespace DotNetty.Handlers.Tls
             Memory<byte> sslOwnedMemory;
             int readByteCount;
 
-            public MediationStreamNet(TlsHandler owner)
+            public MediationStreamNet(MonoTlsHandler owner)
                 : base(owner)
             {
             }
@@ -144,7 +144,7 @@ namespace DotNetty.Handlers.Tls
             
             int ReadFromInput(Memory<byte> destination) => this.source.Read(destination);
 
-            #region Source
+#region Source
 
             sealed class Source
             {
@@ -295,7 +295,7 @@ namespace DotNetty.Handlers.Tls
                 }
             }
 
-            #endregion
+#endregion
         }
     }
 }

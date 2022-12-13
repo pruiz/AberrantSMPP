@@ -5,6 +5,7 @@ namespace DotNetty.Handlers.Tls
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Diagnostics.Contracts;
     using System.IO;
     using System.Net.Security;
@@ -24,7 +25,8 @@ namespace DotNetty.Handlers.Tls
         const int UnencryptedWriteBatchSize = 14 * 1024;
 
         static readonly Exception ChannelClosedException = new IOException("Channel is closed");
-        static readonly Action<Task, object> HandshakeCompletionCallback = new Action<Task, object>(HandleHandshakeCompleted);
+        static readonly Action<object, object> HandshakeCompletionCallback = new Action<object, object>(HandleHandshakeCompleted);
+        static readonly Action<Task<int>, object> UnwrapCompletedCallback = new Action<Task<int>, object>(UnwrapCompleted);
 
         readonly SslStream sslStream;
         readonly MediationStreamBase mediationStream;
@@ -37,7 +39,9 @@ namespace DotNetty.Handlers.Tls
         BatchingPendingWriteQueue pendingUnencryptedWrites;
         Task lastContextWriteTask;
         bool firedChannelRead;
+        volatile FlushMode flushMode = FlushMode.ForceFlush;
         IByteBuffer pendingSslStreamReadBuffer;
+        int pendingSslStreamReadLength;
         Task<int> pendingSslStreamReadFuture;
 
         public MonoTlsHandler(TlsSettings settings)
@@ -114,9 +118,16 @@ namespace DotNetty.Handlers.Tls
             return false;
         }
 
-        static void HandleHandshakeCompleted(Task task, object state)
+        static void HandleHandshakeCompleted(object context, object state)
         {
             var self = (MonoTlsHandler)state;
+            var capturedContext = self.capturedContext;
+            if (!capturedContext.Executor.InEventLoop)
+            {
+                capturedContext.Executor.Execute(HandshakeCompletionCallback, context, state);
+                return;
+            }
+            var task = (Task)context;
             if (self.capturedContext.Executor.InEventLoop)
             {
                 HandleHandshakeCompletedInternal(task, self);
@@ -170,8 +181,7 @@ namespace DotNetty.Handlers.Tls
 
                     if (oldState.Has(TlsHandlerState.FlushedBeforeHandshake))
                     {
-                        self.Wrap(self.capturedContext);
-                        self.capturedContext.Flush();
+                        self.WrapAndFlush(self.capturedContext);
                     }
 
                     break;
@@ -365,7 +375,7 @@ namespace DotNetty.Handlers.Tls
                 if (packetInfos.Count > 0)
                 {
                     ArraySegment<byte> inputIoBuffer = packet.GetIoBuffer(offset, length);
-                    this.mediationStream.SetSource(inputIoBuffer.Array, inputIoBuffer.Offset);
+                    this.mediationStream.SetSource(inputIoBuffer.Array, inputIoBuffer.Offset, ctx.Allocator);
 
                     while (!this.EnsureAuthenticated())
                     {
@@ -397,10 +407,12 @@ namespace DotNetty.Handlers.Tls
                     Contract.Assert(this.pendingSslStreamReadBuffer != null);
 
                     outputBuffer = this.pendingSslStreamReadBuffer;
-                    outputBufferLength = outputBuffer.WritableBytes;
+                    outputBufferLength = this.pendingSslStreamReadLength;
+
 
                     this.pendingSslStreamReadFuture = null;
                     this.pendingSslStreamReadBuffer = null;
+                    this.pendingSslStreamReadLength = 0;
                 }
                 else
                 {
@@ -436,93 +448,78 @@ namespace DotNetty.Handlers.Tls
                         this.mediationStream.ExpandSource(currentPacketLength);
                     }
 
-                    if (currentReadFuture != null)
+                    while (true)
                     {
-                        // there was a read pending already, so we make sure we completed that first
-
-                        if (!currentReadFuture.IsCompleted)
+                        int totalRead = 0;
+                        if (currentReadFuture != null)
                         {
-                            // we did feed the whole current packet to SslStream yet it did not produce any result -> move to the next packet in input
-                            continue;
-                        }
+                            // there was a read pending already, so we make sure we completed that first
 
-                        int read = currentReadFuture.Result;
-                        if (read == 0)
-                        {
-                            //Stream closed
-                            return;
-                        }
-
-                        // Now output the result of previous read and decide whether to do an extra read on the same source or move forward
-                        AddBufferToOutput(outputBuffer, read, output);
-
-                        currentReadFuture = null;
-                        outputBuffer = null;
-                        if (!this.mediationStream.SourceIsReadable)
-                        {
-                            // we just made a frame available for reading but there was already pending read so SslStream read it out to make further progress there
-
-                            if (read < outputBufferLength)
+                            if (!currentReadFuture.IsCompleted)
                             {
-                                // SslStream returned non-full buffer and there's no more input to go through ->
-                                // typically it means SslStream is done reading current frame so we skip
-                                continue;
+                                // we did feed the whole current packet to SslStream yet it did not produce any result -> move to the next packet in input
+
+                                break;
                             }
 
-                            // we've read out `read` bytes out of current packet to fulfil previously outstanding read
-                            outputBufferLength = currentPacketLength - read;
-                            if (outputBufferLength <= 0)
+                            int read = currentReadFuture.Result;
+                            totalRead += read;
+
+                            if (read == 0)
                             {
-                                // after feeding to SslStream current frame it read out more bytes than current packet size
-                                outputBufferLength = FallbackReadBufferSize;
+                                //Stream closed
+                                return;
+                            }
+
+                            // Now output the result of previous read and decide whether to do an extra read on the same source or move forward
+                            AddBufferToOutput(outputBuffer, read, output);
+
+                            currentReadFuture = null;
+                            outputBuffer = null;
+                            if (this.mediationStream.TotalReadableBytes == 0)
+                            {
+                                // we just made a frame available for reading but there was already pending read so SslStream read it out to make further progress there
+
+                                if (read < outputBufferLength)
+                                {
+                                    // SslStream returned non-full buffer and there's no more input to go through ->
+                                    // typically it means SslStream is done reading current frame so we skip
+                                    break;
+                                }
+
+                                // we've read out `read` bytes out of current packet to fulfil previously outstanding read
+                                outputBufferLength = currentPacketLength - totalRead;
+                                if (outputBufferLength <= 0)
+                                {
+                                    // after feeding to SslStream current frame it read out more bytes than current packet size
+                                    outputBufferLength = FallbackReadBufferSize;
+                                }
+                            }
+                            else
+                            {
+                                // SslStream did not get to reading current frame so it completed previous read sync
+                                // and the next read will likely read out the new frame
+                                outputBufferLength = currentPacketLength;
                             }
                         }
                         else
                         {
-                            // SslStream did not get to reading current frame so it completed previous read sync
-                            // and the next read will likely read out the new frame
+                            // there was no pending read before so we estimate buffer of `currentPacketLength` bytes to be sufficient
                             outputBufferLength = currentPacketLength;
                         }
-                    }
-                    else
-                    {
-                        // there was no pending read before so we estimate buffer of `currentPacketLength` bytes to be sufficient
-                        outputBufferLength = currentPacketLength;
-                    }
 
-                    outputBuffer = ctx.Allocator.Buffer(outputBufferLength);
-                    currentReadFuture = this.ReadFromSslStreamAsync(outputBuffer, outputBufferLength);
+                        outputBuffer = ctx.Allocator.Buffer(outputBufferLength);
+                        currentReadFuture = this.ReadFromSslStreamAsync(outputBuffer, outputBufferLength);
+                    }
                 }
 
-                // read out the rest of SslStream's output (if any) at risk of going async
-                // using FallbackReadBufferSize - buffer size we're ok to have pinned with the SslStream until it's done reading
-                while (true)
+                if (currentReadFuture != null)
                 {
-                    if (currentReadFuture != null)
-                    {
-                        if (!currentReadFuture.IsCompleted)
-                        {
-                            break;
-                        }
-
-                        int read = currentReadFuture.Result;
-                        
-                        if (read == 0)
-                        {
-                            //Stream closed
-                            return;
-                        }
-                        
-                        AddBufferToOutput(outputBuffer, read, output);
-                    }
-
-                    outputBuffer = ctx.Allocator.Buffer(FallbackReadBufferSize);
-                    currentReadFuture = this.ReadFromSslStreamAsync(outputBuffer, FallbackReadBufferSize);
+                    pending = true;
+                    this.pendingSslStreamReadBuffer = outputBuffer;
+                    this.pendingSslStreamReadFuture = currentReadFuture;
+                    this.pendingSslStreamReadLength = outputBufferLength;
                 }
-
-                pending = true;
-                this.pendingSslStreamReadBuffer = outputBuffer;
-                this.pendingSslStreamReadFuture = currentReadFuture;
             }
             catch (Exception ex)
             {
@@ -531,7 +528,7 @@ namespace DotNetty.Handlers.Tls
             }
             finally
             {
-                this.mediationStream.ResetSource();
+                this.mediationStream.ResetSource(ctx.Allocator);
                 if (!pending && outputBuffer != null)
                 {
                     if (outputBuffer.IsReadable())
@@ -541,6 +538,90 @@ namespace DotNetty.Handlers.Tls
                     else
                     {
                         outputBuffer.SafeRelease();
+                    }
+                }
+                if (pending)
+                {
+                    //Can't use ExecuteSynchronously here for it may change the order of output if task is already completed here.
+                    this.pendingSslStreamReadFuture?.ContinueWith(UnwrapCompletedCallback, this, TaskContinuationOptions.None);
+                }
+            }
+        }
+
+        static void UnwrapCompleted(Task<int> task, object state)
+        {
+            // Mono(with legacy provider) finish ReadAsync in async, 
+            // so extra check is needed to receive data in async
+            var self = (MonoTlsHandler)state;
+            Debug.Assert(self.capturedContext.Executor.InEventLoop);
+
+            //Ignore task completed in Unwrap
+            if (task == self.pendingSslStreamReadFuture)
+            {
+                IByteBuffer buf = self.pendingSslStreamReadBuffer;
+                int outputBufferLength = self.pendingSslStreamReadLength;
+
+                self.pendingSslStreamReadFuture = null;
+                self.pendingSslStreamReadBuffer = null;
+                self.pendingSslStreamReadLength = 0;
+
+                while (true)
+                {
+                    switch (task.Status)
+                    {
+                        case TaskStatus.RanToCompletion:
+                        {
+                            //The logic is the same as the one in Unwrap()
+                            var read = task.Result;
+                            //Stream Closed
+                            if (read == 0)
+                                return;
+                            self.capturedContext.FireChannelRead(buf.SetWriterIndex(buf.WriterIndex + read));
+
+                            if (self.mediationStream.TotalReadableBytes == 0)
+                            {
+                                self.capturedContext.FireChannelReadComplete();
+                                self.mediationStream.ResetSource(self.capturedContext.Allocator);
+
+                                if (read < outputBufferLength)
+                                {
+                                    // SslStream returned non-full buffer and there's no more input to go through ->
+                                    // typically it means SslStream is done reading current frame so we skip
+                                    return;
+                                }
+                            }
+
+                            outputBufferLength = self.mediationStream.TotalReadableBytes;
+                            if (outputBufferLength <= 0)
+                                outputBufferLength = FallbackReadBufferSize;
+
+                            buf = self.capturedContext.Allocator.Buffer(outputBufferLength);
+                            task = self.ReadFromSslStreamAsync(buf, outputBufferLength);
+                            if (task.IsCompleted)
+                            {
+                                continue;
+                            }
+
+                            self.pendingSslStreamReadFuture = task;
+                            self.pendingSslStreamReadBuffer = buf;
+                            self.pendingSslStreamReadLength = outputBufferLength;
+                            task.ContinueWith(UnwrapCompletedCallback, self, TaskContinuationOptions.ExecuteSynchronously);
+                            return;
+                        }
+
+                        case TaskStatus.Canceled:
+                        case TaskStatus.Faulted:
+                        {
+                            buf.SafeRelease();
+                            self.HandleFailure(task.Exception);
+                            return;
+                        }
+
+                        default:
+                        {
+                            buf.SafeRelease();
+                            throw new ArgumentOutOfRangeException(nameof(task), "Unexpected task status: " + task.Status);
+                        }
                     }
                 }
             }
@@ -616,6 +697,12 @@ namespace DotNetty.Handlers.Tls
                 return;
             }
 
+            this.WrapAndFlush(context);
+        }
+
+        void WrapAndFlush(IChannelHandlerContext context)
+        {
+            this.flushMode = FlushMode.NoFlush;
             try
             {
                 this.Wrap(context);
@@ -623,7 +710,20 @@ namespace DotNetty.Handlers.Tls
             finally
             {
                 // We may have written some parts of data before an exception was thrown so ensure we always flush.
-                context.Flush();
+                if (this.flushMode == FlushMode.NoFlush)
+                {
+                    this.flushMode = FlushMode.ForceFlush;
+                    context.Flush();
+                }
+                else
+                {
+                    context.Executor.Execute((state) => {
+                        var self = (MonoTlsHandler)state;
+
+                        self.flushMode = FlushMode.ForceFlush;
+                        self.capturedContext.Flush();
+                    }, this);
+                }
             }
         }
 
@@ -682,6 +782,12 @@ namespace DotNetty.Handlers.Tls
 
         void FinishWrap(byte[] buffer, int offset, int count)
         {
+            // In Mono(with btls provider) on linux, and maybe also for apple provider, Write is called in another thread,
+            // so it will run after the call to Flush.
+            if (this.flushMode == FlushMode.NoFlush && !this.capturedContext.Executor.InEventLoop)
+            {
+                this.flushMode = FlushMode.PendingFlush;
+            }
             IByteBuffer output;
             if (count == 0)
             {
@@ -693,7 +799,10 @@ namespace DotNetty.Handlers.Tls
                 output.WriteBytes(buffer, offset, count);
             }
 
-            this.lastContextWriteTask = this.capturedContext.WriteAsync(output);
+            this.lastContextWriteTask =
+                (this.flushMode == FlushMode.ForceFlush) ?
+                    this.capturedContext.WriteAndFlushAsync(output)
+                    : this.capturedContext.WriteAsync(output);
         }
 
         Task FinishWrapNonAppDataAsync(byte[] buffer, int offset, int count)
@@ -750,6 +859,22 @@ namespace DotNetty.Handlers.Tls
                 this.CloseAsync(this.capturedContext);
             }
         }
+    }
+
+    enum FlushMode : byte
+    {
+        /// <summary>
+        /// Do nothing with Flush.
+        /// </summary>
+        NoFlush = 0,
+        /// <summary>
+        /// An Flush is or will be posted to IEventExecutor.
+        /// </summary>
+        PendingFlush = 1,
+        /// <summary>
+        /// Force FinishWrap to call Flush.
+        /// </summary>
+        ForceFlush = 2,
     }
 
     [Flags]

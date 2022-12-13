@@ -1,8 +1,10 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 namespace DotNetty.Handlers.Tls
 {
+    using DotNetty.Buffers;
+
     using System;
     using System.IO;
 
@@ -20,18 +22,20 @@ namespace DotNetty.Handlers.Tls
             public static MediationStreamBase Create(MonoTlsHandler owner)
             {
 #if NET5_0_OR_GREATER
-                return new TlsHandler.MediationStreamNet(owner);
+                return new MonoTlsHandler.MediationStreamNet(owner);
 #else
                 return new MediationStream(owner);
 #endif
             }
-            
+
+            public abstract int TotalReadableBytes { get; }
+
             public abstract bool SourceIsReadable { get; }
             public abstract int SourceReadableBytes { get; }
 
-            public abstract void SetSource(byte[] source, int offset);
+            public abstract void SetSource(byte[] source, int offset, IByteBufferAllocator alloc);
             public abstract void ExpandSource(int count);
-            public abstract void ResetSource();
+            public abstract void ResetSource(IByteBufferAllocator alloc);
 
             #region plumbing
 
