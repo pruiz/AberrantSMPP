@@ -16,18 +16,18 @@
  * along with AberrantSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
 using System;
+using System.Collections.Generic;
 using System.Security.Authentication;
 
 using AberrantSMPP.EventObjects;
 using AberrantSMPP.Packet;
 using AberrantSMPP.Packet.Request;
+using AberrantSMPP.Packet.Response;
 
 namespace AberrantSMPP
 {
 	public interface ISmppClient : IDisposable
 	{
-		// FIXME: This should expose all that is common to both Smpp client implementations..
-
 		/// <summary>
 		/// The host to bind this ISmppClient to.
 		/// </summary>
@@ -98,6 +98,47 @@ namespace AberrantSMPP
 		/// Gets or sets if must not check the certificate revocation.
 		/// </summary>
 		bool DisableSslRevocationChecking { get; }
+
+		/// <summary>
+		/// Gets or sets the response timeout (in miliseconds)
+		/// </summary>
+		/// <value>The response timeout.</value>
+		TimeSpan ResponseTimeout { get; set; }
+
+		/// <summary>
+		/// Sends a user-specified Pdu(see the RoaminSMPP base library for
+		/// Pdu types).  This allows complete flexibility for sending Pdus.
+		/// </summary>
+		/// <param name="packet">The Pdu to send.</param>
+		/// <returns>The sequence number of the sent PDU, or null if failed.</returns>
+		uint SendPdu(Pdu packet);
+
+		/// <summary>
+		/// Sends a request and waits for the appropriate response.
+		/// If no response is received before RequestTimeout seconds, an 
+		/// SmppTimeoutException is thrown.
+		/// If a response is received w/ CommandStatus != OK, an
+		/// SmppRequestException is thrown.
+		/// </summary>
+		/// <param name="request">The request.</param>
+		SmppResponse SendAndWait(SmppRequest request);
+
+		/// <summary>
+		/// Sends an SMS message synchronouslly, possibly splitting it on multiple PDUs 
+		/// using the specified segmentation & reassembly method.
+		/// </summary>
+		/// <returns>The list of messageIds assigned by remote party to each submitted PDU.</returns>
+		IEnumerable<SmppResponse> SendAndWait(IEnumerable<SmppRequest> requests);
+
+		/// <summary>
+		/// Sends an SMS message synchronouslly, possibly splitting it on multiple PDUs 
+		/// using the specified segmentation & reassembly method.
+		/// </summary>
+		/// <param name="pdu">The pdu.</param>
+		/// <param name="method">The method.</param>
+		/// <returns>The list of messageIds assigned by remote party to each submitted PDU.</returns>
+		IEnumerable<string> SendAndWait(SmppSubmitSm pdu, SmppSarMethod method);
+
 
 		#region events
 		/// <summary>

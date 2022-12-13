@@ -16,6 +16,8 @@
  * along with AberrantSMPP.  If not, see <http://www.gnu.org/licenses/>.
  */
 using System;
+using System.Net;
+using System.Threading.Tasks;
 
 using AberrantSMPP.EventObjects;
 using AberrantSMPP.Utility;
@@ -116,6 +118,21 @@ namespace AberrantSMPP
 				var interval = GetDelayForStep(_step++, _client.ReconnectIntervals);
 				_Log.InfoFormat("Scheduling reconnect of session after {0}...", interval);
 				_client._eventLoopGroup.Schedule(() => _client.ConnectDetached(), interval);
+			}
+
+			public override Task ConnectAsync(IChannelHandlerContext context, EndPoint remoteAddress, EndPoint localAddress)
+			{
+				_Log.InfoFormat("ConnectAsync [{0}] (CONECTING) remote:{1}, local:{2}...", context.Name, remoteAddress, localAddress);
+				return base.ConnectAsync(context, remoteAddress, localAddress)
+					.ContinueWith(t => {
+						if (t.Exception != null)
+						{
+							_Log.ErrorFormat("ConnectAsync [{0}] (EXCEPTION) remote:{1}, local:{2}.", t.Exception, context.Name, remoteAddress, localAddress);
+							context.CloseAsync();
+						}
+						else
+							_Log.InfoFormat("ConnectAsync [{0}] (CONECTED) remote:{1}, local:{2}.", context.Name, remoteAddress, localAddress);
+					});
 			}
 		}
 	}
