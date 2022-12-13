@@ -19,7 +19,9 @@
  */
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -31,7 +33,6 @@ using AberrantSMPP.Packet;
 using AberrantSMPP.Packet.Request;
 using AberrantSMPP.Packet.Response;
 using AberrantSMPP.Utility;
-
 using Dawn;
 
 using DotNetty.Buffers;
@@ -56,7 +57,7 @@ namespace AberrantSMPP
 	{
 		private static readonly global::Common.Logging.ILog _Log = global::Common.Logging.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-		private static readonly uint CHANNEL_BUFFER_SIZE = 10240;
+		private static readonly uint CHANNEL_BUFFER_SIZE = 1024;
 
 		private readonly CancellationTokenSource _cancellator = new CancellationTokenSource();
 		private readonly Random _random = new Random();
@@ -352,10 +353,20 @@ namespace AberrantSMPP
 		{
 			if (SupportedSslProtocols != SslProtocols.None)
 			{
-				ClientTlsSettings tlsSettings = new ClientTlsSettings(
-					SupportedSslProtocols, !DisableSslRevocationChecking,
-					new List<X509Certificate>(), Host);
-				pipeline.AddLast("tls", new TlsHandler(tlsSettings));
+				if (HermaFx.Utils.EnvironmentHelper.RunningOnMono)
+				{
+					MonoClientTlsSettings tlsSettings = new MonoClientTlsSettings(
+							SupportedSslProtocols, !DisableSslRevocationChecking,
+							new List<X509Certificate>(), Host);
+					pipeline.AddLast("tls", new MonoTlsHandler(tlsSettings));
+				}
+				else
+				{
+					ClientTlsSettings tlsSettings = new ClientTlsSettings(
+							SupportedSslProtocols, !DisableSslRevocationChecking,
+							new List<X509Certificate>(), Host);
+					pipeline.AddLast("tls", new TlsHandler(tlsSettings));
+				}
 			}
 
 			pipeline
