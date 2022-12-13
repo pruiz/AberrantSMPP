@@ -3,7 +3,7 @@
     <Product>AberrantSMPP Library</Product>
     <Company>Pablo Ruiz</Company>
     <Copyright>Copyright © Pablo Ruiz García 2010-2022</Copyright>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <Version Condition=" '$(Version)' == '' ">0.0.0.0</Version>
     <FileVersion Condition=" '$(FileVersion)' == '' ">0.0.0.0</FileVersion>
     <AssemblyTitle>AberrantSMPP</AssemblyTitle>
