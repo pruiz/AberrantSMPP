@@ -25,7 +25,6 @@
     <Compile Update="SMPPClient.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Update="SMPPCommunicator.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Facilities\" />

@@ -17,16 +17,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UnixUtils", "UnixUtils", "{
 		Tools\UnixUtils\sed.exe = Tools\UnixUtils\sed.exe
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AberrantSMPP.Tests", "AberrantSMPP.Tests\AberrantSMPP.Tests.csproj", "{8C7AFCC5-AEF4-4E79-9A1E-330E19ACB959}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libs", "Libs", "{11BEF2CE-ED05-40B7-8241-53AD3C5CE82D}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Packages", "Packages", "{99427D87-ABCF-4A62-91B1-4822133B029C}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{946069C5-ABA2-47AB-8BEE-7B84B130FFB9}"
-	ProjectSection(SolutionItems) = preProject
-		.nuget\packages.config = .nuget\packages.config
-	EndProjectSection
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AberrantSMPP.Tests", "AberrantSMPP.Tests\AberrantSMPP.Tests.csproj", "{8C7AFCC5-AEF4-4E79-9A1E-330E19ACB959}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

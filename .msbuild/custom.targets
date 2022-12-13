@@ -11,6 +11,7 @@
     <PackageProjectUrl>https://github.com/pruiz/AberrantSMPP</PackageProjectUrl>
     <PackageReleaseNotes>See changes for this revision at: https://github.com/pruiz/AberrantSMPP/commit/GIT_COMMIT</PackageReleaseNotes>
     <RepositoryUrl>https://github.com/pruiz/AberrantSMPP</RepositoryUrl>
+    <Description>An Short Message Service Protocol (SMS/SMPP) library.</Description>
     <RepositoryCommit>GIT_COMMIT</RepositoryCommit>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
