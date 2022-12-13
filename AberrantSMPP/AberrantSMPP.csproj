@@ -5,7 +5,7 @@
     <TargetFrameworkFullName Condition=" '$(TargetFrameworkProfile)' == '' ">$(TargetFrameworkVersion)</TargetFrameworkFullName>
     <TargetFrameworkFullName Condition=" '$(TargetFrameworkProfile)' != '' ">$(TargetFrameworkVersion)-$(TargetFrameworkProfile)</TargetFrameworkFullName>
     <LangVersion>9</LangVersion>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <OutputPath>bin\$(TargetFrameworkFullName)\Debug\</OutputPath>

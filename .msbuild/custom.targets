@@ -6,6 +6,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Version Condition=" '$(Version)' == '' ">0.0.0.0</Version>
     <FileVersion Condition=" '$(FileVersion)' == '' ">0.0.0.0</FileVersion>
+    <AssemblyTitle>AberrantSMPP</AssemblyTitle>
     <AssemblyVersion Condition=" '$(AssemblyVersion)' == '' ">0.0.0.0</AssemblyVersion>
     <InformationalVersion Condition=" '$(InformationalVersion)' == '' ">VERSION_STRING</InformationalVersion>
     <PackageProjectUrl>https://github.com/pruiz/AberrantSMPP</PackageProjectUrl>

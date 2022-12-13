@@ -3,7 +3,7 @@
     <TargetFramework>net6</TargetFramework>
     <OutputType>Library</OutputType>
     <LangVersion>9</LangVersion>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\AberrantSMPP\AberrantSMPP.csproj" />
