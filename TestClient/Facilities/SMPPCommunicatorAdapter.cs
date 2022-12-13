@@ -12,8 +12,6 @@ namespace TestClient.Facilities
 			// intentionally empty
 		}
 
-		public SmppResponse SendAndWait(SmppRequest request) => SendRequest(request);
-
 		public void Start() => _bound = Bind();
 
 		public void Stop()

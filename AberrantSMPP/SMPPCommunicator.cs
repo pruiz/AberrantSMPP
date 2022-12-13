@@ -1,4 +1,4 @@
-/* AberrantSMPP: SMPP communication library
+﻿/* AberrantSMPP: SMPP communication library
  * Copyright (C) 2004, 2005 Christopher M. Bouzek
  * Copyright (C) 2010, 2011 Pablo Ruiz García <pruiz@crt0.net>
  *
@@ -1310,5 +1310,16 @@ namespace AberrantSMPP
 
 			base.Dispose(disposing);
 		}
+
+		#region explicit ISmppClient adapter methods
+		TimeSpan ISmppClient.ResponseTimeout
+		{
+			get => TimeSpan.FromMilliseconds(ResponseTimeout);
+			set => ResponseTimeout = (int)value.TotalMilliseconds;
+		}
+		SmppResponse ISmppClient.SendAndWait(SmppRequest request) => SendRequest(request);
+		IEnumerable<SmppResponse> ISmppClient.SendAndWait(IEnumerable<SmppRequest> requests) => SendRequests(requests);
+		IEnumerable<string> ISmppClient.SendAndWait(SmppSubmitSm pdu, SmppSarMethod method) => Send(pdu, method);
+		#endregion
 	}
 }

@@ -15,8 +15,6 @@ namespace TestClient.Facilities
 		//void Connect();
 		//void Disconnect();
 		bool IsClientReady();
-		SmppResponse SendAndWait(SmppRequest request);
-		uint SendPdu(Pdu packet);
 		SmppClientStatus Status { get; }
 	}
 }
