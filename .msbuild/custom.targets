@@ -9,6 +9,7 @@
     <AssemblyTitle>AberrantSMPP</AssemblyTitle>
     <AssemblyVersion Condition=" '$(AssemblyVersion)' == '' ">0.0.0.0</AssemblyVersion>
     <InformationalVersion Condition=" '$(InformationalVersion)' == '' ">VERSION_STRING</InformationalVersion>
+    <PackageVersion Condition=" '$(PackageVersion)' == '' ">0.0.0.0</PackageVersion>
     <PackageProjectUrl>https://github.com/pruiz/AberrantSMPP</PackageProjectUrl>
     <PackageReleaseNotes>See changes for this revision at: https://github.com/pruiz/AberrantSMPP/commit/GIT_COMMIT</PackageReleaseNotes>
     <RepositoryUrl>https://github.com/pruiz/AberrantSMPP</RepositoryUrl>
