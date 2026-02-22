@@ -6,6 +6,7 @@ You can find a NuGet package with binaries for fx v3.5 & v.40 at:
 
   https://www.nuget.org/packages/AberrantSMPP/
 
+- Pablo Ruiz
 
 =========================== OLD README ==============================
 
